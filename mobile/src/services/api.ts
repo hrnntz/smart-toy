@@ -43,6 +43,12 @@ export const toyService = {
   update: (id: number, data: any) => api.put(`/toy/${id}`, data),
   delete: (id: number) => api.delete(`/toy/${id}`),
   toggle: (id: number) => api.patch(`/toy/${id}/toggle`),
+  chatWithToy: (toyId: number, message: string) =>
+    api.post(`/toy/${toyId}/chat`, { message }),
+  // ✅ Métodos para mensajes del historial
+  getMessages: (toyId: number) => api.get(`/toy/${toyId}/messages`),
+  saveMessage: (toyId: number, content: string, isUser: boolean) =>
+    api.post(`/toy/${toyId}/messages`, { content, isUser }),
 };
 
 // Servicios de perfil del niño
@@ -59,12 +65,12 @@ export const configService = {
     api.put('/config', data),
 };
 
-// Servicios de usuario
+// Servicios de usuario (autenticación)
 export const userService = {
   getProfile: () => api.get('/auth/profile'),
 };
 
-// ✅ Servicios de rutinas (separado de userService)
+// Servicios de rutinas
 export const rutinaService = {
   getAll: () => api.get('/rutina'),
   create: (data: { nombre: string; hora: string; repetir?: boolean; mensaje?: string; accionAdicional?: string }) => 
@@ -72,6 +78,23 @@ export const rutinaService = {
   update: (id: number, data: { nombre?: string; hora?: string; repetir?: boolean; mensaje?: string; accionAdicional?: string }) => 
     api.put(`/rutina/${id}`, data),
   delete: (id: number) => api.delete(`/rutina/${id}`),
+};
+
+// Servicios de historias
+export const storyService = {
+  generate: (data: { tema: string; duracion: string; personajes?: string; enseñanza?: string }) =>
+    api.post('/story/generate', data),
+  getAll: () => api.get('/story'),
+  getById: (id: number) => api.get(`/story/${id}`),
+  delete: (id: number) => api.delete(`/story/${id}`),
+};
+
+// ✅ Servicio de autenticación (login, registro, etc.)
+export const authService = {
+  login: (email: string, password: string) => api.post('/auth/login', { email, password }),
+  register: (name: string, email: string, password: string) => 
+    api.post('/auth/register', { name, email, password }),
+  getProfile: () => api.get('/auth/profile'),
 };
 
 export default api;

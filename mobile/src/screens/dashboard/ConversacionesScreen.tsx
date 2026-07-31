@@ -1,56 +1,90 @@
-import React from 'react';
+// src/screens/dashboard/ConversacionesScreen.tsx
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  ActivityIndicator,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { toyService } from '../../services/api';
+
+interface Toy {
+  id: number;
+  name: string;
+  serialNumber: string;
+  isConnected: boolean;
+  avatarUrl?: string;
+}
 
 export default function ConversacionesScreen({ navigation }: any) {
-  const conversaciones = [
-    { id: 1, pregunta: '¿Qué son los dinosaurios?', fecha: 'Hoy, 7:45 PM' },
-    { id: 2, pregunta: 'Cuéntame una historia', fecha: 'Hoy, 7:30 PM' },
-    { id: 3, pregunta: '¿Por qué llueve?', fecha: 'Hoy, 6:20 PM' },
-    { id: 4, pregunta: 'Enséñame en inglés', fecha: 'Ayer, 5:10 PM' },
-    { id: 5, pregunta: 'Hablemos de los planetas', fecha: 'Ayer, 4:00 PM' },
-  ];
+  const [toys, setToys] = useState<Toy[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadToys();
+  }, []);
+
+  const loadToys = async () => {
+    try {
+      const res = await toyService.getAll();
+      if (res.data.success) setToys(res.data.data || []);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const openChat = (toy: Toy) => {
+    navigation.navigate('Chat', {
+      toyId: toy.id,
+      toyName: toy.name,
+      avatarUrl: toy.avatarUrl,
+    });
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color="#4A90D9" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
-      {/* Header con botón Volver */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={28} color="#2C3E50" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Conversaciones</Text>
-        <View style={{ width: 36 }} />
+        <Text style={styles.title}>Conversaciones</Text>
       </View>
-
-      {/* Tabs */}
-      <View style={styles.tabs}>
-        <TouchableOpacity style={[styles.tab, styles.tabActive]}>
-          <Text style={styles.tabActiveText}>Recientes</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.tab}>
-          <Text style={styles.tabText}>Favoritas</Text>
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {conversaciones.map((conv) => (
-          <TouchableOpacity key={conv.id} style={styles.conversationCard}>
-            <View style={styles.convIcon}>
-              <Ionicons name="chatbubble-ellipses" size={24} color="#4A90D9" />
-            </View>
-            <View style={styles.convInfo}>
-              <Text style={styles.convQuestion}>{conv.pregunta}</Text>
-              <Text style={styles.convDate}>{conv.fecha}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={24} color="#CCC" />
-          </TouchableOpacity>
-        ))}
+      <ScrollView>
+        {toys.length === 0 ? (
+          <View style={styles.empty}>
+            <Ionicons name="chatbubbles-outline" size={64} color="#ccc" />
+            <Text style={styles.emptyText}>No hay juguetes para chatear</Text>
+            <Text style={styles.emptySub}>Crea un juguete desde "Mis Juguetes"</Text>
+          </View>
+        ) : (
+          toys.map((toy) => (
+            <TouchableOpacity key={toy.id} style={styles.card} onPress={() => openChat(toy)}>
+              <Image
+                source={{ uri: toy.avatarUrl || 'https://via.placeholder.com/48' }}
+                style={styles.avatar}
+              />
+              <View style={styles.cardInfo}>
+                <Text style={styles.cardName}>{toy.name}</Text>
+                <Text style={styles.cardSerial}>🔑 {toy.serialNumber}</Text>
+                <Text style={styles.cardStatus}>
+                  {toy.isConnected ? '🟢 Conectado' : '🔴 Desconectado'}
+                </Text>
+              </View>
+              <Ionicons name="chatbubble" size={24} color="#4A90D9" />
+            </TouchableOpacity>
+          ))
+        )}
         <View style={{ height: 20 }} />
       </ScrollView>
     </View>
@@ -58,49 +92,14 @@ export default function ConversacionesScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F7FA',
-    paddingHorizontal: 16,
-    paddingTop: 40,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  backButton: {
-    padding: 4,
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#2C3E50',
-  },
-  tabs: {
-    flexDirection: 'row',
-    marginBottom: 16,
-  },
-  tab: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginRight: 8,
-  },
-  tabActive: {
-    backgroundColor: '#4A90D9',
-  },
-  tabText: {
-    color: '#7F8C8D',
-    fontSize: 14,
-  },
-  tabActiveText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  conversationCard: {
+  container: { flex: 1, backgroundColor: '#F5F7FA', paddingHorizontal: 16, paddingTop: 40 },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  header: { marginBottom: 20 },
+  title: { fontSize: 28, fontWeight: 'bold', color: '#2C3E50' },
+  empty: { alignItems: 'center', marginTop: 60 },
+  emptyText: { fontSize: 16, color: '#999', marginTop: 16 },
+  emptySub: { fontSize: 14, color: '#bbb', marginTop: 4 },
+  card: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'white',
@@ -112,26 +111,9 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 1,
   },
-  convIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#EBF5FB',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  convInfo: {
-    flex: 1,
-  },
-  convQuestion: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2C3E50',
-  },
-  convDate: {
-    fontSize: 13,
-    color: '#7F8C8D',
-    marginTop: 2,
-  },
+  avatar: { width: 48, height: 48, borderRadius: 24, marginRight: 12, backgroundColor: '#F0F0F0' },
+  cardInfo: { flex: 1 },
+  cardName: { fontSize: 16, fontWeight: '600', color: '#2C3E50' },
+  cardSerial: { fontSize: 13, color: '#7F8C8D', marginTop: 2 },
+  cardStatus: { fontSize: 13, color: '#27AE60', marginTop: 2 },
 });

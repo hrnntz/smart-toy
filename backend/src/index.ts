@@ -6,12 +6,12 @@ import helmet from "helmet";
 import morgan from "morgan";
 import { AppDataSource } from "./config/database";
 
-
 import authRoutes from "./routes/auth";
 import childRoutes from "./routes/child";
 import toyRoutes from "./routes/toy";
 import rutinaRoutes from "./routes/rutina";
-
+import messageRoutes from "./routes/message"; // ✅ Importar rutas de mensajes
+import storyRoutes from "./routes/story";
 
 dotenv.config();
 
@@ -38,16 +38,15 @@ app.use("/api/auth", authRoutes);
 app.use("/api/child", childRoutes);
 app.use("/api/toy", toyRoutes);
 app.use("/api/rutina", rutinaRoutes);
+app.use("/api/toy", messageRoutes); // ✅ Montar rutas de mensajes
+app.use("/api/story", storyRoutes);
 
 // Base de datos + servidor
 AppDataSource.initialize()
   .then(() => {
     console.log("PostgreSQL conectado correctamente");
-
     app.listen(PORT, () => {
-      console.log(
-        `Smart Toy Backend ejecutándose en http://localhost:${PORT}`
-      );
+      console.log(`Smart Toy Backend ejecutándose en http://localhost:${PORT}`);
     });
   })
   .catch((error) => {

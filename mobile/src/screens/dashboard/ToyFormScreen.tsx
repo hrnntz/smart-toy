@@ -26,6 +26,8 @@ interface ToyFormScreenProps {
         name: string;
         serialNumber: string;
         childId?: number;
+        personality?: string;
+        context?: string;
       };
     };
   };
@@ -38,6 +40,8 @@ export default function ToyFormScreen({ navigation, route }: ToyFormScreenProps)
   const [name, setName] = useState(toy?.name || '');
   const [serialNumber, setSerialNumber] = useState(toy?.serialNumber || '');
   const [childId, setChildId] = useState<number | undefined>(toy?.childId);
+  const [personality, setPersonality] = useState(toy?.personality || '');
+  const [context, setContext] = useState(toy?.context || '');
   const [children, setChildren] = useState<Child[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingChildren, setLoadingChildren] = useState(true);
@@ -72,27 +76,33 @@ export default function ToyFormScreen({ navigation, route }: ToyFormScreenProps)
     setLoading(true);
 
     try {
-      let response;
       const data = {
         name: name.trim(),
         serialNumber: serialNumber.trim(),
         childId: childId || undefined,
+        personality: personality.trim() || undefined,
+        context: context.trim() || undefined,
       };
 
+      console.log('📤 Enviando datos:', data);
+
+      let response;
       if (isEditing) {
         response = await toyService.update(toy.id, data);
       } else {
         response = await toyService.create(data);
       }
 
+      console.log('✅ Respuesta del servidor:', response.data);
+
       if (response.data.success) {
         Alert.alert('Éxito', isEditing ? 'Juguete actualizado' : 'Juguete creado');
-        navigation.goBack();
+        navigation.navigate('ToyList');
       } else {
         Alert.alert('Error', response.data.message || 'Error al guardar');
       }
     } catch (error: any) {
-      console.error('Error saving toy:', error);
+      console.error('❌ Error saving toy:', error);
       Alert.alert('Error', error.response?.data?.message || 'Error al conectar con el servidor');
     } finally {
       setLoading(false);
@@ -102,7 +112,7 @@ export default function ToyFormScreen({ navigation, route }: ToyFormScreenProps)
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={28} color="#2C3E50" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>
@@ -157,49 +167,33 @@ export default function ToyFormScreen({ navigation, route }: ToyFormScreenProps)
           </View>
         )}
 
+        <Text style={styles.label}>Personalidad (para IA)</Text>
+        <TextInput
+          style={[styles.input, styles.textArea]}
+          placeholder="Ej: Alegre, curioso, amable, divertido..."
+          value={personality}
+          onChangeText={setPersonality}
+          multiline
+          numberOfLines={2}
+        />
+
+        <Text style={styles.label}>Contexto / Historia (para IA)</Text>
+        <TextInput
+          style={[styles.input, styles.textArea]}
+          placeholder="Ej: Eres un panda que vive en el bosque y le encanta contar historias..."
+          value={context}
+          onChangeText={setContext}
+          multiline
+          numberOfLines={4}
+        />
+
         <TouchableOpacity
           style={[styles.saveButton, loading && styles.saveButtonDisabled]}
           onPress={handleSave}
           disabled={loading}
         >
-          {loading ? (
-            <ActivityIndicator color="white" />
-          ) : (
-            <Text style={styles.saveButtonText}>
-              {isEditing ? 'Actualizar' : 'Guardar'}
-            </Text>
-          )}
+          {loading ? <ActivityIndicator color="white" /> : <Text style={styles.saveButtonText}>Guardar</Text>}
         </TouchableOpacity>
-
-        {isEditing && (
-          <TouchableOpacity
-            style={styles.deleteButton}
-            onPress={() => {
-              Alert.alert(
-                'Eliminar',
-                '¿Estás seguro de eliminar este juguete?',
-                [
-                  { text: 'Cancelar', style: 'cancel' },
-                  {
-                    text: 'Eliminar',
-                    style: 'destructive',
-                    onPress: async () => {
-                      try {
-                        await toyService.delete(toy.id);
-                        Alert.alert('Éxito', 'Juguete eliminado');
-                        navigation.goBack();
-                      } catch (error) {
-                        Alert.alert('Error', 'No se pudo eliminar');
-                      }
-                    },
-                  },
-                ]
-              );
-            }}
-          >
-            <Text style={styles.deleteButtonText}>Eliminar juguete</Text>
-          </TouchableOpacity>
-        )}
       </View>
     </ScrollView>
   );
@@ -218,6 +212,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 24,
   },
+  backButton: {
+    padding: 4,
+  },
   headerTitle: {
     fontSize: 22,
     fontWeight: 'bold',
@@ -227,6 +224,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderRadius: 12,
     padding: 20,
+    marginBottom: 20,
     shadowColor: '#000',
     shadowOpacity: 0.04,
     shadowRadius: 4,
@@ -237,6 +235,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#2C3E50',
     marginBottom: 6,
+    marginTop: 12,
   },
   input: {
     borderWidth: 1,
@@ -244,8 +243,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
-    marginBottom: 16,
     backgroundColor: '#F9F9F9',
+  },
+  textArea: {
+    textAlignVertical: 'top',
   },
   childSelector: {
     flexDirection: 'row',
@@ -281,16 +282,6 @@ const styles = StyleSheet.create({
   saveButtonText: {
     color: 'white',
     fontSize: 18,
-    fontWeight: '600',
-  },
-  deleteButton: {
-    marginTop: 16,
-    alignItems: 'center',
-    padding: 12,
-  },
-  deleteButtonText: {
-    color: '#E74C3C',
-    fontSize: 16,
     fontWeight: '600',
   },
 });

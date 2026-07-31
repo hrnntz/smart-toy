@@ -2,11 +2,11 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 
-// Importar pantallas
 import HomeScreen from '../screens/dashboard/HomeScreen';
 import RutinasScreen from '../screens/dashboard/RutinasScreen';
 import HistoriasScreen from '../screens/dashboard/HistoriasScreen';
 import MusicaScreen from '../screens/dashboard/MusicaScreen';
+import ConversacionesScreen from '../screens/dashboard/ConversacionesScreen';
 import MasScreen from '../screens/dashboard/MasScreen';
 
 const Tab = createBottomTabNavigator();
@@ -27,6 +27,8 @@ export default function TabNavigator() {
             iconName = focused ? 'book' : 'book-outline';
           } else if (route.name === 'Música') {
             iconName = focused ? 'musical-notes' : 'musical-notes-outline';
+          } else if (route.name === 'Conversaciones') {
+            iconName = focused ? 'chatbubbles' : 'chatbubbles-outline';
           } else if (route.name === 'Más') {
             iconName = focused ? 'grid' : 'grid-outline';
           }
@@ -52,6 +54,7 @@ export default function TabNavigator() {
       <Tab.Screen name="Rutinas" component={RutinasScreen} />
       <Tab.Screen name="Historias" component={HistoriasScreen} />
       <Tab.Screen name="Música" component={MusicaScreen} />
+      <Tab.Screen name="Conversaciones" component={ConversacionesScreen} />
       <Tab.Screen name="Más" component={MasScreen} />
     </Tab.Navigator>
   );

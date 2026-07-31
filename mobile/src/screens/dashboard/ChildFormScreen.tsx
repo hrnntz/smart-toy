@@ -306,11 +306,9 @@ export default function ChildFormScreen({ navigation, route }: ChildFormScreenPr
                 textMonthFontSize: 0, // Ocultamos el header del calendario
                 textDayHeaderFontWeight: '600',
                 textDayHeaderFontSize: 14,
-                textDayHeaderColor: '#2C3E50',
                 textDayFontSize: 16,
                 textDayFontWeight: '400',
               }}
-              hideMonthHeader={true}
               hideArrows={true}
             />
 

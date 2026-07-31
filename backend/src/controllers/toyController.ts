@@ -1,289 +1,219 @@
+// backend/src/controllers/toyController.ts
 import { Request, Response } from "express";
 import { AppDataSource } from "../config/database";
 import { Toy } from "../models/Toy";
 import { Child } from "../models/Child";
 import { AuthRequest } from "../middleware/auth";
+import { getAIResponse } from "../services/aiService";
 
 const toyRepository = AppDataSource.getRepository(Toy);
 const childRepository = AppDataSource.getRepository(Child);
 
-export const toyStatus = (_req: Request, res: Response): void => {
-  res.json({
-    success: true,
-    message: "Toy API funcionando"
-  });
+// ✅ Generar avatar con Pollinations.ai (gratuito, sin clave)
+const generateAvatar = (toyName: string): string => {
+  const prompt = encodeURIComponent(`${toyName} toy cute cartoon character, colorful, friendly face, kawaii style`);
+  return `https://image.pollinations.ai/prompt/${prompt}?width=300&height=300&seed=${encodeURIComponent(toyName)}`;
 };
 
-// Obtener todos los juguetes del usuario autenticado
-export const getToys = async (
-  req: AuthRequest,
-  res: Response
-): Promise<void> => {
+export const toyStatus = (_req: Request, res: Response): void => {
+  res.json({ success: true, message: "Toy API funcionando" });
+};
+
+export const getToys = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user?.userId;
-
     if (!userId) {
-      res.status(401).json({
-        success: false,
-        message: "Usuario no autenticado"
-      });
+      res.status(401).json({ success: false, message: "Usuario no autenticado" });
       return;
     }
-
     const toys = await toyRepository.find({
-      where: { child: { user: { id: userId } } },
-      relations: ["child"]
+      where: { user: { id: userId } },
+      relations: ["child"],
     });
-
-    res.status(200).json({
-      success: true,
-      data: toys
-    });
+    res.status(200).json({ success: true, data: toys });
   } catch (error) {
     console.error("Error al obtener juguetes:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error interno del servidor"
-    });
+    res.status(500).json({ success: false, message: "Error interno del servidor" });
   }
 };
 
-// Crear un nuevo juguete
-export const createToy = async (
-  req: AuthRequest,
-  res: Response
-): Promise<void> => {
+export const createToy = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user?.userId;
-
     if (!userId) {
-      res.status(401).json({
-        success: false,
-        message: "Usuario no autenticado"
-      });
+      res.status(401).json({ success: false, message: "Usuario no autenticado" });
       return;
     }
 
-    const { name, serialNumber, childId } = req.body;
-
+    const { name, serialNumber, childId, personality, context } = req.body;
     if (!name || !serialNumber) {
-      res.status(400).json({
-        success: false,
-        message: "Nombre y número de serie son obligatorios"
-      });
+      res.status(400).json({ success: false, message: "Nombre y número de serie son obligatorios" });
       return;
     }
 
-    // Verificar que el niño existe y pertenece al usuario
     let child = null;
     if (childId) {
-      child = await childRepository.findOne({
-        where: { id: childId, user: { id: userId } }
-      });
-
+      child = await childRepository.findOne({ where: { id: childId, user: { id: userId } } });
       if (!child) {
-        res.status(404).json({
-          success: false,
-          message: "Niño no encontrado"
-        });
+        res.status(404).json({ success: false, message: "Niño no encontrado" });
         return;
       }
     }
 
-    // Verificar que el número de serie no esté duplicado
-    const existingToy = await toyRepository.findOne({
-      where: { serialNumber }
-    });
-
+    const existingToy = await toyRepository.findOne({ where: { serialNumber } });
     if (existingToy) {
-      res.status(409).json({
-        success: false,
-        message: "El número de serie ya está registrado"
-      });
+      res.status(409).json({ success: false, message: "El número de serie ya está registrado" });
       return;
     }
+
+    // ✅ Generar avatar con Pollinations
+    const avatarUrl = generateAvatar(name);
 
     const toy = toyRepository.create({
       name,
       serialNumber,
       child: child || null,
-      isConnected: false
+      user: { id: userId },
+      personality: personality || null,
+      context: context || null,
+      avatarUrl,
+      isConnected: false,
     });
 
     const savedToy = await toyRepository.save(toy);
-
-    res.status(201).json({
-      success: true,
-      message: "Juguete creado correctamente",
-      data: savedToy
-    });
+    res.status(201).json({ success: true, message: "Juguete creado correctamente", data: savedToy });
   } catch (error) {
     console.error("Error al crear juguete:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error interno del servidor"
-    });
+    res.status(500).json({ success: false, message: "Error interno del servidor" });
   }
 };
 
-// Actualizar un juguete
-export const updateToy = async (
-  req: AuthRequest,
-  res: Response
-): Promise<void> => {
+export const updateToy = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user?.userId;
     const toyId = Number(req.params.id);
-
     if (!userId) {
-      res.status(401).json({
-        success: false,
-        message: "Usuario no autenticado"
-      });
+      res.status(401).json({ success: false, message: "Usuario no autenticado" });
       return;
     }
 
-    const { name, serialNumber, childId, isConnected } = req.body;
-
+    const { name, serialNumber, childId, isConnected, personality, context } = req.body;
     const toy = await toyRepository.findOne({
-      where: { id: toyId, child: { user: { id: userId } } },
-      relations: ["child"]
+      where: { id: toyId, user: { id: userId } },
+      relations: ["child"],
     });
 
     if (!toy) {
-      res.status(404).json({
-        success: false,
-        message: "Juguete no encontrado"
-      });
+      res.status(404).json({ success: false, message: "Juguete no encontrado" });
       return;
     }
 
-    if (name) toy.name = name;
+    if (name) {
+      toy.name = name;
+      toy.avatarUrl = generateAvatar(name); // ✅ Actualizar avatar si cambia el nombre
+    }
     if (serialNumber) toy.serialNumber = serialNumber;
     if (isConnected !== undefined) toy.isConnected = isConnected;
+    if (personality !== undefined) toy.personality = personality;
+    if (context !== undefined) toy.context = context;
 
     if (childId !== undefined) {
       if (childId === null) {
         toy.child = null;
       } else {
-        const child = await childRepository.findOne({
-          where: { id: childId, user: { id: userId } }
-        });
-
+        const child = await childRepository.findOne({ where: { id: childId, user: { id: userId } } });
         if (!child) {
-          res.status(404).json({
-            success: false,
-            message: "Niño no encontrado"
-          });
+          res.status(404).json({ success: false, message: "Niño no encontrado" });
           return;
         }
-
         toy.child = child;
       }
     }
 
     const updatedToy = await toyRepository.save(toy);
-
-    res.status(200).json({
-      success: true,
-      message: "Juguete actualizado correctamente",
-      data: updatedToy
-    });
+    res.status(200).json({ success: true, message: "Juguete actualizado correctamente", data: updatedToy });
   } catch (error) {
     console.error("Error al actualizar juguete:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error interno del servidor"
-    });
+    res.status(500).json({ success: false, message: "Error interno del servidor" });
   }
 };
 
-// Eliminar un juguete
-export const deleteToy = async (
-  req: AuthRequest,
-  res: Response
-): Promise<void> => {
+export const deleteToy = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user?.userId;
     const toyId = Number(req.params.id);
-
     if (!userId) {
-      res.status(401).json({
-        success: false,
-        message: "Usuario no autenticado"
-      });
+      res.status(401).json({ success: false, message: "Usuario no autenticado" });
       return;
     }
 
-    const toy = await toyRepository.findOne({
-      where: { id: toyId, child: { user: { id: userId } } }
-    });
-
+    const toy = await toyRepository.findOne({ where: { id: toyId, user: { id: userId } } });
     if (!toy) {
-      res.status(404).json({
-        success: false,
-        message: "Juguete no encontrado"
-      });
+      res.status(404).json({ success: false, message: "Juguete no encontrado" });
       return;
     }
 
     await toyRepository.remove(toy);
-
-    res.status(200).json({
-      success: true,
-      message: "Juguete eliminado correctamente"
-    });
+    res.status(200).json({ success: true, message: "Juguete eliminado correctamente" });
   } catch (error) {
     console.error("Error al eliminar juguete:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error interno del servidor"
-    });
+    res.status(500).json({ success: false, message: "Error interno del servidor" });
   }
 };
 
-// Conectar/desconectar juguete
-export const toggleToyConnection = async (
-  req: AuthRequest,
-  res: Response
-): Promise<void> => {
+export const toggleToyConnection = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user?.userId;
     const toyId = Number(req.params.id);
-
     if (!userId) {
-      res.status(401).json({
-        success: false,
-        message: "Usuario no autenticado"
-      });
+      res.status(401).json({ success: false, message: "Usuario no autenticado" });
       return;
     }
 
-    const toy = await toyRepository.findOne({
-      where: { id: toyId, child: { user: { id: userId } } }
-    });
-
+    const toy = await toyRepository.findOne({ where: { id: toyId, user: { id: userId } } });
     if (!toy) {
-      res.status(404).json({
-        success: false,
-        message: "Juguete no encontrado"
-      });
+      res.status(404).json({ success: false, message: "Juguete no encontrado" });
       return;
     }
 
     toy.isConnected = !toy.isConnected;
     const updatedToy = await toyRepository.save(toy);
-
     res.status(200).json({
       success: true,
       message: toy.isConnected ? "Juguete conectado" : "Juguete desconectado",
-      data: updatedToy
+      data: updatedToy,
     });
   } catch (error) {
     console.error("Error al conectar/desconectar juguete:", error);
-    res.status(500).json({
-      success: false,
-      message: "Error interno del servidor"
-    });
+    res.status(500).json({ success: false, message: "Error interno del servidor" });
   }
 };
+
+export const chatWithToy = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.userId;
+    const toyId = Number(req.params.id);
+    if (!userId) {
+      res.status(401).json({ success: false, message: "Usuario no autenticado" });
+      return;
+    }
+
+    const { message } = req.body;
+    if (!message) {
+      res.status(400).json({ success: false, message: "Mensaje requerido" });
+      return;
+    }
+
+    const toy = await toyRepository.findOne({ where: { id: toyId, user: { id: userId } } });
+    if (!toy) {
+      res.status(404).json({ success: false, message: "Juguete no encontrado" });
+      return;
+    }
+
+    const reply = await getAIResponse(message, toy.name, toy.personality, toy.context);
+    res.status(200).json({ success: true, data: { reply } });
+  } catch (error) {
+    console.error("Error en chat:", error);
+    res.status(500).json({ success: false, message: "Error al procesar el mensaje" });
+  }
+};  

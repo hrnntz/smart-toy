@@ -1,3 +1,4 @@
+// mobile/src/hooks/useUser.ts
 import { useState, useEffect } from 'react';
 import { authService, User } from '../services/auth';
 
