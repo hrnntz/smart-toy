@@ -1,5 +1,10 @@
 {
   "android": {
     "package": "com.anonymous.smarttoymobile"
+  },
+  "extra": {
+    "eas": {
+      "projectId": "e2411870-1162-4282-869c-7c3611fbf477"
+    }
   }
 }

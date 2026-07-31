@@ -10,7 +10,7 @@ import authRoutes from "./routes/auth";
 import childRoutes from "./routes/child";
 import toyRoutes from "./routes/toy";
 import rutinaRoutes from "./routes/rutina";
-import messageRoutes from "./routes/message"; // ✅ Importar rutas de mensajes
+import messageRoutes from "./routes/message";
 import storyRoutes from "./routes/story";
 
 dotenv.config();
@@ -38,15 +38,17 @@ app.use("/api/auth", authRoutes);
 app.use("/api/child", childRoutes);
 app.use("/api/toy", toyRoutes);
 app.use("/api/rutina", rutinaRoutes);
-app.use("/api/toy", messageRoutes); // ✅ Montar rutas de mensajes
+app.use("/api/toy", messageRoutes);
 app.use("/api/story", storyRoutes);
 
 // Base de datos + servidor
 AppDataSource.initialize()
   .then(() => {
     console.log("PostgreSQL conectado correctamente");
-    app.listen(PORT, () => {
+    // ✅ CAMBIO AQUÍ: Escuchar en todas las interfaces (0.0.0.0)
+    app.listen(PORT, '0.0.0.0', () => {
       console.log(`Smart Toy Backend ejecutándose en http://localhost:${PORT}`);
+      console.log(`📡 Accesible desde la red local en tu IP: http://192.168.x.x:${PORT}`);
     });
   })
   .catch((error) => {

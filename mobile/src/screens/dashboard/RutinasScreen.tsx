@@ -12,6 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { rutinaService } from '../../services/api';
+import { sendNotification } from '../../services/notificationService';
 
 interface Rutina {
   id: number;
@@ -55,16 +56,13 @@ export default function RutinasScreen({ navigation }: any) {
     loadRutinas();
   }, []);
 
-  // ✅ Función de eliminación SIMPLIFICADA (igual que ChildListScreen)
   const deleteRutina = (id: number, nombre: string) => {
     console.log('🔴 Eliminar rutina:', nombre, 'ID:', id);
     
-    // Usar confirm nativo del navegador (funciona en web)
     if (!window.confirm(`¿Estás seguro que quieres eliminar "${nombre}"?`)) {
       return;
     }
 
-    // Ejecutar eliminación con fetch directo
     (async () => {
       try {
         console.log('🗑️ Eliminando ID:', id);
@@ -84,6 +82,11 @@ export default function RutinasScreen({ navigation }: any) {
         if (data.success) {
           Alert.alert('Éxito', 'Rutina eliminada correctamente');
           await loadRutinas();
+          // Notificar eliminación
+          await sendNotification(
+            'Rutina eliminada',
+            `Se ha eliminado la rutina "${nombre}"`
+          );
         } else {
           Alert.alert('Error', data.message || 'No se pudo eliminar');
         }

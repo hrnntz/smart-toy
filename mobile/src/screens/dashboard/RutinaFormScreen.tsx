@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { rutinaService } from '../../services/api';
 import CustomAlert from '../../components/common/CustomAlert';
+import { sendNotification } from '../../services/notificationService';
 
 interface RutinaFormScreenProps {
   navigation: any;
@@ -115,7 +116,15 @@ export default function RutinaFormScreen({ navigation, route }: RutinaFormScreen
       }
 
       if (response.data.success) {
+        const savedRutina = response.data.data;
         showAlert('Éxito', isEditing ? 'Rutina actualizada' : 'Rutina creada');
+        
+        // ✅ Enviar notificación
+        await sendNotification(
+          isEditing ? 'Rutina actualizada' : 'Rutina creada',
+          `"${savedRutina.nombre}" a las ${formatHoraDisplay(savedRutina.hora)}${savedRutina.repetir ? ' (diaria)' : ''}`
+        );
+
         setTimeout(() => navigation.goBack(), 1500);
       } else {
         showAlert('Error', response.data.message || 'Error al guardar');
@@ -150,7 +159,6 @@ export default function RutinaFormScreen({ navigation, route }: RutinaFormScreen
         />
 
         <Text style={styles.label}>Hora *</Text>
-
         {Platform.OS === 'web' ? (
           <View style={styles.timePickerWrapper}>
             <Ionicons name="time-outline" size={24} color="#4A90D9" style={styles.timeIcon} />
