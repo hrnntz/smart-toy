@@ -47,6 +47,7 @@ app.use("/api/config", configRoutes);
 AppDataSource.initialize()
   .then(() => {
     console.log("PostgreSQL conectado correctamente");
+    console.log(`🗄️  Base de datos: ${process.env.DB_NAME} @ ${process.env.DB_HOST}`);
     // ✅ CAMBIO AQUÍ: Escuchar en todas las interfaces (0.0.0.0)
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`Smart Toy Backend ejecutándose en http://localhost:${PORT}`);
