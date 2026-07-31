@@ -12,6 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { rutinaService } from '../../services/api';
+import { storage } from '../../services/storage';
 import { sendNotification } from '../../services/notificationService';
 
 interface Rutina {
@@ -58,43 +59,39 @@ export default function RutinasScreen({ navigation }: any) {
 
   const deleteRutina = (id: number, nombre: string) => {
     console.log('🔴 Eliminar rutina:', nombre, 'ID:', id);
-    
-    if (!window.confirm(`¿Estás seguro que quieres eliminar "${nombre}"?`)) {
-      return;
-    }
-
-    (async () => {
-      try {
-        console.log('🗑️ Eliminando ID:', id);
-        const token = localStorage.getItem('token');
-        
-        const response = await fetch(`http://192.168.1.2:3000/api/rutina/${id}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        const data = await response.json();
-        console.log('✅ Respuesta:', data);
-        
-        if (data.success) {
-          Alert.alert('Éxito', 'Rutina eliminada correctamente');
-          await loadRutinas();
-          // Notificar eliminación
-          await sendNotification(
-            'Rutina eliminada',
-            `Se ha eliminado la rutina "${nombre}"`
-          );
-        } else {
-          Alert.alert('Error', data.message || 'No se pudo eliminar');
-        }
-      } catch (error: any) {
-        console.error('❌ Error:', error);
-        Alert.alert('Error', 'No se pudo eliminar la rutina');
-      }
-    })();
+    Alert.alert(
+      'Eliminar rutina',
+      `¿Estás seguro que quieres eliminar "${nombre}"?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              console.log('🗑️ Eliminando ID:', id);
+              const response = await rutinaService.delete(id);
+              console.log('✅ Respuesta:', response.data);
+              
+              if (response.data.success) {
+                Alert.alert('Éxito', 'Rutina eliminada correctamente');
+                await loadRutinas();
+                // Notificar eliminación
+                await sendNotification(
+                  'Rutina eliminada',
+                  `Se ha eliminado la rutina "${nombre}"`
+                );
+              } else {
+                Alert.alert('Error', response.data.message || 'No se pudo eliminar');
+              }
+            } catch (error: any) {
+              console.error('❌ Error:', error);
+              Alert.alert('Error', 'No se pudo eliminar la rutina');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const formatHora = (hora: string) => {

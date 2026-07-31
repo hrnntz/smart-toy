@@ -8,6 +8,7 @@ import { Toy } from "../models/Toy";
 import { Rutina } from "../models/Rutina";
 import { Message } from "../models/Message";
 import { Story } from "../models/Story";
+import { DeviceConfig } from "../models/DeviceConfig";
 
 
 dotenv.config();
@@ -20,7 +21,7 @@ export const AppDataSource = new DataSource({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME || "smart_toy",
 
- entities: [User, Child, Toy, Rutina, Message, Story],
+ entities: [User, Child, Toy, Rutina, Message, Story, DeviceConfig],
 
 
   synchronize: true,

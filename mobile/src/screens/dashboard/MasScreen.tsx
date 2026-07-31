@@ -19,14 +19,22 @@ export default function MasScreen({ navigation }: any) {
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <Text style={styles.title}>Configuración</Text>
 
-      {/* Dispositivo Panda - navega a la lista de juguetes */}
+      {/* Dispositivo Panda - navega a la configuración y a la lista de juguetes */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Dispositivo Panda</Text>
         <TouchableOpacity
           style={styles.menuItem}
+          onPress={() => navigation.navigate('Configuracion')}
+        >
+          <Ionicons name="settings-outline" size={22} color="#4A90D9" />
+          <Text style={styles.menuText}>Configuración del dispositivo</Text>
+          <Ionicons name="chevron-forward" size={20} color="#CCC" style={styles.menuArrow} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.menuItem}
           onPress={() => navigation.navigate('ToyList')}
         >
-          <Ionicons name="game-controller" size={22} color="#4A90D9" />
+          <Ionicons name="game-controller" size={22} color="#E67E22" />
           <Text style={styles.menuText}>Gestionar dispositivos</Text>
           <Ionicons name="chevron-forward" size={20} color="#CCC" style={styles.menuArrow} />
         </TouchableOpacity>

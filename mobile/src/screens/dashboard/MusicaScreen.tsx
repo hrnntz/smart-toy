@@ -1,67 +1,129 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { storage } from '../../services/storage';
+
+type TabType = 'Musica' | 'Sonidos' | 'Favoritos';
+
+interface Track {
+  id: number;
+  title: string;
+  duration: string;
+  icon: string;
+  color: string;
+  type: 'Musica' | 'Sonidos';
+}
+
+const TRACKS: Track[] = [
+  { id: 1, title: 'Música relajante', duration: '30 min', icon: 'musical-note', color: '#27AE60', type: 'Musica' },
+  { id: 2, title: 'Canciones infantiles', duration: '45 min', icon: 'musical-notes', color: '#E67E22', type: 'Musica' },
+  { id: 3, title: 'Sonidos de naturaleza', duration: '60 min', icon: 'leaf', color: '#3498DB', type: 'Sonidos' },
+  { id: 4, title: 'Ruido blanco', duration: '30 min', icon: 'moon', color: '#2C3E50', type: 'Sonidos' },
+];
+
+const FAVORITES_KEY = 'musica_favoritos';
 
 export default function MusicaScreen() {
+  const [activeTab, setActiveTab] = useState<TabType>('Musica');
+  const [playingId, setPlayingId] = useState<number | null>(null);
+  const [favorites, setFavorites] = useState<number[]>([]);
+
+  useEffect(() => {
+    loadFavorites();
+  }, []);
+
+  const loadFavorites = async () => {
+    try {
+      const saved = await storage.getItem(FAVORITES_KEY);
+      if (saved) setFavorites(JSON.parse(saved));
+    } catch (error) {
+      console.error('Error cargando favoritos:', error);
+    }
+  };
+
+  const saveFavorites = async (newFavs: number[]) => {
+    try {
+      await storage.setItem(FAVORITES_KEY, JSON.stringify(newFavs));
+    } catch (error) {
+      console.error('Error guardando favoritos:', error);
+    }
+  };
+
+  const togglePlay = (track: Track) => {
+    setPlayingId(playingId === track.id ? null : track.id);
+  };
+
+  const toggleFavorite = (id: number) => {
+    const newFavs = favorites.includes(id)
+      ? favorites.filter((f) => f !== id)
+      : [...favorites, id];
+    setFavorites(newFavs);
+    saveFavorites(newFavs);
+  };
+
+  const tracksToShow = activeTab === 'Favoritos'
+    ? TRACKS.filter((t) => favorites.includes(t.id))
+    : activeTab === 'Musica'
+      ? TRACKS.filter((t) => t.type === 'Musica')
+      : TRACKS.filter((t) => t.type === 'Sonidos');
+
   return (
     <ScrollView style={styles.container}>
       <Text style={styles.title}>Música y sonidos</Text>
 
       <View style={styles.tabRow}>
-        <TouchableOpacity style={[styles.tab, styles.tabActive]}>
-          <Text style={styles.tabActiveText}>Música</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.tab}>
-          <Text style={styles.tabText}>Sonidos</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.tab}>
-          <Text style={styles.tabText}>Favoritos</Text>
-        </TouchableOpacity>
+        {(['Musica', 'Sonidos', 'Favoritos'] as TabType[]).map((tab) => (
+          <TouchableOpacity
+            key={tab}
+            style={[styles.tab, activeTab === tab && styles.tabActive]}
+            onPress={() => setActiveTab(tab)}
+          >
+            <Text style={[styles.tabText, activeTab === tab && styles.tabActiveText]}>{tab}</Text>
+          </TouchableOpacity>
+        ))}
       </View>
 
-      <View style={styles.musicCard}>
-        <Ionicons name="musical-note" size={32} color="#27AE60" />
-        <View style={styles.musicInfo}>
-          <Text style={styles.musicTitle}>Música relajante</Text>
-          <Text style={styles.musicDuration}>30 min</Text>
+      {tracksToShow.length === 0 ? (
+        <View style={styles.empty}>
+          <Ionicons name="musical-note-outline" size={64} color="#ccc" />
+          <Text style={styles.emptyText}>
+            {activeTab === 'Favoritos' ? 'No tienes favoritos todavía. Toca el corazón en una pista.' : 'No hay pistas en esta categoría.'}
+          </Text>
         </View>
-        <TouchableOpacity>
-          <Ionicons name="play-circle" size={32} color="#4A90D9" />
-        </TouchableOpacity>
-      </View>
+      ) : (
+        tracksToShow.map((track) => (
+          <View key={track.id} style={styles.musicCard}>
+            <Ionicons name={track.icon as any} size={32} color={track.color} />
+            <View style={styles.musicInfo}>
+              <Text style={styles.musicTitle}>{track.title}</Text>
+              <Text style={styles.musicDuration}>{track.duration}</Text>
+            </View>
+            <TouchableOpacity style={styles.favButton} onPress={() => toggleFavorite(track.id)}>
+              <Ionicons
+                name={favorites.includes(track.id) ? 'heart' : 'heart-outline'}
+                size={24}
+                color={favorites.includes(track.id) ? '#E74C3C' : '#CCC'}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => togglePlay(track)}>
+              <Ionicons
+                name={playingId === track.id ? 'pause-circle' : 'play-circle'}
+                size={36}
+                color={playingId === track.id ? '#27AE60' : '#4A90D9'}
+              />
+            </TouchableOpacity>
+          </View>
+        ))
+      )}
 
-      <View style={styles.musicCard}>
-        <Ionicons name="musical-notes" size={32} color="#E67E22" />
-        <View style={styles.musicInfo}>
-          <Text style={styles.musicTitle}>Canciones infantiles</Text>
-          <Text style={styles.musicDuration}>45 min</Text>
+      {playingId !== null && (
+        <View style={styles.nowPlaying}>
+          <Ionicons name="volume-high" size={18} color="#27AE60" />
+          <Text style={styles.nowPlayingText}>
+            Reproduciendo: {TRACKS.find((t) => t.id === playingId)?.title || ''}
+          </Text>
         </View>
-        <TouchableOpacity>
-          <Ionicons name="play-circle" size={32} color="#4A90D9" />
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.musicCard}>
-        <Ionicons name="leaf" size={32} color="#3498DB" />
-        <View style={styles.musicInfo}>
-          <Text style={styles.musicTitle}>Sonidos de naturaleza</Text>
-          <Text style={styles.musicDuration}>60 min</Text>
-        </View>
-        <TouchableOpacity>
-          <Ionicons name="play-circle" size={32} color="#4A90D9" />
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.musicCard}>
-        <Ionicons name="moon" size={32} color="#2C3E50" />
-        <View style={styles.musicInfo}>
-          <Text style={styles.musicTitle}>Ruido blanco</Text>
-          <Text style={styles.musicDuration}>30 min</Text>
-        </View>
-        <TouchableOpacity>
-          <Ionicons name="play-circle" size={32} color="#4A90D9" />
-        </TouchableOpacity>
-      </View>
+      )}
     </ScrollView>
   );
 }
@@ -88,12 +150,13 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 20,
     marginRight: 8,
+    backgroundColor: '#EBF5FB',
   },
   tabActive: {
     backgroundColor: '#4A90D9',
   },
   tabText: {
-    color: '#7F8C8D',
+    color: '#2C3E50',
     fontSize: 14,
   },
   tabActiveText: {
@@ -125,5 +188,36 @@ const styles = StyleSheet.create({
   musicDuration: {
     fontSize: 13,
     color: '#7F8C8D',
+  },
+  favButton: {
+    padding: 8,
+    marginRight: 4,
+  },
+  empty: {
+    alignItems: 'center',
+    marginTop: 60,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#999',
+    marginTop: 16,
+    textAlign: 'center',
+    paddingHorizontal: 20,
+  },
+  nowPlaying: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E8F8F5',
+    padding: 12,
+    borderRadius: 12,
+    marginTop: 8,
+    marginBottom: 20,
+    gap: 8,
+  },
+  nowPlayingText: {
+    fontSize: 14,
+    color: '#27AE60',
+    fontWeight: '500',
+    flex: 1,
   },
 });

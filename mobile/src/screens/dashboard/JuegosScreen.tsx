@@ -1,51 +1,91 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { storage } from '../../services/storage';
 
 type Categoria = 'Todos' | 'Lógica' | 'Memoria' | 'Matemáticas' | 'Lectura';
 
+interface Juego {
+  id: number;
+  name: string;
+  desc: string;
+  icon: string;
+  categoria: Categoria;
+}
+
+const JUEGOS: Juego[] = [
+  { id: 1, name: 'Adivinanzas', desc: 'Ejercita tu mente', icon: 'bulb-outline', categoria: 'Lógica' },
+  { id: 2, name: 'Colores', desc: 'Aprende jugando', icon: 'color-palette-outline', categoria: 'Lógica' },
+  { id: 3, name: 'Sumas simples', desc: 'Matemáticas básicas', icon: 'calculator-outline', categoria: 'Matemáticas' },
+  { id: 4, name: 'Memoria', desc: 'Mejora tu memoria', icon: 'brain-outline', categoria: 'Memoria' },
+  { id: 5, name: 'Ordenar palabras', desc: 'Forma la palabra correcta', icon: 'text-outline', categoria: 'Lectura' },
+  { id: 6, name: 'Secuencias', desc: 'Encuentra el patrón', icon: 'git-compare-outline', categoria: 'Lógica' },
+  { id: 7, name: 'Pares iguales', desc: 'Encuentra las parejas', icon: 'grid-outline', categoria: 'Memoria' },
+  { id: 8, name: 'Restas', desc: 'Aprende a restar', icon: 'remove-circle-outline', categoria: 'Matemáticas' },
+  { id: 9, name: 'Completar palabras', desc: 'Encuentra la letra', icon: 'create-outline', categoria: 'Lectura' },
+];
+
+const PROGRESS_KEY = 'juegos_progreso';
+
 export default function JuegosScreen({ navigation }: any) {
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<Categoria>('Todos');
+  const [progreso, setProgreso] = useState<Record<number, boolean>>({});
 
   const categorias: Categoria[] = ['Todos', 'Lógica', 'Memoria', 'Matemáticas', 'Lectura'];
 
-  const juegos = {
-    Todos: [
-      { id: 1, name: 'Adivinanzas', desc: 'Ejercita tu mente', icon: 'bulb-outline' },
-      { id: 2, name: 'Colores', desc: 'Aprende jugando', icon: 'color-palette-outline' },
-      { id: 3, name: 'Sumas simples', desc: 'Matemáticas básicas', icon: 'calculator-outline' },
-      { id: 4, name: 'Memoria', desc: 'Mejora tu memoria', icon: 'brain-outline' },
-      { id: 5, name: 'Ordenar palabras', desc: 'Forma la palabra correcta', icon: 'text-outline' },
-    ],
-    Lógica: [
-      { id: 6, name: 'Secuencias', desc: 'Encuentra el patrón', icon: 'git-compare-outline' },
-      { id: 7, name: 'Adivinanzas', desc: 'Ejercita tu mente', icon: 'bulb-outline' },
-    ],
-    Memoria: [
-      { id: 8, name: 'Memoria', desc: 'Mejora tu memoria', icon: 'brain-outline' },
-      { id: 9, name: 'Pares iguales', desc: 'Encuentra las parejas', icon: 'grid-outline' },
-    ],
-    Matemáticas: [
-      { id: 10, name: 'Sumas simples', desc: 'Matemáticas básicas', icon: 'calculator-outline' },
-      { id: 11, name: 'Restas', desc: 'Aprende a restar', icon: 'remove-circle-outline' },
-    ],
-    Lectura: [
-      { id: 12, name: 'Ordenar palabras', desc: 'Forma la palabra correcta', icon: 'text-outline' },
-      { id: 13, name: 'Completar palabras', desc: 'Encuentra la letra', icon: 'create-outline' },
-    ],
+  useEffect(() => {
+    loadProgress();
+  }, []);
+
+  const loadProgress = async () => {
+    try {
+      const saved = await storage.getItem(PROGRESS_KEY);
+      if (saved) setProgreso(JSON.parse(saved));
+    } catch (error) {
+      console.error('Error cargando progreso:', error);
+    }
   };
 
-  const juegosFiltrados = juegos[categoriaSeleccionada] || juegos.Todos;
+  const saveProgress = async (newProgress: Record<number, boolean>) => {
+    try {
+      await storage.setItem(PROGRESS_KEY, JSON.stringify(newProgress));
+    } catch (error) {
+      console.error('Error guardando progreso:', error);
+    }
+  };
+
+  const handlePlay = (juego: Juego) => {
+    Alert.alert(
+      juego.name,
+      `"${juego.name}" estará disponible pronto. ¡Sigue practicando!`,
+      [
+        { text: 'Cerrar', style: 'cancel' },
+        {
+          text: 'Marcar como jugado',
+          onPress: () => {
+            const newProgress = { ...progreso, [juego.id]: true };
+            setProgreso(newProgress);
+            saveProgress(newProgress);
+            Alert.alert('¡Bien!', `Progreso guardado en "${juego.name}"`);
+          },
+        },
+      ]
+    );
+  };
+
+  const juegosFiltrados = categoriaSeleccionada === 'Todos'
+    ? JUEGOS
+    : JUEGOS.filter((j) => j.categoria === categoriaSeleccionada);
 
   return (
     <View style={styles.container}>
-      {/* Header con botón Volver */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={28} color="#2C3E50" />
@@ -54,7 +94,6 @@ export default function JuegosScreen({ navigation }: any) {
         <View style={{ width: 36 }} />
       </View>
 
-      {/* Categorías */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -81,10 +120,9 @@ export default function JuegosScreen({ navigation }: any) {
         ))}
       </ScrollView>
 
-      {/* Lista de juegos */}
       <ScrollView showsVerticalScrollIndicator={false}>
         {juegosFiltrados.map((juego) => (
-          <TouchableOpacity key={juego.id} style={styles.gameCard}>
+          <TouchableOpacity key={juego.id} style={styles.gameCard} onPress={() => handlePlay(juego)}>
             <View style={styles.gameIcon}>
               <Ionicons name={juego.icon as any} size={28} color="#4A90D9" />
             </View>
@@ -92,7 +130,11 @@ export default function JuegosScreen({ navigation }: any) {
               <Text style={styles.gameName}>{juego.name}</Text>
               <Text style={styles.gameDesc}>{juego.desc}</Text>
             </View>
-            <Ionicons name="play-circle" size={32} color="#4A90D9" />
+            {progreso[juego.id] ? (
+              <Ionicons name="checkmark-circle" size={28} color="#27AE60" />
+            ) : (
+              <Ionicons name="play-circle" size={32} color="#4A90D9" />
+            )}
           </TouchableOpacity>
         ))}
         <View style={{ height: 20 }} />

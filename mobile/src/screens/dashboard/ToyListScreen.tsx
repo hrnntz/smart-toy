@@ -64,20 +64,26 @@ export default function ToyListScreen({ navigation }: any) {
   };
 
   const deleteToy = (id: number, name: string) => {
-    if (!window.confirm(`¿Eliminar "${name}"?`)) return;
-    (async () => {
-      try {
-        const token = localStorage.getItem('token');
-        await fetch(`http://192.168.1.2:3000/api/toy/${id}`, {
-          method: 'DELETE',
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        Alert.alert('Éxito', 'Juguete eliminado');
-        loadToys();
-      } catch (error) {
-        Alert.alert('Error', 'No se pudo eliminar');
-      }
-    })();
+    Alert.alert(
+      'Eliminar juguete',
+      `¿Eliminar "${name}"?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await toyService.delete(id);
+              Alert.alert('Éxito', 'Juguete eliminado');
+              loadToys();
+            } catch (error) {
+              Alert.alert('Error', 'No se pudo eliminar');
+            }
+          },
+        },
+      ]
+    );
   };
 
   if (loading) {

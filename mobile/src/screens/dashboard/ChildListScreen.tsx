@@ -12,6 +12,7 @@
     import { Ionicons } from '@expo/vector-icons';
     import { useFocusEffect } from '@react-navigation/native';
     import { childService } from '../../services/api';
+    import { storage } from '../../services/storage';
 
     interface Child {
     id: number;
@@ -55,43 +56,37 @@
         loadChildren();
     }, []);
 
-    // ✅ Función de eliminación SIMPLIFICADA (usa window.confirm)
+    // ✅ Función de eliminación compatible con móvil y web
     const deleteChild = (id: number, name: string) => {
         console.log('🔴 Eliminar:', name, 'ID:', id);
-        
-        // Usar confirm nativo del navegador (funciona en web)
-        if (!window.confirm(`¿Estás seguro que quieres eliminar a ${name}?`)) {
-        return;
-        }
-
-        // Ejecutar eliminación
-        (async () => {
-        try {
-            console.log('🗑️ Eliminando ID:', id);
-            const token = localStorage.getItem('token');
-            
-            const response = await fetch(`http://192.168.1.2:3000/api/child/${id}`, {
-            method: 'DELETE',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            }
-            });
-            
-            const data = await response.json();
-            console.log('✅ Respuesta:', data);
-            
-            if (data.success) {
-            Alert.alert('Éxito', 'Niño eliminado correctamente');
-            await loadChildren();
-            } else {
-            Alert.alert('Error', data.message || 'No se pudo eliminar');
-            }
-        } catch (error: any) {
-            console.error('❌ Error:', error);
-            Alert.alert('Error', 'No se pudo eliminar el niño');
-        }
-        })();
+        Alert.alert(
+        'Eliminar niño',
+        `¿Estás seguro que quieres eliminar a ${name}?`,
+        [
+            { text: 'Cancelar', style: 'cancel' },
+            {
+            text: 'Eliminar',
+            style: 'destructive',
+            onPress: async () => {
+                try {
+                console.log('🗑️ Eliminando ID:', id);
+                const response = await childService.delete(id);
+                console.log('✅ Respuesta:', response.data);
+                
+                if (response.data.success) {
+                    Alert.alert('Éxito', 'Niño eliminado correctamente');
+                    await loadChildren();
+                } else {
+                    Alert.alert('Error', response.data.message || 'No se pudo eliminar');
+                }
+                } catch (error: any) {
+                console.error('❌ Error:', error);
+                Alert.alert('Error', 'No se pudo eliminar el niño');
+                }
+            },
+            },
+        ]
+        );
     };
 
     if (loading) {

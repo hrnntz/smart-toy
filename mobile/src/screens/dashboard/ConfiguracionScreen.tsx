@@ -5,41 +5,83 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  TextInput,
+  Switch,
+  Alert,
   ActivityIndicator,
-  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { toyService } from '../../services/api';
+import { configService } from '../../services/api';
 
-interface Toy {
+interface DeviceConfig {
   id: number;
-  name: string;
-  serialNumber: string;
-  isConnected: boolean;
-  avatarUrl?: string;
+  deviceName: string;
+  volume: number;
+  eyeLights: boolean;
+  vibration: boolean;
+  nightMode: boolean;
+  wifi: string | null;
 }
 
-export default function ConversacionesScreen({ navigation }: any) {
-  const [toys, setToys] = useState<Toy[]>([]);
+export default function ConfiguracionScreen({ navigation }: any) {
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [config, setConfig] = useState<DeviceConfig>({
+    id: 0,
+    deviceName: 'Panda',
+    volume: 50,
+    eyeLights: true,
+    vibration: true,
+    nightMode: false,
+    wifi: null,
+  });
 
   useEffect(() => {
-    loadToys();
+    loadConfig();
   }, []);
 
-  const loadToys = async () => {
+  const loadConfig = async () => {
     try {
-      const res = await toyService.getAll();
-      if (res.data.success) setToys(res.data.data || []);
+      const res = await configService.getConfig();
+      if (res.data.success && res.data.data) {
+        setConfig(res.data.data);
+      }
     } catch (error) {
-      console.error(error);
+      console.error('Error cargando configuración:', error);
+      Alert.alert('Error', 'No se pudo cargar la configuración');
     } finally {
       setLoading(false);
     }
   };
 
-  const openChat = (toy: Toy) => {
-    navigation.navigate('Chat', { toyId: toy.id, toyName: toy.name, avatarUrl: toy.avatarUrl });
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const res = await configService.updateConfig({
+        deviceName: config.deviceName,
+        volume: config.volume,
+        eyeLights: config.eyeLights,
+        vibration: config.vibration,
+        nightMode: config.nightMode,
+        wifi: config.wifi || undefined,
+      });
+      if (res.data.success) {
+        Alert.alert('Éxito', 'Configuración guardada');
+      } else {
+        Alert.alert('Error', res.data.message || 'No se pudo guardar');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'No se pudo guardar la configuración');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const adjustVolume = (delta: number) => {
+    setConfig((c) => ({
+      ...c,
+      volume: Math.min(100, Math.max(0, c.volume + delta)),
+    }));
   };
 
   if (loading) {
@@ -51,68 +93,219 @@ export default function ConversacionesScreen({ navigation }: any) {
   }
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
-        <Text style={styles.title}>Conversaciones</Text>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+          <Ionicons name="arrow-back" size={28} color="#2C3E50" />
+        </TouchableOpacity>
+        <Text style={styles.title}>Configuración del dispositivo</Text>
+        <View style={{ width: 36 }} />
       </View>
-      <ScrollView>
-        {toys.length === 0 ? (
-          <View style={styles.empty}>
-            <Ionicons name="chatbubbles-outline" size={64} color="#ccc" />
-            <Text style={styles.emptyText}>No hay juguetes para chatear</Text>
-            <Text style={styles.emptySub}>Crea un juguete desde "Mis Juguetes"</Text>
+
+      {/* Nombre del dispositivo */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Dispositivo</Text>
+        <Text style={styles.label}>Nombre del Panda</Text>
+        <TextInput
+          style={styles.input}
+          value={config.deviceName}
+          onChangeText={(text) => setConfig({ ...config, deviceName: text })}
+          placeholder="Nombre del dispositivo"
+        />
+      </View>
+
+      {/* Volumen */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Volumen</Text>
+        <View style={styles.volumeRow}>
+          <TouchableOpacity onPress={() => adjustVolume(-10)} style={styles.volumeButton}>
+            <Ionicons name="remove" size={24} color="#4A90D9" />
+          </TouchableOpacity>
+          <Ionicons name="volume-medium" size={24} color="#4A90D9" />
+          <Text style={styles.volumeText}>{config.volume}%</Text>
+          <TouchableOpacity onPress={() => adjustVolume(10)} style={styles.volumeButton}>
+            <Ionicons name="add" size={24} color="#4A90D9" />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Preferencias */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Preferencias</Text>
+
+        <View style={styles.switchRow}>
+          <View style={styles.switchInfo}>
+            <Ionicons name="eye" size={22} color="#4A90D9" />
+            <Text style={styles.switchText}>Luces de los ojos</Text>
           </View>
+          <Switch
+            value={config.eyeLights}
+            onValueChange={(value) => setConfig({ ...config, eyeLights: value })}
+            trackColor={{ false: '#CCC', true: '#4A90D9' }}
+          />
+        </View>
+
+        <View style={styles.switchRow}>
+          <View style={styles.switchInfo}>
+            <Ionicons name="phone-portrait" size={22} color="#E67E22" />
+            <Text style={styles.switchText}>Vibración</Text>
+          </View>
+          <Switch
+            value={config.vibration}
+            onValueChange={(value) => setConfig({ ...config, vibration: value })}
+            trackColor={{ false: '#CCC', true: '#4A90D9' }}
+          />
+        </View>
+
+        <View style={styles.switchRow}>
+          <View style={styles.switchInfo}>
+            <Ionicons name="moon" size={22} color="#2C3E50" />
+            <Text style={styles.switchText}>Modo noche</Text>
+          </View>
+          <Switch
+            value={config.nightMode}
+            onValueChange={(value) => setConfig({ ...config, nightMode: value })}
+            trackColor={{ false: '#CCC', true: '#4A90D9' }}
+          />
+        </View>
+      </View>
+
+      {/* WiFi */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Red WiFi</Text>
+        <TextInput
+          style={styles.input}
+          value={config.wifi || ''}
+          onChangeText={(text) => setConfig({ ...config, wifi: text })}
+          placeholder="Nombre de la red WiFi"
+        />
+      </View>
+
+      <TouchableOpacity
+        style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+        onPress={handleSave}
+        disabled={saving}
+      >
+        {saving ? (
+          <ActivityIndicator color="white" />
         ) : (
-          toys.map((toy) => (
-            <TouchableOpacity key={toy.id} style={styles.card} onPress={() => openChat(toy)}>
-              {toy.avatarUrl ? (
-                <Image source={{ uri: toy.avatarUrl }} style={styles.avatar} />
-              ) : (
-                <View style={styles.cardIcon}>
-                  <Ionicons name="game-controller" size={28} color="#E67E22" />
-                </View>
-              )}
-              <View style={styles.cardInfo}>
-                <Text style={styles.cardName}>{toy.name}</Text>
-                <Text style={styles.cardSerial}>🔑 {toy.serialNumber}</Text>
-                <Text style={styles.cardStatus}>
-                  {toy.isConnected ? '🟢 Conectado' : '🔴 Desconectado'}
-                </Text>
-              </View>
-              <Ionicons name="chatbubble" size={24} color="#4A90D9" />
-            </TouchableOpacity>
-          ))
+          <Text style={styles.saveButtonText}>Guardar configuración</Text>
         )}
-        <View style={{ height: 20 }} />
-      </ScrollView>
-    </View>
+      </TouchableOpacity>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F5F7FA', paddingHorizontal: 16, paddingTop: 40 },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { marginBottom: 20 },
-  title: { fontSize: 28, fontWeight: 'bold', color: '#2C3E50' },
-  empty: { alignItems: 'center', marginTop: 60 },
-  emptyText: { fontSize: 16, color: '#999', marginTop: 16 },
-  emptySub: { fontSize: 14, color: '#bbb', marginTop: 4 },
-  card: {
-    flexDirection: 'row',
+  container: {
+    flex: 1,
+    backgroundColor: '#F5F7FA',
+    paddingHorizontal: 16,
+    paddingTop: 40,
+  },
+  center: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#F5F7FA',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  backButton: {
+    padding: 4,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#2C3E50',
+    flex: 1,
+    textAlign: 'center',
+  },
+  section: {
     backgroundColor: 'white',
-    padding: 16,
     borderRadius: 12,
-    marginBottom: 12,
+    padding: 16,
+    marginBottom: 16,
     shadowColor: '#000',
     shadowOpacity: 0.04,
     shadowRadius: 4,
     elevation: 1,
   },
-  avatar: { width: 48, height: 48, borderRadius: 24, marginRight: 12 },
-  cardIcon: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#FEF5E7', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-  cardInfo: { flex: 1 },
-  cardName: { fontSize: 16, fontWeight: '600', color: '#2C3E50' },
-  cardSerial: { fontSize: 13, color: '#7F8C8D', marginTop: 2 },
-  cardStatus: { fontSize: 13, color: '#27AE60', marginTop: 2 },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#2C3E50',
+    marginBottom: 12,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#7F8C8D',
+    marginBottom: 6,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    backgroundColor: '#F9F9F9',
+  },
+  volumeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 16,
+  },
+  volumeButton: {
+    backgroundColor: '#EBF5FB',
+    borderRadius: 20,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  volumeText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2C3E50',
+    minWidth: 50,
+    textAlign: 'center',
+  },
+  switchRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  switchInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  switchText: {
+    fontSize: 15,
+    color: '#34495E',
+  },
+  saveButton: {
+    backgroundColor: '#4A90D9',
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  saveButtonDisabled: {
+    opacity: 0.6,
+  },
+  saveButtonText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: '600',
+  },
 });

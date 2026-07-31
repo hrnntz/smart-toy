@@ -24,6 +24,21 @@ export class Child {
   @Column({ type: "varchar", length: 20, nullable: true })
   gender!: string | null;
 
+  @Column({ type: "int", nullable: true })
+  age!: number | null;
+
+  @Column({ type: "varchar", length: 50, nullable: true })
+  language!: string | null;
+
+  @Column({ type: "varchar", length: 20, nullable: true })
+  bedtime!: string | null;
+
+  @Column({ type: "varchar", length: 20, nullable: true })
+  energyLevel!: string | null;
+
+  @Column({ type: "varchar", length: 100, nullable: true })
+  personality!: string | null;
+
   @CreateDateColumn()
   createdAt!: Date;
 

@@ -1,9 +1,6 @@
 import axios from 'axios';
 import { storage } from './storage';
-
-// Cambia esta IP por la de tu computadora
-// Ejecuta 'ipconfig' para encontrar tu IP local
-const API_URL = 'http://localhost:3000/api';;
+import { API_URL } from '../config/env';
 
 const api = axios.create({
   baseURL: API_URL,

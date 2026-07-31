@@ -12,6 +12,120 @@ export const childStatus = (_req: Request, res: Response): void => {
   });
 };
 
+// Obtener el perfil del niño (el primero del usuario, o el indicado por query param)
+export const getProfile = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      res.status(401).json({
+        success: false,
+        message: "Usuario no autenticado"
+      });
+      return;
+    }
+
+    const childId = req.query.childId ? Number(req.query.childId) : undefined;
+
+    const where: any = { user: { id: userId } };
+    if (childId) where.id = childId;
+
+    const child = await childRepository.findOne({
+      where,
+      relations: ["toy"]
+    });
+
+    if (!child) {
+      res.status(404).json({
+        success: false,
+        message: "No se encontró perfil de niño"
+      });
+      return;
+    }
+
+    res.status(200).json({
+      success: true,
+      data: child
+    });
+  } catch (error) {
+    console.error("Error al obtener perfil del niño:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error interno del servidor"
+    });
+  }
+};
+
+// Actualizar el perfil del niño (campos extendidos)
+export const updateProfile = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      res.status(401).json({
+        success: false,
+        message: "Usuario no autenticado"
+      });
+      return;
+    }
+
+    const childId = req.query.childId ? Number(req.query.childId) : undefined;
+
+    const where: any = { user: { id: userId } };
+    if (childId) where.id = childId;
+
+    const child = await childRepository.findOne({
+      where
+    });
+
+    if (!child) {
+      res.status(404).json({
+        success: false,
+        message: "No se encontró perfil de niño"
+      });
+      return;
+    }
+
+    const {
+      name,
+      birthDate,
+      age,
+      language,
+      bedtime,
+      energyLevel,
+      personality
+    } = req.body;
+
+    if (name !== undefined) child.name = name;
+    if (birthDate !== undefined) child.birthDate = birthDate;
+    if (age !== undefined) child.age = age;
+    if (language !== undefined) child.language = language;
+    if (bedtime !== undefined) child.bedtime = bedtime;
+    if (energyLevel !== undefined) child.energyLevel = energyLevel;
+    if (personality !== undefined) child.personality = personality;
+
+    const updatedChild = await childRepository.save(child);
+
+    res.status(200).json({
+      success: true,
+      message: "Perfil actualizado correctamente",
+      data: updatedChild
+    });
+  } catch (error) {
+    console.error("Error al actualizar perfil del niño:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error interno del servidor"
+    });
+  }
+};
+
 // Obtener todos los niños del usuario autenticado
 export const getChildren = async (
   req: AuthRequest,

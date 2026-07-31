@@ -32,6 +32,7 @@ export default function RootNavigator() {
   return (
     <NavigationContainer>
       <Stack.Navigator
+        id="Root"
         initialRouteName="AuthLoading"
         screenOptions={{ headerShown: false }}
       >

@@ -6,17 +6,22 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { storage } from '../../services/storage';
 import { authService } from '../../services/auth';
-import { rutinaService } from '../../services/api';
+import { rutinaService, toyService, configService } from '../../services/api';
 
 export default function HomeScreen({ navigation }: any) {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [greeting, setGreeting] = useState('¡Hola!');
   const [nextRutina, setNextRutina] = useState<string | null>(null);
+  const [connectedToys, setConnectedToys] = useState(0);
+  const [totalToys, setTotalToys] = useState(0);
+  const [deviceName, setDeviceName] = useState('Panda');
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
 
   useEffect(() => {
     const hour = new Date().getHours();
@@ -29,6 +34,8 @@ export default function HomeScreen({ navigation }: any) {
   useEffect(() => {
     loadUser();
     loadNextRutina();
+    loadDeviceStatus();
+    loadRecentActivity();
   }, []);
 
   const loadUser = async () => {
@@ -82,6 +89,62 @@ export default function HomeScreen({ navigation }: any) {
     }
   };
 
+  const loadDeviceStatus = async () => {
+    try {
+      const toysRes = await toyService.getAll();
+      if (toysRes.data.success) {
+        const toys = toysRes.data.data || [];
+        setTotalToys(toys.length);
+        setConnectedToys(toys.filter((t: any) => t.isConnected).length);
+      }
+      const configRes = await configService.getConfig();
+      if (configRes.data.success) {
+        setDeviceName(configRes.data.data?.deviceName || 'Panda');
+      }
+    } catch (error) {
+      console.error('Error cargando estado del dispositivo:', error);
+    }
+  };
+
+  const loadRecentActivity = async () => {
+    try {
+      const res = await toyService.getAll();
+      if (res.data.success && res.data.data.length > 0) {
+        const firstToy = res.data.data[0];
+        const msgs = await toyService.getMessages(firstToy.id);
+        if (msgs.data.success && msgs.data.data.length > 0) {
+          const lastMsgs = msgs.data.data.slice(-2);
+          setRecentActivity(lastMsgs.map((m: any) => ({
+            icon: m.isUser ? 'chatbubble-ellipses' : 'chatbubble-ellipses-outline',
+            color: m.isUser ? '#4A90D9' : '#27AE60',
+            text: m.isUser ? `Preguntaste: ${m.content.slice(0, 40)}${m.content.length > 40 ? '...' : ''}` : `Panda respondió: ${m.content.slice(0, 40)}${m.content.length > 40 ? '...' : ''}`,
+          })));
+        }
+      }
+    } catch (error) {
+      console.error('Error cargando actividad:', error);
+    }
+  };
+
+  const handleTalk = async () => {
+    try {
+      const res = await toyService.getAll();
+      if (res.data.success && res.data.data.length > 0) {
+        const toy = res.data.data[0];
+        navigation.navigate('Chat', {
+          toyId: toy.id,
+          toyName: toy.name,
+          avatarUrl: toy.avatarUrl,
+        });
+      } else {
+        Alert.alert('Sin juguetes', 'Primero agrega un juguete para poder hablar con Panda.');
+        navigation.navigate('ToyList');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'No se pudo conectar con los juguetes');
+    }
+  };
+
   const handleLogout = async () => {
     await storage.removeItem('token');
     await storage.removeItem('user');
@@ -112,16 +175,16 @@ export default function HomeScreen({ navigation }: any) {
       <View style={styles.statusCard}>
         <View style={styles.statusRow}>
           <View style={styles.statusItem}>
-            <Ionicons name="wifi" size={20} color="#27AE60" />
-            <Text style={styles.statusText}>Conectado</Text>
+            <Ionicons name="wifi" size={20} color={totalToys > 0 ? '#27AE60' : '#95A5A6'} />
+            <Text style={styles.statusText}>{totalToys > 0 ? `${connectedToys}/${totalToys} conectados` : 'Sin juguetes'}</Text>
           </View>
           <View style={styles.statusItem}>
-            <Ionicons name="bluetooth" size={20} color="#27AE60" />
-            <Text style={styles.statusText}>Conectado</Text>
+            <Ionicons name="bluetooth" size={20} color={connectedToys > 0 ? '#27AE60' : '#95A5A6'} />
+            <Text style={styles.statusText}>{connectedToys > 0 ? 'Conectado' : 'Desconectado'}</Text>
           </View>
           <View style={styles.statusItem}>
             <Ionicons name="battery-charging" size={20} color="#F39C12" />
-            <Text style={styles.statusText}>78%</Text>
+            <Text style={styles.statusText}>{deviceName}</Text>
           </View>
         </View>
         <View style={styles.reminderBox}>
@@ -132,7 +195,7 @@ export default function HomeScreen({ navigation }: any) {
         </View>
       </View>
 
-      <TouchableOpacity style={styles.talkButton}>
+      <TouchableOpacity style={styles.talkButton} onPress={handleTalk}>
         <Ionicons name="mic" size={28} color="white" />
         <Text style={styles.talkButtonText}>Hablar con Panda</Text>
       </TouchableOpacity>
@@ -162,15 +225,18 @@ export default function HomeScreen({ navigation }: any) {
           <Ionicons name="calendar" size={32} color="#4A90D9" />
           <Text style={styles.gridText}>Rutinas</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.gridItem}>
+        <TouchableOpacity style={styles.gridItem} onPress={() => navigation.navigate('Historias')}>
           <Ionicons name="book" size={32} color="#E67E22" />
           <Text style={styles.gridText}>Historias</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.gridItem}>
+        <TouchableOpacity style={styles.gridItem} onPress={() => navigation.navigate('Música')}>
           <Ionicons name="musical-notes" size={32} color="#27AE60" />
           <Text style={styles.gridText}>Música</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.gridItem}>
+        <TouchableOpacity
+          style={styles.gridItem}
+          onPress={() => Alert.alert('Próximamente', 'La supervisión por cámara estará disponible en una próxima versión.')}
+        >
           <Ionicons name="camera" size={32} color="#2ECC71" />
           <Text style={styles.gridText}>Supervisión</Text>
         </TouchableOpacity>
@@ -178,18 +244,17 @@ export default function HomeScreen({ navigation }: any) {
 
       <View style={styles.activitySection}>
         <Text style={styles.sectionTitle}>Actividad reciente</Text>
-        <View style={styles.activityItem}>
-          <Ionicons name="chatbubble-ellipses" size={18} color="#4A90D9" />
-          <Text style={styles.activityText}>Panda respondió: ¿Qué son los dinosaurios?</Text>
-        </View>
-        <View style={styles.activityItem}>
-          <Ionicons name="musical-note" size={18} color="#27AE60" />
-          <Text style={styles.activityText}>Reprodujo canción: Duérmete mi niño</Text>
-        </View>
-        <View style={styles.activityItem}>
-          <Ionicons name="notifications" size={18} color="#F39C12" />
-          <Text style={styles.activityText}>Recordatorio: Cepillarse los dientes</Text>
-        </View>
+        {recentActivity.length > 0 ? recentActivity.map((item, index) => (
+          <View key={index} style={styles.activityItem}>
+            <Ionicons name={item.icon} size={18} color={item.color} />
+            <Text style={styles.activityText}>{item.text}</Text>
+          </View>
+        )) : (
+          <View style={styles.activityItem}>
+            <Ionicons name="chatbubble-ellipses" size={18} color="#4A90D9" />
+            <Text style={styles.activityText}>Sin actividad reciente todavía</Text>
+          </View>
+        )}
       </View>
     </ScrollView>
   );

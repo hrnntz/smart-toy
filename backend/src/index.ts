@@ -12,6 +12,7 @@ import toyRoutes from "./routes/toy";
 import rutinaRoutes from "./routes/rutina";
 import messageRoutes from "./routes/message";
 import storyRoutes from "./routes/story";
+import configRoutes from "./routes/config";
 
 dotenv.config();
 
@@ -40,6 +41,7 @@ app.use("/api/toy", toyRoutes);
 app.use("/api/rutina", rutinaRoutes);
 app.use("/api/toy", messageRoutes);
 app.use("/api/story", storyRoutes);
+app.use("/api/config", configRoutes);
 
 // Base de datos + servidor
 AppDataSource.initialize()
