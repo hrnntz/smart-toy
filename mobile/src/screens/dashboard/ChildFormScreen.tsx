@@ -303,7 +303,7 @@ export default function ChildFormScreen({ navigation, route }: ChildFormScreenPr
                 arrowColor: '#4A90D9',
                 monthTextColor: '#2C3E50',
                 textMonthFontWeight: 'bold',
-                textMonthFontSize: 0, // Ocultamos el header del calendario
+                textMonthFontSize: 1, // Ocultamos el header del calendario
                 textDayHeaderFontWeight: '600',
                 textDayHeaderFontSize: 14,
                 textDayFontSize: 16,

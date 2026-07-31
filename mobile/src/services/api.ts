@@ -3,7 +3,7 @@ import { storage } from './storage';
 
 // Cambia esta IP por la de tu computadora
 // Ejecuta 'ipconfig' para encontrar tu IP local
-const API_URL = 'http://192.168.1.2:3000/api';
+const API_URL = 'http://localhost:3000/api';;
 
 const api = axios.create({
   baseURL: API_URL,
