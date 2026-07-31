@@ -4,10 +4,14 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
+import { AppDataSource } from "./config/database";
+
 
 import authRoutes from "./routes/auth";
 import childRoutes from "./routes/child";
 import toyRoutes from "./routes/toy";
+import rutinaRoutes from "./routes/rutina";
+
 
 dotenv.config();
 
@@ -33,10 +37,20 @@ app.get("/api/health", (_req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/child", childRoutes);
 app.use("/api/toy", toyRoutes);
+app.use("/api/rutina", rutinaRoutes);
 
-// Servidor
-app.listen(PORT, () => {
-  console.log(
-    `🚀 Smart Toy Backend ejecutándose en http://localhost:${PORT}`
-  );
-});
+// Base de datos + servidor
+AppDataSource.initialize()
+  .then(() => {
+    console.log("PostgreSQL conectado correctamente");
+
+    app.listen(PORT, () => {
+      console.log(
+        `Smart Toy Backend ejecutándose en http://localhost:${PORT}`
+      );
+    });
+  })
+  .catch((error) => {
+    console.error("Error conectando a PostgreSQL:", error);
+    process.exit(1);
+  });
