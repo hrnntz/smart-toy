@@ -103,6 +103,7 @@ Escanea el QR con **Expo Go** (Android/iOS).
 | Gestión de niños | ✅ |
 | Gestión de juguetes + chat IA | ✅ |
 | Rutinas | ✅ |
+| Rutinas (Notificaciones) |🚧 En desarrollo |
 | Historias con IA | ✅ |
 | Música y sonidos | 🚧 En desarrollo |
 | Aprender inglés | 🚧 En desarrollo |
