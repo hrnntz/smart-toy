@@ -11,6 +11,7 @@ import {
   Platform,
   Image,
   Alert,
+  Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
@@ -25,14 +26,38 @@ interface Message {
   audioUrl?: string;
 }
 
+interface CharacterVoice {
+  id: string;
+  name: string;
+  icon: string;
+  desc: string;
+}
+
+const VOICE_OPTIONS: CharacterVoice[] = [
+  { id: 'EXAVITQu4vr4xnSDxMaL', name: 'Bella (Panda Dulce)', icon: 'paw', desc: 'Voz tierna e infantil' },
+  { id: 'jBpfOiLJlfdOoWvoflAa', name: 'Gigi (Cuento Mágico)', icon: 'sparkles', desc: 'Voz animada de hada' },
+  { id: 'zrHiDhphv95cyQqftM9H', name: 'Mimi (Oso Pequeño)', icon: 'heart', desc: 'Voz muy tierna tipo peluche' },
+  { id: '21m00Tcm4TlvDq8ikWAM', name: 'Rachel (Amiga Panda)', icon: 'moon', desc: 'Voz calmada para dormir' },
+  { id: 'jsCqWAovK2LkecYy1ClR', name: 'Freya (Princesa)', icon: 'ribbon', desc: 'Voz alegre y expresiva' },
+  { id: 'z9fAnlkznG4ndvfOBYJU', name: 'Glinda (Fantasía)', icon: 'planet', desc: 'Voz mágica de cuento' },
+  { id: 'zcAAsDuNqEBlko7h1jiB', name: 'Giovanni (Explorador)', icon: 'compass', desc: 'Voz animada masculina' },
+  { id: 'AZnzlk1XvdvUeBnXmlld', name: 'Domi (Aventurera)', icon: 'flash', desc: 'Voz enérgica y risueña' },
+  { id: 'D38z5RcWu1voky8WS1ja', name: 'Finn (Caricatura)', icon: 'happy', desc: 'Voz graciosa de caricatura' },
+  { id: 'IKne3meq5aSn9XLyUdCD', name: 'Charlie (Divertido)', icon: 'school', desc: 'Voz juvenil amigable' },
+];
+
 export default function ChatScreen({ navigation, route }: any) {
   const { toyId, toyName, avatarUrl } = route.params || {};
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(false);
   const [voiceMode, setVoiceMode] = useState(true);
+  const [selectedVoice, setSelectedVoice] = useState<string>('EXAVITQu4vr4xnSDxMaL');
+  const [showVoiceModal, setShowVoiceModal] = useState(false);
+
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [isRecording, setIsRecording] = useState(false);
+  const isProcessingRef = useRef(false);
   const scrollViewRef = useRef<ScrollView>(null);
 
   useEffect(() => {
@@ -62,7 +87,7 @@ export default function ChatScreen({ navigation, route }: any) {
           setMessages([
             {
               id: 'welcome',
-              text: `¡Hola! Soy ${toyName}, tu amigo inteligente. Mantén presionado el botón verde del micrófono para hablarme 🧸`,
+              text: `¡Hola! Soy ${toyName}, tu amigo inteligente. Presiona el micrófono para hablarme o escríbeme 🧸`,
               isUser: false,
               timestamp: new Date(),
             },
@@ -74,9 +99,12 @@ export default function ChatScreen({ navigation, route }: any) {
     }
   };
 
-  // 🎙️ Iniciar grabación de voz con el micrófono
+  // 🎙️ Iniciar grabación evadiendo bucles
   const startRecording = async () => {
+    if (isProcessingRef.current || loading || isRecording) return;
     try {
+      await stopAudio(); // Detener cualquier reproducción en curso
+
       const permission = await Audio.requestPermissionsAsync();
       if (permission.status !== 'granted') {
         Alert.alert('Permiso Denegado', 'Se requiere acceso al micrófono para hablar con Panda.');
@@ -95,13 +123,14 @@ export default function ChatScreen({ navigation, route }: any) {
       setIsRecording(true);
     } catch (err) {
       console.error('Error al iniciar grabación:', err);
-      Alert.alert('Error', 'No se pudo activar el micrófono.');
+      setIsRecording(false);
     }
   };
 
-  // ⏹️ Detener grabación y enviar audio para Groq Whisper STT + ElevenLabs TTS
+  // ⏹️ Detener grabación de audio y enviar a backend
   const stopRecording = async () => {
-    if (!recording) return;
+    if (!recording || isProcessingRef.current) return;
+    isProcessingRef.current = true;
     setIsRecording(false);
     setLoading(true);
 
@@ -110,10 +139,20 @@ export default function ChatScreen({ navigation, route }: any) {
       const uri = recording.getURI();
       setRecording(null);
 
-      if (!uri || !toyId) return;
+      // Cambiar modo de audio a modo reproducción para altavoces
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        playsInSilentModeIOS: true,
+      });
 
-      // Enviar el archivo m4a al backend -> Groq Whisper (STT) -> Groq LLM -> ElevenLabs (TTS)
-      const res = await toyService.voiceChatWithAudio(toyId, uri);
+      if (!uri || !toyId) {
+        isProcessingRef.current = false;
+        setLoading(false);
+        return;
+      }
+
+      // Enviar audio con la voz seleccionada
+      const res = await toyService.voiceChatWithAudio(toyId, uri, selectedVoice);
 
       if (res.data.success && res.data.data) {
         const userText = res.data.data.userText || '🎙️ Mensaje de voz';
@@ -137,23 +176,24 @@ export default function ChatScreen({ navigation, route }: any) {
           },
         ]);
 
-        // Reproducir voz sintetizada por ElevenLabs
         if (audioUrl) {
           await playAudio(audioUrl);
         }
       }
     } catch (error) {
-      console.error('Error procesando voz con Whisper:', error);
-      Alert.alert('Error', 'No se pudo procesar la voz con la IA de Groq Whisper.');
+      console.error('Error procesando voz:', error);
+      Alert.alert('Error', 'No se pudo procesar la voz.');
     } finally {
+      isProcessingRef.current = false;
       setLoading(false);
     }
   };
 
   const sendMessage = async (textToSend?: string) => {
     const text = textToSend || inputText.trim();
-    if (!text || !toyId) return;
+    if (!text || !toyId || isProcessingRef.current) return;
 
+    isProcessingRef.current = true;
     const userMsg: Message = {
       id: Date.now().toString(),
       text,
@@ -169,7 +209,7 @@ export default function ChatScreen({ navigation, route }: any) {
       let audioUrl = '';
 
       if (voiceMode) {
-        const response = await toyService.voiceChatWithToy(toyId, text);
+        const response = await toyService.voiceChatWithToy(toyId, text, selectedVoice);
         if (response.data.success) {
           replyText = response.data.data.replyText;
           audioUrl = response.data.data.audioUrl;
@@ -197,9 +237,12 @@ export default function ChatScreen({ navigation, route }: any) {
     } catch (error) {
       console.error('Error en chat:', error);
     } finally {
+      isProcessingRef.current = false;
       setLoading(false);
     }
   };
+
+  const currentVoiceObj = VOICE_OPTIONS.find((v) => v.id === selectedVoice) || VOICE_OPTIONS[0];
 
   return (
     <View style={styles.mainWrapper}>
@@ -214,8 +257,15 @@ export default function ChatScreen({ navigation, route }: any) {
         />
         <View style={styles.headerTitleContainer}>
           <Text style={styles.headerTitle}>{toyName || 'Panda Inteligente'}</Text>
-          <Text style={styles.headerStatus}>🟢 En línea • Groq Whisper & ElevenLabs</Text>
+          <Text style={styles.headerStatus}>🟢 Voz: {currentVoiceObj.name.split(' ')[0]}</Text>
         </View>
+
+        {/* Botón Selector de Voz */}
+        <TouchableOpacity style={styles.voiceSelectBtn} onPress={() => setShowVoiceModal(true)}>
+          <Ionicons name="mic-circle" size={26} color="#8E44AD" />
+        </TouchableOpacity>
+
+        {/* Toggle de Mute/Voz */}
         <TouchableOpacity
           style={[styles.voiceToggle, voiceMode && styles.voiceToggleActive]}
           onPress={() => setVoiceMode(!voiceMode)}
@@ -252,7 +302,7 @@ export default function ChatScreen({ navigation, route }: any) {
                     onPress={() => msg.audioUrl && playAudio(msg.audioUrl)}
                   >
                     <Ionicons name="play-circle" size={22} color="#27AE60" />
-                    <Text style={styles.audioPlayText}>Escuchar Voz ElevenLabs</Text>
+                    <Text style={styles.audioPlayText}>Escuchar Voz de Panda</Text>
                   </TouchableOpacity>
                 )}
                 <Text style={styles.timestamp}>
@@ -265,7 +315,7 @@ export default function ChatScreen({ navigation, route }: any) {
           {isRecording && (
             <View style={styles.recordingIndicator}>
               <Ionicons name="mic-sharp" size={24} color="#E74C3C" />
-              <Text style={styles.recordingText}>🎙️ Escuchando tu voz... suelta para enviar</Text>
+              <Text style={styles.recordingText}>🎙️ Grabando... suelta para enviar</Text>
             </View>
           )}
 
@@ -273,18 +323,19 @@ export default function ChatScreen({ navigation, route }: any) {
             <View style={[styles.messageRow, styles.botRow]}>
               <View style={[styles.messageBubble, styles.botBubble, styles.loadingBubble]}>
                 <ActivityIndicator size="small" color="#4A90D9" />
-                <Text style={styles.loadingBubbleText}>Panda está transcribiendo y procesando tu voz...</Text>
+                <Text style={styles.loadingBubbleText}>Panda está procesando la respuesta de voz...</Text>
               </View>
             </View>
           )}
         </ScrollView>
 
-        {/* Barra de Entrada con Micrófono y Texto */}
+        {/* Barra de Entrada */}
         <View style={styles.inputContainer}>
           <TouchableOpacity
-            style={[styles.micButton, isRecording && styles.micButtonRecording]}
+            style={[styles.micButton, isRecording && styles.micButtonRecording, loading && styles.micButtonDisabled]}
             onPressIn={startRecording}
             onPressOut={stopRecording}
+            disabled={loading}
           >
             <Ionicons name={isRecording ? "stop-circle" : "mic"} size={24} color="white" />
           </TouchableOpacity>
@@ -299,7 +350,7 @@ export default function ChatScreen({ navigation, route }: any) {
             maxLength={500}
           />
           <TouchableOpacity
-            style={[styles.sendButton, !inputText.trim() && styles.sendButtonDisabled]}
+            style={[styles.sendButton, (!inputText.trim() || loading) && styles.sendButtonDisabled]}
             onPress={() => sendMessage()}
             disabled={!inputText.trim() || loading}
           >
@@ -307,6 +358,45 @@ export default function ChatScreen({ navigation, route }: any) {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+
+      {/* Modal Selector de Voces de Personajes */}
+      <Modal visible={showVoiceModal} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={styles.modalTitle}>Elige la Voz de Panda</Text>
+                <Text style={styles.modalSubtitle}>10 voces oficiales estilo caricatura</Text>
+              </View>
+              <TouchableOpacity onPress={() => setShowVoiceModal(false)}>
+                <Ionicons name="close" size={26} color="#2C3E50" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.voiceList}>
+              {VOICE_OPTIONS.map((v) => (
+                <TouchableOpacity
+                  key={v.id}
+                  style={[styles.voiceCard, selectedVoice === v.id && styles.voiceCardActive]}
+                  onPress={() => {
+                    setSelectedVoice(v.id);
+                    setShowVoiceModal(false);
+                  }}
+                >
+                  <View style={[styles.voiceIconBg, selectedVoice === v.id && styles.voiceIconBgActive]}>
+                    <Ionicons name={v.icon as any} size={22} color={selectedVoice === v.id ? 'white' : '#8E44AD'} />
+                  </View>
+                  <View style={styles.voiceInfo}>
+                    <Text style={[styles.voiceName, selectedVoice === v.id && styles.voiceNameActive]}>{v.name}</Text>
+                    <Text style={styles.voiceDesc}>{v.desc}</Text>
+                  </View>
+                  {selectedVoice === v.id && <Ionicons name="checkmark-circle" size={24} color="#8E44AD" />}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -331,6 +421,7 @@ const styles = StyleSheet.create({
   headerTitleContainer: { flex: 1 },
   headerTitle: { fontSize: 16, fontWeight: 'bold', color: '#1E293B' },
   headerStatus: { fontSize: 12, color: '#27AE60', marginTop: 1 },
+  voiceSelectBtn: { padding: 6, marginRight: 4 },
   voiceToggle: {
     padding: 8,
     borderRadius: 20,
@@ -391,6 +482,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   micButtonRecording: { backgroundColor: '#E74C3C' },
+  micButtonDisabled: { backgroundColor: '#CBD5E1' },
   input: {
     flex: 1,
     backgroundColor: '#F1F5F9',
@@ -403,4 +495,18 @@ const styles = StyleSheet.create({
   },
   sendButton: { backgroundColor: '#4A90D9', width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
   sendButtonDisabled: { backgroundColor: '#CBD5E1' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  modalContent: { backgroundColor: 'white', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: '80%' },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  modalTitle: { fontSize: 18, fontWeight: 'bold', color: '#1E293B' },
+  modalSubtitle: { fontSize: 13, color: '#64748B', marginTop: 2 },
+  voiceList: { marginBottom: 10 },
+  voiceCard: { flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 16, backgroundColor: '#F8FAFC', marginBottom: 10 },
+  voiceCardActive: { backgroundColor: '#F3E8FF', borderWidth: 1, borderColor: '#8E44AD' },
+  voiceIconBg: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#F3E8FF', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  voiceIconBgActive: { backgroundColor: '#8E44AD' },
+  voiceInfo: { flex: 1 },
+  voiceName: { fontSize: 15, fontWeight: 'bold', color: '#1E293B' },
+  voiceNameActive: { color: '#8E44AD' },
+  voiceDesc: { fontSize: 12, color: '#64748B', marginTop: 2 },
 });
