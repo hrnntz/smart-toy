@@ -1,18 +1,19 @@
-const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY || '';
-const DEFAULT_VOICE_ID = process.env.ELEVENLABS_VOICE_ID || '21m00Tcm4TlvDq8ikWAM'; // Rachel / Cute voice default
-
-export const generateSpeechFromText = async (text: string, voiceId = DEFAULT_VOICE_ID): Promise<string> => {
+export const generateSpeechFromText = async (text: string, voiceId?: string): Promise<string> => {
   try {
-    if (!ELEVENLABS_API_KEY) {
-      console.warn('⚠️ ELEVENLABS_API_KEY no configurada. Se omitirá la síntesis de voz.');
+    const apiKey = (process.env.ELEVENLABS_API_KEY || '').trim();
+    const defaultVoice = (process.env.ELEVENLABS_VOICE_ID || '21m00Tcm4TlvDq8ikWAM').trim();
+    const targetVoiceId = voiceId || defaultVoice;
+
+    if (!apiKey) {
+      console.warn('⚠️ ELEVENLABS_API_KEY no configurada en el servidor. Se omitirá la síntesis de voz.');
       return '';
     }
 
-    const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+    const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${targetVoiceId}`, {
       method: 'POST',
       headers: {
         'Accept': 'audio/mpeg',
-        'xi-api-key': ELEVENLABS_API_KEY,
+        'xi-api-key': apiKey,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({

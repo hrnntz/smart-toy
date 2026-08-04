@@ -119,7 +119,7 @@ export default function ChatScreen({ navigation, route }: any) {
         ...prev,
         {
           id: (Date.now() + 2).toString(),
-          text: '❌ Hubo un error procesando la voz con la IA. Intenta de nuevo.',
+          text: '❌ Hubo un error procesando el mensaje. Intenta de nuevo.',
           isUser: false,
           timestamp: new Date(),
         },
@@ -130,11 +130,7 @@ export default function ChatScreen({ navigation, route }: any) {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-    >
+    <View style={styles.mainWrapper}>
       {/* Header del Chat */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
@@ -156,73 +152,81 @@ export default function ChatScreen({ navigation, route }: any) {
         </TouchableOpacity>
       </View>
 
-      {/* Lista de Mensajes */}
-      <ScrollView
-        ref={scrollViewRef}
-        style={styles.messagesContainer}
-        contentContainerStyle={styles.messagesContent}
-        onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
+      <KeyboardAvoidingView
+        style={styles.flexContainer}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
-        {messages.map((msg) => (
-          <View key={msg.id} style={[styles.messageRow, msg.isUser ? styles.userRow : styles.botRow]}>
-            {!msg.isUser && (
-              <Image
-                source={{ uri: avatarUrl || 'https://image.pollinations.ai/prompt/cute%20panda%20toy?width=100&height=100' }}
-                style={styles.avatar}
-              />
-            )}
-            <View style={[styles.messageBubble, msg.isUser ? styles.userBubble : styles.botBubble]}>
-              <Text style={msg.isUser ? styles.userText : styles.botText}>{msg.text}</Text>
-              {msg.audioUrl && (
-                <TouchableOpacity
-                  style={styles.audioPlayBtn}
-                  onPress={() => msg.audioUrl && playAudio(msg.audioUrl)}
-                >
-                  <Ionicons name="play-circle" size={22} color="#27AE60" />
-                  <Text style={styles.audioPlayText}>Escuchar Voz ElevenLabs</Text>
-                </TouchableOpacity>
-              )}
-              <Text style={styles.timestamp}>
-                {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </Text>
-            </View>
-          </View>
-        ))}
-
-        {loading && (
-          <View style={[styles.messageRow, styles.botRow]}>
-            <View style={[styles.messageBubble, styles.botBubble, styles.loadingBubble]}>
-              <ActivityIndicator size="small" color="#4A90D9" />
-              <Text style={styles.loadingBubbleText}>Panda está pensando la respuesta con voz...</Text>
-            </View>
-          </View>
-        )}
-      </ScrollView>
-
-      {/* Barra de Entrada de Mensajes y Voz */}
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="Habla o escribe a Panda..."
-          value={inputText}
-          onChangeText={setInputText}
-          multiline
-          maxLength={500}
-        />
-        <TouchableOpacity
-          style={[styles.sendButton, !inputText.trim() && styles.sendButtonDisabled]}
-          onPress={() => sendMessage()}
-          disabled={!inputText.trim() || loading}
+        {/* Lista de Mensajes */}
+        <ScrollView
+          ref={scrollViewRef}
+          style={styles.messagesContainer}
+          contentContainerStyle={styles.messagesContent}
+          onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
         >
-          <Ionicons name="send" size={22} color="white" />
-        </TouchableOpacity>
-      </View>
-    </KeyboardAvoidingView>
+          {messages.map((msg) => (
+            <View key={msg.id} style={[styles.messageRow, msg.isUser ? styles.userRow : styles.botRow]}>
+              {!msg.isUser && (
+                <Image
+                  source={{ uri: avatarUrl || 'https://image.pollinations.ai/prompt/cute%20panda%20toy?width=100&height=100' }}
+                  style={styles.avatar}
+                />
+              )}
+              <View style={[styles.messageBubble, msg.isUser ? styles.userBubble : styles.botBubble]}>
+                <Text style={msg.isUser ? styles.userText : styles.botText}>{msg.text}</Text>
+                {msg.audioUrl && (
+                  <TouchableOpacity
+                    style={styles.audioPlayBtn}
+                    onPress={() => msg.audioUrl && playAudio(msg.audioUrl)}
+                  >
+                    <Ionicons name="play-circle" size={22} color="#27AE60" />
+                    <Text style={styles.audioPlayText}>Escuchar Voz ElevenLabs</Text>
+                  </TouchableOpacity>
+                )}
+                <Text style={styles.timestamp}>
+                  {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </Text>
+              </View>
+            </View>
+          ))}
+
+          {loading && (
+            <View style={[styles.messageRow, styles.botRow]}>
+              <View style={[styles.messageBubble, styles.botBubble, styles.loadingBubble]}>
+                <ActivityIndicator size="small" color="#4A90D9" />
+                <Text style={styles.loadingBubbleText}>Panda está pensando la respuesta con voz...</Text>
+              </View>
+            </View>
+          )}
+        </ScrollView>
+
+        {/* Barra de Entrada de Mensajes y Voz */}
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.input}
+            placeholder="Escribe un mensaje a Panda..."
+            placeholderTextColor="#94A3B8"
+            value={inputText}
+            onChangeText={setInputText}
+            multiline
+            maxLength={500}
+          />
+          <TouchableOpacity
+            style={[styles.sendButton, !inputText.trim() && styles.sendButtonDisabled]}
+            onPress={() => sendMessage()}
+            disabled={!inputText.trim() || loading}
+          >
+            <Ionicons name="send" size={20} color="white" />
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FAFC' },
+  mainWrapper: { flex: 1, backgroundColor: '#F8FAFC' },
+  flexContainer: { flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -233,6 +237,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
     elevation: 2,
+    zIndex: 10,
   },
   backButton: { padding: 4, marginRight: 8 },
   headerAvatar: { width: 40, height: 40, borderRadius: 20, marginRight: 10, backgroundColor: '#E2E8F0' },
