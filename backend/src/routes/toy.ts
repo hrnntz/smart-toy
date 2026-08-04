@@ -16,7 +16,15 @@ import fs from "fs";
 
 const uploadsDir = path.join(__dirname, "../../uploads");
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
-const upload = multer({ dest: uploadsDir });
+
+const storage = multer.diskStorage({
+  destination: uploadsDir,
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname) || ".m4a";
+    cb(null, `${Date.now()}-${Math.random().toString(36).substring(2)}${ext}`);
+  },
+});
+const upload = multer({ storage });
 
 const router = Router();
 

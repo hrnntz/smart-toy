@@ -1,5 +1,6 @@
 import Groq from 'groq-sdk';
 import fs from 'fs';
+import path from 'path';
 
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
@@ -57,13 +58,20 @@ Nunca uses lenguaje técnico ni complejo. Siempre responde en español.
 // 2. RECONOCIMIENTO DE VOZ STT CON GROQ WHISPER
 // ============================================
 export const transcribeAudioWithWhisper = async (filePath: string): Promise<string> => {
+  let targetPath = filePath;
   try {
     if (!fs.existsSync(filePath)) {
       throw new Error('El archivo de audio no existe');
     }
 
+    // Si el archivo no tiene extensión .m4a, renombrarlo para que Groq valide el tipo
+    if (!path.extname(filePath)) {
+      targetPath = `${filePath}.m4a`;
+      fs.renameSync(filePath, targetPath);
+    }
+
     const transcription = await groq.audio.transcriptions.create({
-      file: fs.createReadStream(filePath),
+      file: fs.createReadStream(targetPath),
       model: 'whisper-large-v3',
       language: 'es',
       response_format: 'json',
