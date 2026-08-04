@@ -150,29 +150,63 @@ Donde "answer" es el índice numérico (0, 1 o 2) de la opción correcta.
 };
 
 // ============================================
-// 4. GENERADOR DE MÚSICA IA Y AMBIENTE
+// 4. GENERADOR DE MÚSICA Y CANCIONES DE CUNA CON IA
 // ============================================
 export const generateAIMusicTrack = async (prompt: string): Promise<{ title: string; uri: string; duration: string }> => {
   try {
-    const seed = encodeURIComponent(prompt.substring(0, 30));
-    // URLs de streams ambientales de alta calidad
-    const sampleUris = [
-      'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
-      'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
-      'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3',
-      'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3',
-    ];
-    const randomIndex = Math.floor(Math.abs(prompt.length) % sampleUris.length);
+    const { generateSpeechFromText } = require("./elevenlabsService");
+    const lowerPrompt = prompt.toLowerCase();
+
+    // Streams de música relajante y sonidos ambientales variados
+    const ambientLibrary: Record<string, string> = {
+      lluvia: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3',
+      mar: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
+      olas: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
+      bosque: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3',
+      naturaleza: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3',
+      piano: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+      relajante: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3',
+      dormir: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3',
+      estrellas: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-15.mp3',
+      arpa: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-16.mp3',
+    };
+
+    for (const key of Object.keys(ambientLibrary)) {
+      if (lowerPrompt.includes(key)) {
+        return {
+          title: `Pista Ambiental: ${prompt.charAt(0).toUpperCase() + prompt.slice(1)}`,
+          uri: ambientLibrary[key],
+          duration: '15 min',
+        };
+      }
+    }
+
+    // Si es una solicitud de canción personalizada, Groq compone la letra y ElevenLabs la canta
+    const systemPrompt = `Eres un compositor experto en nanas e historias musicales infantiles. 
+Genera una nana de cuna muy dulce de 4 versos rítmicos basada en el tema: "${prompt}". 
+Solo responde con la letra de la canción de cuna, de forma poética y tierna. Sin introducciones.`;
+
+    const chatCompletion = await groq.chat.completions.create({
+      messages: [{ role: 'system', content: systemPrompt }],
+      model: 'llama-3.3-70b-versatile',
+      temperature: 0.7,
+      max_tokens: 150,
+    });
+
+    const songLyrics = chatCompletion.choices[0]?.message?.content || `Duérmete mi niño, duérmete mi amor, las estrellas brillan con su resplandor. ${prompt}`;
+    
+    // Sintetizar la nana cantada por la voz dulce de Bella / TTS
+    const audioUrl = await generateSpeechFromText(`🎶 ${songLyrics}`, 'EXAVITQu4vr4xnSDxMaL');
 
     return {
-      title: `Pista IA: ${prompt.charAt(0).toUpperCase() + prompt.slice(1)}`,
-      uri: sampleUris[randomIndex],
-      duration: '15 min',
+      title: `Nana IA: ${prompt.charAt(0).toUpperCase() + prompt.slice(1)}`,
+      uri: audioUrl || 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+      duration: '3 min',
     };
   } catch (error) {
     console.error('❌ Error en generateAIMusicTrack:', error);
     return {
-      title: 'Cuento de cuna tranquilo',
+      title: 'Canción de Cuna Panda',
       uri: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
       duration: '10 min',
     };

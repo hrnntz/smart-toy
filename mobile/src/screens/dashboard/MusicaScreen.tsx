@@ -27,10 +27,14 @@ interface Track {
 }
 
 const DEFAULT_TRACKS: Track[] = [
-  { id: 1, title: 'Música relajante para cuna', duration: '30 min', icon: 'musical-note', color: '#27AE60', type: 'Musica', uri: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3' },
-  { id: 2, title: 'Canciones infantiles de Panda', duration: '45 min', icon: 'musical-notes', color: '#E67E22', type: 'Musica', uri: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3' },
-  { id: 3, title: 'Sonidos de la naturaleza & lluvia', duration: '60 min', icon: 'leaf', color: '#3498DB', type: 'Sonidos', uri: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3' },
-  { id: 4, title: 'Ruido blanco para dormir profundo', duration: '30 min', icon: 'moon', color: '#8E44AD', type: 'Sonidos', uri: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3' },
+  { id: 1, title: 'Piano relajante para cuna', duration: '30 min', icon: 'musical-note', color: '#27AE60', type: 'Musica', uri: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3' },
+  { id: 2, title: 'Canciones y nanas de Panda', duration: '45 min', icon: 'musical-notes', color: '#E67E22', type: 'Musica', uri: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3' },
+  { id: 3, title: 'Melodía suave de caja de música', duration: '20 min', icon: 'heart', color: '#E74C3C', type: 'Musica', uri: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3' },
+  { id: 4, title: 'Arpa mágica de estrellas', duration: '25 min', icon: 'sparkles', color: '#9B59B6', type: 'Musica', uri: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-16.mp3' },
+  { id: 5, title: 'Lluvia suave en el bosque', duration: '60 min', icon: 'leaf', color: '#3498DB', type: 'Sonidos', uri: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3' },
+  { id: 6, title: 'Olas del mar y brisa pacífica', duration: '45 min', icon: 'water', color: '#2980B9', type: 'Sonidos', uri: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3' },
+  { id: 7, title: 'Ruido blanco para dormir profundo', duration: '30 min', icon: 'moon', color: '#8E44AD', type: 'Sonidos', uri: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3' },
+  { id: 8, title: 'Flauta zen y viento nocturno', duration: '40 min', icon: 'planet', color: '#16A085', type: 'Sonidos', uri: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-15.mp3' },
 ];
 
 const FAVORITES_KEY = 'musica_favoritos';
