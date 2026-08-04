@@ -152,12 +152,46 @@ Donde "answer" es el índice numérico (0, 1 o 2) de la opción correcta.
 // ============================================
 // 4. GENERADOR DE MÚSICA Y CANCIONES DE CUNA CON IA
 // ============================================
+// ============================================
+// 4. GENERADOR DE MÚSICA IA REAL (META MUSICGEN & GROQ/ELEVENLABS)
+// ============================================
 export const generateAIMusicTrack = async (prompt: string): Promise<{ title: string; uri: string; duration: string }> => {
   try {
-    const { generateSpeechFromText } = require("./elevenlabsService");
     const lowerPrompt = prompt.toLowerCase();
+    console.log(`🎶 Generando música con IA para el prompt: "${prompt}"...`);
 
-    // Streams de sonidos ambientales reales de Google Actions Audio Library y Freesound
+    // 1. Intentar generación instrumental de música original con Meta MusicGen AI (Hugging Face)
+    const hfToken = process.env.HUGGINGFACE_API_KEY || '';
+    if (hfToken) {
+      try {
+        console.log('🤖 Llamando a Meta MusicGen AI (facebook/musicgen-small)...');
+        const hfRes = await fetch('https://api-inference.huggingface.co/models/facebook/musicgen-small', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${hfToken.trim()}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ inputs: prompt }),
+        });
+
+        if (hfRes.ok) {
+          const arrayBuffer = await hfRes.arrayBuffer();
+          const base64Audio = Buffer.from(arrayBuffer).toString('base64');
+          console.log('✅ ¡Pista de música instrumental generada con éxito por Meta MusicGen AI!');
+          return {
+            title: `Música IA: ${prompt.charAt(0).toUpperCase() + prompt.slice(1)}`,
+            uri: `data:audio/wav;base64,${base64Audio}`,
+            duration: '30 seg',
+          };
+        } else {
+          console.warn('⚠️ Meta MusicGen no respondió OK, pasando a generador de nana cantada...', hfRes.status);
+        }
+      } catch (hfErr) {
+        console.error('⚠️ Error llamando a Meta MusicGen:', hfErr);
+      }
+    }
+
+    // 2. Si la petición es sobre un tema ambiental específico (lluvia, mar, bosque, ruido blanco)
     const ambientLibrary: Record<string, string> = {
       lluvia: 'https://actions.google.com/sounds/v1/weather/rain_heavy_loud.ogg',
       mar: 'https://actions.google.com/sounds/v1/water/ocean_waves.ogg',
@@ -178,14 +212,15 @@ export const generateAIMusicTrack = async (prompt: string): Promise<{ title: str
     for (const key of Object.keys(ambientLibrary)) {
       if (lowerPrompt.includes(key)) {
         return {
-          title: `Pista Ambiental: ${prompt.charAt(0).toUpperCase() + prompt.slice(1)}`,
+          title: `Sonido Real: ${prompt.charAt(0).toUpperCase() + prompt.slice(1)}`,
           uri: ambientLibrary[key],
           duration: '15 min',
         };
       }
     }
 
-    // Si es una solicitud de canción personalizada, Groq compone la letra y ElevenLabs la canta
+    // 3. Composición de canción de cuna personalizada con Groq Llama 3.3 + Voz Cantada con ElevenLabs/TTS
+    const { generateSpeechFromText } = require("./elevenlabsService");
     const systemPrompt = `Eres un compositor experto en nanas e historias musicales infantiles. 
 Genera una nana de cuna muy dulce de 4 versos rítmicos basada en el tema: "${prompt}". 
 Solo responde con la letra de la canción de cuna, de forma poética y tierna. Sin introducciones.`;
@@ -199,19 +234,19 @@ Solo responde con la letra de la canción de cuna, de forma poética y tierna. S
 
     const songLyrics = chatCompletion.choices[0]?.message?.content || `Duérmete mi niño, duérmete mi amor, las estrellas brillan con su resplandor. ${prompt}`;
     
-    // Sintetizar la nana cantada por la voz dulce de Bella / TTS
+    // Sintetizar la nana cantada por la voz dulce de Bella / ElevenLabs / TTS
     const audioUrl = await generateSpeechFromText(`🎶 ${songLyrics}`, 'EXAVITQu4vr4xnSDxMaL');
 
     return {
       title: `Nana IA: ${prompt.charAt(0).toUpperCase() + prompt.slice(1)}`,
-      uri: audioUrl || 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+      uri: audioUrl || 'https://actions.google.com/sounds/v1/ambiences/white_noise.ogg',
       duration: '3 min',
     };
   } catch (error) {
     console.error('❌ Error en generateAIMusicTrack:', error);
     return {
       title: 'Canción de Cuna Panda',
-      uri: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+      uri: 'https://actions.google.com/sounds/v1/ambiences/white_noise.ogg',
       duration: '10 min',
     };
   }
