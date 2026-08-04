@@ -21,6 +21,8 @@ import RutinasScreen from '../screens/dashboard/RutinasScreen';
 import RutinaFormScreen from '../screens/dashboard/RutinaFormScreen';
 import ChatScreen from '../screens/dashboard/ChatScreen';
 
+import MusicaScreen from '../screens/dashboard/MusicaScreen';
+
 // ✅ Pantallas de historias (nuevas)
 import HistoriasScreen from '../screens/dashboard/HistoriasScreen';
 import GenerarHistoriaScreen from '../screens/dashboard/GenerarHistoriaScreen';
@@ -58,6 +60,8 @@ export default function RootNavigator() {
         <Stack.Screen name="Configuracion" component={ConfiguracionScreen} />
         <Stack.Screen name="Rutinas" component={RutinasScreen} />
         <Stack.Screen name="RutinaForm" component={RutinaFormScreen} />
+        <Stack.Screen name="Musica" component={MusicaScreen} />
+        <Stack.Screen name="Música" component={MusicaScreen} />
 
         {/* ✅ Pantallas de historias */}
         <Stack.Screen name="Historias" component={HistoriasScreen} />

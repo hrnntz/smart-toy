@@ -1,5 +1,4 @@
-// src/screens/dashboard/ConversacionesScreen.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,6 +9,7 @@ import {
   Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { toyService } from '../../services/api';
 
 interface Toy {
@@ -24,9 +24,11 @@ export default function ConversacionesScreen({ navigation }: any) {
   const [toys, setToys] = useState<Toy[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadToys();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      loadToys();
+    }, [])
+  );
 
   const loadToys = async () => {
     try {

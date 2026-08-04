@@ -108,3 +108,30 @@ export const deleteStory = async (
     res.status(500).json({ success: false, message: 'Error interno' });
   }
 };
+
+export const getStoryById = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    const userId = req.user?.userId;
+    const storyId = Number(req.params.id);
+    if (!userId) {
+      res.status(401).json({ success: false, message: 'No autenticado' });
+      return;
+    }
+
+    const story = await storyRepository.findOne({
+      where: { id: storyId, user: { id: userId } },
+    });
+    if (!story) {
+      res.status(404).json({ success: false, message: 'Historia no encontrada' });
+      return;
+    }
+
+    res.status(200).json({ success: true, data: story });
+  } catch (error) {
+    console.error('Error al obtener historia:', error);
+    res.status(500).json({ success: false, message: 'Error interno' });
+  }
+};

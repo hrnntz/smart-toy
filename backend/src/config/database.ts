@@ -21,9 +21,7 @@ export const AppDataSource = new DataSource({
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME || "smart_toy",
 
-  ssl: {
-    rejectUnauthorized: false,
-  },
+  ssl: process.env.DB_SSL === "true" ? { rejectUnauthorized: false } : false,
 
   entities: [User, Child, Toy, Rutina, Message, Story, DeviceConfig],
 

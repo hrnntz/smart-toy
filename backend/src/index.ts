@@ -54,7 +54,7 @@ AppDataSource.initialize()
       console.log(`📡 Accesible desde la red local en tu IP: http://192.168.x.x:${PORT}`);
     });
   })
-  .catch((error) => {
+  .catch((error: any) => {
     console.error("Error conectando a PostgreSQL:", error);
     process.exit(1);
   });

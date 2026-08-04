@@ -12,6 +12,7 @@ import { storage } from '../../services/storage';
 export default function MasScreen({ navigation }: any) {
   const handleLogout = async () => {
     await storage.removeItem('token');
+    await storage.removeItem('user');
     navigation.replace('Login');
   };
 
