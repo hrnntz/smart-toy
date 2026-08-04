@@ -3,7 +3,7 @@ import { generateGameQuestions } from "../services/aiService";
 
 export const generateQuestions = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { gameName, category, count } = req.body;
+    const { gameName, category, difficulty, count } = req.body;
 
     if (!gameName || !category) {
       res.status(400).json({
@@ -14,7 +14,8 @@ export const generateQuestions = async (req: Request, res: Response): Promise<vo
     }
 
     const questionCount = Number(count) || 10;
-    const questions = await generateGameQuestions(gameName, category, questionCount);
+    const diffLevel = difficulty || "Medio";
+    const questions = await generateGameQuestions(gameName, category, diffLevel, questionCount);
 
     res.status(200).json({
       success: true,

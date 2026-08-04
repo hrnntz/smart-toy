@@ -23,6 +23,10 @@ import ChatScreen from '../screens/dashboard/ChatScreen';
 
 import MusicaScreen from '../screens/dashboard/MusicaScreen';
 
+// Pantallas de supervisión por cámara
+import SupervisionScreen from '../screens/dashboard/SupervisionScreen';
+import CameraBroadcasterScreen from '../screens/dashboard/CameraBroadcasterScreen';
+
 // ✅ Pantallas de historias (nuevas)
 import HistoriasScreen from '../screens/dashboard/HistoriasScreen';
 import GenerarHistoriaScreen from '../screens/dashboard/GenerarHistoriaScreen';
@@ -62,6 +66,11 @@ export default function RootNavigator() {
         <Stack.Screen name="RutinaForm" component={RutinaFormScreen} />
         <Stack.Screen name="Musica" component={MusicaScreen} />
         <Stack.Screen name="Música" component={MusicaScreen} />
+
+        {/* Pantallas de supervisión por cámara */}
+        <Stack.Screen name="Supervision" component={SupervisionScreen} />
+        <Stack.Screen name="Supervisión" component={SupervisionScreen} />
+        <Stack.Screen name="CameraBroadcaster" component={CameraBroadcasterScreen} />
 
         {/* ✅ Pantallas de historias */}
         <Stack.Screen name="Historias" component={HistoriasScreen} />

@@ -7,6 +7,7 @@ import {
   deleteToy,
   toggleToyConnection,
   chatWithToy,
+  voiceChatWithToy,
 } from "../controllers/toyController";
 import { authenticateToken } from "../middleware/auth";
 
@@ -20,6 +21,7 @@ router.post("/", createToy);
 router.put("/:id", updateToy);
 router.delete("/:id", deleteToy);
 router.patch("/:id/toggle", toggleToyConnection);
-router.post("/:id/chat", chatWithToy); // ✅
+router.post("/:id/chat", chatWithToy);
+router.post("/:id/voice-chat", voiceChatWithToy);
 
 export default router;

@@ -36,6 +36,20 @@ export const initSocketServer = (httpServer: HTTPServer): SocketIOServer => {
       io?.to(`toy:${message.toyId}`).emit("chat:receive_message", message);
     });
 
+    // 📹 Transmisión de Cámara por Nube en Tiempo Real
+    socket.on("camera:join_stream", (roomId: string) => {
+      socket.join(`camera_room:${roomId}`);
+      console.log(`📹 Socket ${socket.id} se unió a la sala de cámara camera_room:${roomId}`);
+    });
+
+    socket.on("camera:stream_frame", (data: { roomId: string; frame: string; timestamp: number }) => {
+      socket.to(`camera_room:${data.roomId}`).emit("camera:receive_frame", data);
+    });
+
+    socket.on("camera:stop_stream", (roomId: string) => {
+      io?.to(`camera_room:${roomId}`).emit("camera:stream_ended");
+    });
+
     socket.on("disconnect", () => {
       console.log(`❌ Cliente desconectado de Socket.io: ${socket.id}`);
     });

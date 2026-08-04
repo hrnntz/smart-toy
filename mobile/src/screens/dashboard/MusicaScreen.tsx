@@ -1,10 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+  ActivityIndicator,
+  Alert,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { storage } from '../../services/storage';
-import { playAudio, pauseAudio, resumeAudio, stopAudio, isAudioPaused } from '../../services/audioService';
+import { musicService } from '../../services/api';
+import { playAudio, pauseAudio, resumeAudio, stopAudio } from '../../services/audioService';
 
-type TabType = 'Musica' | 'Sonidos' | 'Favoritos';
+type TabType = 'Musica' | 'Sonidos' | 'Favoritos' | 'IA Generador';
 
 interface Track {
   id: number;
@@ -16,20 +26,25 @@ interface Track {
   uri: string;
 }
 
-const TRACKS: Track[] = [
-  { id: 1, title: 'Música relajante', duration: '30 min', icon: 'musical-note', color: '#27AE60', type: 'Musica', uri: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3' },
-  { id: 2, title: 'Canciones infantiles', duration: '45 min', icon: 'musical-notes', color: '#E67E22', type: 'Musica', uri: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3' },
-  { id: 3, title: 'Sonidos de naturaleza', duration: '60 min', icon: 'leaf', color: '#3498DB', type: 'Sonidos', uri: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3' },
-  { id: 4, title: 'Ruido blanco', duration: '30 min', icon: 'moon', color: '#2C3E50', type: 'Sonidos', uri: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3' },
+const DEFAULT_TRACKS: Track[] = [
+  { id: 1, title: 'Música relajante para cuna', duration: '30 min', icon: 'musical-note', color: '#27AE60', type: 'Musica', uri: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3' },
+  { id: 2, title: 'Canciones infantiles de Panda', duration: '45 min', icon: 'musical-notes', color: '#E67E22', type: 'Musica', uri: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3' },
+  { id: 3, title: 'Sonidos de la naturaleza & lluvia', duration: '60 min', icon: 'leaf', color: '#3498DB', type: 'Sonidos', uri: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3' },
+  { id: 4, title: 'Ruido blanco para dormir profundo', duration: '30 min', icon: 'moon', color: '#8E44AD', type: 'Sonidos', uri: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3' },
 ];
 
 const FAVORITES_KEY = 'musica_favoritos';
 
 export default function MusicaScreen() {
   const [activeTab, setActiveTab] = useState<TabType>('Musica');
+  const [tracks, setTracks] = useState<Track[]>(DEFAULT_TRACKS);
   const [playingId, setPlayingId] = useState<number | null>(null);
   const [isPaused, setIsPaused] = useState<boolean>(false);
   const [favorites, setFavorites] = useState<number[]>([]);
+  
+  // AI Music Generator State
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [generatingMusic, setGeneratingMusic] = useState(false);
 
   useEffect(() => {
     loadFavorites();
@@ -52,6 +67,36 @@ export default function MusicaScreen() {
       await storage.setItem(FAVORITES_KEY, JSON.stringify(newFavs));
     } catch (error) {
       console.error('Error guardando favoritos:', error);
+    }
+  };
+
+  const generateAIMusic = async (presetPrompt?: string) => {
+    const promptToUse = presetPrompt || aiPrompt.trim();
+    if (!promptToUse) return;
+
+    setGeneratingMusic(true);
+    try {
+      const res = await musicService.generateMusic(promptToUse);
+      if (res.data.success && res.data.data) {
+        const newTrack: Track = {
+          id: Date.now(),
+          title: res.data.data.title,
+          duration: res.data.data.duration || '15 min',
+          icon: 'sparkles',
+          color: '#8E44AD',
+          type: 'Musica',
+          uri: res.data.data.uri,
+        };
+        setTracks((prev) => [newTrack, ...prev]);
+        setAiPrompt('');
+        Alert.alert('¡Música Generada!', `Se ha creado "${newTrack.title}". ¡Presiona Play para escucharla!`);
+        togglePlay(newTrack);
+      }
+    } catch (error) {
+      console.error('Error generando música:', error);
+      Alert.alert('Error', 'No se pudo generar la música con IA.');
+    } finally {
+      setGeneratingMusic(false);
     }
   };
 
@@ -90,17 +135,20 @@ export default function MusicaScreen() {
   };
 
   const tracksToShow = activeTab === 'Favoritos'
-    ? TRACKS.filter((t) => favorites.includes(t.id))
+    ? tracks.filter((t) => favorites.includes(t.id))
     : activeTab === 'Musica'
-      ? TRACKS.filter((t) => t.type === 'Musica')
-      : TRACKS.filter((t) => t.type === 'Sonidos');
+      ? tracks.filter((t) => t.type === 'Musica')
+      : activeTab === 'Sonidos'
+        ? tracks.filter((t) => t.type === 'Sonidos')
+        : tracks;
 
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.title}>Música y sonidos</Text>
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      <Text style={styles.title}>Música & Sonidos IA</Text>
 
+      {/* Selector de Pestañas */}
       <View style={styles.tabRow}>
-        {(['Musica', 'Sonidos', 'Favoritos'] as TabType[]).map((tab) => (
+        {(['Musica', 'Sonidos', 'Favoritos', 'IA Generador'] as TabType[]).map((tab) => (
           <TouchableOpacity
             key={tab}
             style={[styles.tab, activeTab === tab && styles.tabActive]}
@@ -111,17 +159,62 @@ export default function MusicaScreen() {
         ))}
       </View>
 
+      {/* Sección Generador de Música IA */}
+      {activeTab === 'IA Generador' && (
+        <View style={styles.aiGeneratorCard}>
+          <View style={styles.aiHeader}>
+            <Ionicons name="sparkles" size={24} color="#8E44AD" />
+            <Text style={styles.aiTitle}>Generador de Nanas y Sonidos con IA</Text>
+          </View>
+          <Text style={styles.aiSubtitle}>
+            Escribe un prompt para que la IA componga una pista de relajación personalizada para tu hijo:
+          </Text>
+
+          <TextInput
+            style={styles.aiInput}
+            placeholder="Ej: Canción de cuna suave con piano y olas de mar..."
+            value={aiPrompt}
+            onChangeText={setAiPrompt}
+          />
+
+          <TouchableOpacity
+            style={[styles.generateBtn, (!aiPrompt.trim() || generatingMusic) && styles.generateBtnDisabled]}
+            onPress={() => generateAIMusic()}
+            disabled={!aiPrompt.trim() || generatingMusic}
+          >
+            {generatingMusic ? (
+              <ActivityIndicator color="white" size="small" />
+            ) : (
+              <>
+                <Ionicons name="color-wand" size={20} color="white" />
+                <Text style={styles.generateBtnText}>Generar Música con IA</Text>
+              </>
+            )}
+          </TouchableOpacity>
+
+          <Text style={styles.presetsTitle}>Prompts Rápidos Sugeridos:</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.presetsRow}>
+            {['Arpa relajante para dormir', 'Lluvia suave en el bosque', 'Sonidos del espacio y estrellas', 'Piano suave de cuna'].map((p) => (
+              <TouchableOpacity key={p} style={styles.presetChip} onPress={() => generateAIMusic(p)}>
+                <Text style={styles.presetText}>✨ {p}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
+
+      {/* Lista de Pistas de Audio */}
       {tracksToShow.length === 0 ? (
         <View style={styles.empty}>
           <Ionicons name="musical-note-outline" size={64} color="#ccc" />
           <Text style={styles.emptyText}>
-            {activeTab === 'Favoritos' ? 'No tienes favoritos todavía. Toca el corazón en una pista.' : 'No hay pistas en esta categoría.'}
+            {activeTab === 'Favoritos' ? 'No tienes favoritos todavía. Toca el corazón en una pista.' : 'No hay pistas disponibles en esta categoría.'}
           </Text>
         </View>
       ) : (
         tracksToShow.map((track) => (
           <View key={track.id} style={styles.musicCard}>
-            <Ionicons name={track.icon as any} size={32} color={track.color} />
+            <Ionicons name={track.icon as any} size={28} color={track.color} />
             <View style={styles.musicInfo}>
               <Text style={styles.musicTitle}>{track.title}</Text>
               <Text style={styles.musicDuration}>{track.duration}</Text>
@@ -146,12 +239,13 @@ export default function MusicaScreen() {
 
       {playingId !== null && (
         <View style={styles.nowPlaying}>
-          <Ionicons name={isPaused ? "pause" : "volume-high"} size={18} color={isPaused ? "#E67E22" : "#27AE60"} />
+          <Ionicons name={isPaused ? "pause" : "volume-high"} size={20} color={isPaused ? "#E67E22" : "#27AE60"} />
           <Text style={[styles.nowPlayingText, isPaused && { color: "#E67E22" }]}>
-            {isPaused ? 'Pausado: ' : 'Reproduciendo: '}{TRACKS.find((t) => t.id === playingId)?.title || ''}
+            {isPaused ? 'Pausado: ' : 'Reproduciendo: '}{tracks.find((t) => t.id === playingId)?.title || ''}
           </Text>
         </View>
       )}
+      <View style={{ height: 30 }} />
     </ScrollView>
   );
 }
@@ -161,23 +255,23 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F5F7FA',
     paddingHorizontal: 16,
-    paddingTop: 50,
+    paddingTop: 45,
   },
   title: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: 'bold',
     color: '#2C3E50',
     marginBottom: 16,
   },
   tabRow: {
     flexDirection: 'row',
-    marginBottom: 20,
+    marginBottom: 16,
   },
   tab: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
-    marginRight: 8,
+    marginRight: 6,
     backgroundColor: '#EBF5FB',
   },
   tabActive: {
@@ -185,23 +279,64 @@ const styles = StyleSheet.create({
   },
   tabText: {
     color: '#2C3E50',
-    fontSize: 14,
+    fontSize: 13,
   },
   tabActiveText: {
     color: 'white',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
   },
+  aiGeneratorCard: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 20,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#F3E8FF',
+  },
+  aiHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+  aiTitle: { fontSize: 16, fontWeight: 'bold', color: '#8E44AD' },
+  aiSubtitle: { fontSize: 13, color: '#64748B', marginBottom: 12 },
+  aiInput: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginBottom: 12,
+  },
+  generateBtn: {
+    flexDirection: 'row',
+    backgroundColor: '#8E44AD',
+    paddingVertical: 12,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 14,
+  },
+  generateBtnDisabled: { backgroundColor: '#CBD5E1' },
+  generateBtnText: { color: 'white', fontWeight: 'bold', fontSize: 14 },
+  presetsTitle: { fontSize: 12, fontWeight: 'bold', color: '#64748B', marginBottom: 8 },
+  presetsRow: { flexDirection: 'row' },
+  presetChip: {
+    backgroundColor: '#F3E8FF',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    marginRight: 8,
+  },
+  presetText: { fontSize: 12, color: '#8E44AD', fontWeight: '500' },
   musicCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'white',
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 16,
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
     elevation: 1,
   },
   musicInfo: {
@@ -209,13 +344,14 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   musicTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
     color: '#2C3E50',
   },
   musicDuration: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#7F8C8D',
+    marginTop: 2,
   },
   favButton: {
     padding: 8,
@@ -223,29 +359,28 @@ const styles = StyleSheet.create({
   },
   empty: {
     alignItems: 'center',
-    marginTop: 60,
+    marginTop: 40,
   },
   emptyText: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#999',
     marginTop: 16,
     textAlign: 'center',
-    paddingHorizontal: 20,
   },
   nowPlaying: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#E8F8F5',
-    padding: 12,
-    borderRadius: 12,
+    padding: 14,
+    borderRadius: 16,
     marginTop: 8,
     marginBottom: 20,
-    gap: 8,
+    gap: 10,
   },
   nowPlayingText: {
     fontSize: 14,
     color: '#27AE60',
-    fontWeight: '500',
+    fontWeight: '600',
     flex: 1,
   },
 });

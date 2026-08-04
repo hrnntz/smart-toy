@@ -232,4 +232,66 @@ export const chatWithToy = async (req: AuthRequest, res: Response): Promise<void
     console.error("Error en chat:", error);
     res.status(500).json({ success: false, message: "Error al procesar el mensaje" });
   }
+};
+
+// Interacción por voz con ElevenLabs TTS
+export const voiceChatWithToy = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.userId;
+    const toyId = Number(req.params.id);
+    const { message, voiceId } = req.body;
+
+    if (!userId) {
+      res.status(401).json({ success: false, message: "Usuario no autenticado" });
+      return;
+    }
+
+    if (!message) {
+      res.status(400).json({ success: false, message: "Mensaje de voz o texto requerido" });
+      return;
+    }
+
+    const toy = await toyRepository.findOne({ where: { id: toyId, user: { id: userId } } });
+    if (!toy) {
+      res.status(404).json({ success: false, message: "Juguete no encontrado" });
+      return;
+    }
+
+    // Historial para contexto
+    const pastMessages = await messageRepository.find({
+      where: { toy: { id: toyId } },
+      order: { createdAt: "DESC" },
+      take: 15,
+    });
+
+    const history: ChatHistoryMessage[] = pastMessages
+      .reverse()
+      .map((msg) => ({
+        role: msg.isUser ? "user" : "assistant",
+        content: msg.content,
+      }));
+
+    const replyText = await getAIResponse(message, toy.name, toy.personality, toy.context, history);
+    
+    // Convertir respuesta de texto a voz con ElevenLabs
+    const { generateSpeechFromText } = require("../services/elevenlabsService");
+    const audioDataUrl = await generateSpeechFromText(replyText, voiceId);
+
+    // Guardar historial en la base de datos
+    const userMsg = messageRepository.create({ toy, content: message, isUser: true });
+    const botMsg = messageRepository.create({ toy, content: replyText, isUser: false });
+    await messageRepository.save([userMsg, botMsg]);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        userText: message,
+        replyText,
+        audioUrl: audioDataUrl,
+      },
+    });
+  } catch (error) {
+    console.error("Error en voiceChatWithToy:", error);
+    res.status(500).json({ success: false, message: "Error procesando voz con IA" });
+  }
 };  
