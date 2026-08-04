@@ -160,15 +160,15 @@ export const generateAIMusicTrack = async (prompt: string): Promise<{ title: str
     const lowerPrompt = prompt.toLowerCase();
     console.log(`🎶 Generando música con IA para el prompt: "${prompt}"...`);
 
-    // 1. Intentar generación instrumental de música original con Meta MusicGen AI (Hugging Face)
-    const hfToken = process.env.HUGGINGFACE_API_KEY || '';
+    // 1. Intentar generación instrumental de música original con Meta MusicGen AI (Hugging Face Router API)
+    const hfToken = (process.env.HUGGINGFACE_API_KEY || '').trim();
     if (hfToken) {
       try {
-        console.log('🤖 Llamando a Meta MusicGen AI (facebook/musicgen-small)...');
-        const hfRes = await fetch('https://api-inference.huggingface.co/models/facebook/musicgen-small', {
+        const hfUrl = 'https://router.huggingface.co/hf-inference/models/facebook/musicgen-small';
+        const hfRes = await fetch(hfUrl, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${hfToken.trim()}`,
+            'Authorization': `Bearer ${hfToken}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({ inputs: prompt }),
@@ -183,15 +183,13 @@ export const generateAIMusicTrack = async (prompt: string): Promise<{ title: str
             uri: `data:audio/wav;base64,${base64Audio}`,
             duration: '30 seg',
           };
-        } else {
-          console.warn('⚠️ Meta MusicGen no respondió OK, pasando a generador de nana cantada...', hfRes.status);
         }
-      } catch (hfErr) {
-        console.error('⚠️ Error llamando a Meta MusicGen:', hfErr);
+      } catch (hfErr: any) {
+        console.warn(`ℹ️ Meta MusicGen API no disponible (${hfErr?.message || 'Offline'}). Usando compositor inteligente Groq...`);
       }
     }
 
-    // 2. Si la petición es sobre un tema ambiental específico (lluvia, mar, bosque, ruido blanco)
+    // 2. Si la petición es sobre un tema ambiental específico (lluvia, mar, bosque, ruido blanco, etc.)
     const ambientLibrary: Record<string, string> = {
       lluvia: 'https://actions.google.com/sounds/v1/weather/rain_heavy_loud.ogg',
       mar: 'https://actions.google.com/sounds/v1/water/ocean_waves.ogg',
@@ -219,11 +217,11 @@ export const generateAIMusicTrack = async (prompt: string): Promise<{ title: str
       }
     }
 
-    // 3. Composición de canción de cuna personalizada con Groq Llama 3.3 + Voz Cantada con ElevenLabs/TTS
+    // 3. Composición poética de canción de cuna personalizada con Groq Llama 3.3 + Voz Dulce Cantada (ElevenLabs/TTS)
     const { generateSpeechFromText } = require("./elevenlabsService");
     const systemPrompt = `Eres un compositor experto en nanas e historias musicales infantiles. 
 Genera una nana de cuna muy dulce de 4 versos rítmicos basada en el tema: "${prompt}". 
-Solo responde con la letra de la canción de cuna, de forma poética y tierna. Sin introducciones.`;
+Solo responde con la letra de la canción de cuna en español, poética, tierna y con rima para niños. Sin introducciones.`;
 
     const chatCompletion = await groq.chat.completions.create({
       messages: [{ role: 'system', content: systemPrompt }],
