@@ -234,21 +234,34 @@ export const chatWithToy = async (req: AuthRequest, res: Response): Promise<void
   }
 };
 
-// Interacción por voz con ElevenLabs TTS
+// Interacción por voz con ElevenLabs TTS y Groq Whisper STT
 export const voiceChatWithToy = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const userId = req.user?.userId;
     const toyId = Number(req.params.id);
-    const { message, voiceId } = req.body;
+    const { voiceId } = req.body;
+    let message = req.body.message;
 
     if (!userId) {
       res.status(401).json({ success: false, message: "Usuario no autenticado" });
       return;
     }
 
+    // Si el usuario grabó audio desde el micrófono, transcribirlo con Groq Whisper
+    if (req.file) {
+      const { transcribeAudioWithWhisper } = require("../services/aiService");
+      const transcribedText = await transcribeAudioWithWhisper(req.file.path);
+      if (transcribedText) {
+        message = transcribedText;
+      }
+      try {
+        const fs = require("fs");
+        if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      } catch (err) {}
+    }
+
     if (!message) {
-      res.status(400).json({ success: false, message: "Mensaje de voz o texto requerido" });
-      return;
+      message = "¡Hola Panda!";
     }
 
     const toy = await toyRepository.findOne({ where: { id: toyId, user: { id: userId } } });

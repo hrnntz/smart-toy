@@ -119,11 +119,25 @@ export default function RutinaFormScreen({ navigation, route }: RutinaFormScreen
         const savedRutina = response.data.data;
         showAlert('Éxito', isEditing ? 'Rutina actualizada' : 'Rutina creada');
         
-        // ✅ Enviar notificación
-        await sendNotification(
-          isEditing ? 'Rutina actualizada' : 'Rutina creada',
-          `"${savedRutina.nombre}" a las ${formatHoraDisplay(savedRutina.hora)}${savedRutina.repetir ? ' (diaria)' : ''}`
-        );
+        // ✅ Programar notificación en el celular a la hora exacta configurada
+        try {
+          const { requestPermissions, scheduleNotification } = require('../../services/notificationService');
+          const hasPerm = await requestPermissions();
+          if (hasPerm && savedRutina.hora) {
+            const [h, m] = savedRutina.hora.split(':').map(Number);
+            await scheduleNotification(
+              `⏰ Recordatorio Panda: ${savedRutina.nombre}`,
+              savedRutina.mensaje || `Es hora de cumplir con la rutina: ${savedRutina.nombre}`,
+              {
+                type: 'daily',
+                hour: h,
+                minute: m,
+              } as any
+            );
+          }
+        } catch (err) {
+          console.warn('Error al programar alarma de rutina:', err);
+        }
 
         setTimeout(() => navigation.goBack(), 1500);
       } else {

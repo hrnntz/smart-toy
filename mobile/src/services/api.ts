@@ -44,6 +44,18 @@ export const toyService = {
     api.post(`/toy/${toyId}/chat`, { message }),
   voiceChatWithToy: (toyId: number, message: string, voiceId?: string) =>
     api.post(`/toy/${toyId}/voice-chat`, { message, voiceId }),
+  voiceChatWithAudio: (toyId: number, audioUri: string, voiceId?: string) => {
+    const formData = new FormData();
+    formData.append('audio', {
+      uri: audioUri,
+      type: 'audio/m4a',
+      name: 'recording.m4a',
+    } as any);
+    if (voiceId) formData.append('voiceId', voiceId);
+    return api.post(`/toy/${toyId}/voice-chat`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
   // ✅ Métodos para mensajes del historial
   getMessages: (toyId: number) => api.get(`/toy/${toyId}/messages`),
   saveMessage: (toyId: number, content: string, isUser: boolean) =>

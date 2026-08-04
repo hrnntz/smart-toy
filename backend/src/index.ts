@@ -1,5 +1,7 @@
-import "reflect-metadata";
 import dotenv from "dotenv";
+dotenv.config();
+
+import "reflect-metadata";
 import express from "express";
 import http from "http";
 import cors from "cors";
@@ -17,8 +19,6 @@ import storyRoutes from "./routes/story";
 import configRoutes from "./routes/config";
 import gameRoutes from "./routes/game";
 import musicRoutes from "./routes/music";
-
-dotenv.config();
 
 const app = express();
 const server = http.createServer(app);

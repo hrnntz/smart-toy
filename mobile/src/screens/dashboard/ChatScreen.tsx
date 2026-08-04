@@ -10,8 +10,10 @@ import {
   KeyboardAvoidingView,
   Platform,
   Image,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Audio } from 'expo-av';
 import { toyService } from '../../services/api';
 import { playAudio, stopAudio } from '../../services/audioService';
 
@@ -29,6 +31,8 @@ export default function ChatScreen({ navigation, route }: any) {
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(false);
   const [voiceMode, setVoiceMode] = useState(true);
+  const [recording, setRecording] = useState<Audio.Recording | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
 
   useEffect(() => {
@@ -37,6 +41,9 @@ export default function ChatScreen({ navigation, route }: any) {
     }
     return () => {
       stopAudio();
+      if (recording) {
+        recording.stopAndUnloadAsync();
+      }
     };
   }, [toyId]);
 
@@ -55,7 +62,7 @@ export default function ChatScreen({ navigation, route }: any) {
           setMessages([
             {
               id: 'welcome',
-              text: `¡Hola! Soy ${toyName}, tu amigo inteligente. Habla o escríbeme para conversar 🧸`,
+              text: `¡Hola! Soy ${toyName}, tu amigo inteligente. Mantén presionado el botón verde del micrófono para hablarme 🧸`,
               isUser: false,
               timestamp: new Date(),
             },
@@ -64,6 +71,82 @@ export default function ChatScreen({ navigation, route }: any) {
       }
     } catch (error) {
       console.error('Error cargando mensajes:', error);
+    }
+  };
+
+  // 🎙️ Iniciar grabación de voz con el micrófono
+  const startRecording = async () => {
+    try {
+      const permission = await Audio.requestPermissionsAsync();
+      if (permission.status !== 'granted') {
+        Alert.alert('Permiso Denegado', 'Se requiere acceso al micrófono para hablar con Panda.');
+        return;
+      }
+
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
+
+      const { recording: newRecording } = await Audio.Recording.createAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY
+      );
+      setRecording(newRecording);
+      setIsRecording(true);
+    } catch (err) {
+      console.error('Error al iniciar grabación:', err);
+      Alert.alert('Error', 'No se pudo activar el micrófono.');
+    }
+  };
+
+  // ⏹️ Detener grabación y enviar audio para Groq Whisper STT + ElevenLabs TTS
+  const stopRecording = async () => {
+    if (!recording) return;
+    setIsRecording(false);
+    setLoading(true);
+
+    try {
+      await recording.stopAndUnloadAsync();
+      const uri = recording.getURI();
+      setRecording(null);
+
+      if (!uri || !toyId) return;
+
+      // Enviar el archivo m4a al backend -> Groq Whisper (STT) -> Groq LLM -> ElevenLabs (TTS)
+      const res = await toyService.voiceChatWithAudio(toyId, uri);
+
+      if (res.data.success && res.data.data) {
+        const userText = res.data.data.userText || '🎙️ Mensaje de voz';
+        const replyText = res.data.data.replyText || '¡Hola!';
+        const audioUrl = res.data.data.audioUrl;
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: Date.now().toString(),
+            text: userText,
+            isUser: true,
+            timestamp: new Date(),
+          },
+          {
+            id: (Date.now() + 1).toString(),
+            text: replyText,
+            isUser: false,
+            timestamp: new Date(),
+            audioUrl,
+          },
+        ]);
+
+        // Reproducir voz sintetizada por ElevenLabs
+        if (audioUrl) {
+          await playAudio(audioUrl);
+        }
+      }
+    } catch (error) {
+      console.error('Error procesando voz con Whisper:', error);
+      Alert.alert('Error', 'No se pudo procesar la voz con la IA de Groq Whisper.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -86,7 +169,6 @@ export default function ChatScreen({ navigation, route }: any) {
       let audioUrl = '';
 
       if (voiceMode) {
-        // Enviar vía voiceChatWithToy (Groq LLM + ElevenLabs TTS)
         const response = await toyService.voiceChatWithToy(toyId, text);
         if (response.data.success) {
           replyText = response.data.data.replyText;
@@ -109,21 +191,11 @@ export default function ChatScreen({ navigation, route }: any) {
 
       setMessages((prev) => [...prev, botMsg]);
 
-      // Reproducir voz de ElevenLabs si está disponible
       if (audioUrl) {
         await playAudio(audioUrl);
       }
     } catch (error) {
       console.error('Error en chat:', error);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: (Date.now() + 2).toString(),
-          text: '❌ Hubo un error procesando el mensaje. Intenta de nuevo.',
-          isUser: false,
-          timestamp: new Date(),
-        },
-      ]);
     } finally {
       setLoading(false);
     }
@@ -142,7 +214,7 @@ export default function ChatScreen({ navigation, route }: any) {
         />
         <View style={styles.headerTitleContainer}>
           <Text style={styles.headerTitle}>{toyName || 'Panda Inteligente'}</Text>
-          <Text style={styles.headerStatus}>🟢 En línea • Respuesta por Voz IA</Text>
+          <Text style={styles.headerStatus}>🟢 En línea • Groq Whisper & ElevenLabs</Text>
         </View>
         <TouchableOpacity
           style={[styles.voiceToggle, voiceMode && styles.voiceToggleActive]}
@@ -190,21 +262,36 @@ export default function ChatScreen({ navigation, route }: any) {
             </View>
           ))}
 
+          {isRecording && (
+            <View style={styles.recordingIndicator}>
+              <Ionicons name="mic-sharp" size={24} color="#E74C3C" />
+              <Text style={styles.recordingText}>🎙️ Escuchando tu voz... suelta para enviar</Text>
+            </View>
+          )}
+
           {loading && (
             <View style={[styles.messageRow, styles.botRow]}>
               <View style={[styles.messageBubble, styles.botBubble, styles.loadingBubble]}>
                 <ActivityIndicator size="small" color="#4A90D9" />
-                <Text style={styles.loadingBubbleText}>Panda está pensando la respuesta con voz...</Text>
+                <Text style={styles.loadingBubbleText}>Panda está transcribiendo y procesando tu voz...</Text>
               </View>
             </View>
           )}
         </ScrollView>
 
-        {/* Barra de Entrada de Mensajes y Voz */}
+        {/* Barra de Entrada con Micrófono y Texto */}
         <View style={styles.inputContainer}>
+          <TouchableOpacity
+            style={[styles.micButton, isRecording && styles.micButtonRecording]}
+            onPressIn={startRecording}
+            onPressOut={stopRecording}
+          >
+            <Ionicons name={isRecording ? "stop-circle" : "mic"} size={24} color="white" />
+          </TouchableOpacity>
+
           <TextInput
             style={styles.input}
-            placeholder="Escribe un mensaje a Panda..."
+            placeholder="Mantén el micro para hablar..."
             placeholderTextColor="#94A3B8"
             value={inputText}
             onChangeText={setInputText}
@@ -273,6 +360,17 @@ const styles = StyleSheet.create({
   },
   audioPlayText: { fontSize: 12, color: '#27AE60', fontWeight: 'bold' },
   timestamp: { fontSize: 10, color: '#94A3B8', marginTop: 6, alignSelf: 'flex-end' },
+  recordingIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FDEDEC',
+    padding: 12,
+    borderRadius: 16,
+    marginBottom: 12,
+    gap: 8,
+  },
+  recordingText: { color: '#E74C3C', fontWeight: 'bold', fontSize: 14 },
   loadingBubble: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   loadingBubbleText: { fontSize: 13, color: '#64748B' },
   inputContainer: {
@@ -284,11 +382,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
+  micButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#27AE60',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  micButtonRecording: { backgroundColor: '#E74C3C' },
   input: {
     flex: 1,
     backgroundColor: '#F1F5F9',
     borderRadius: 24,
-    paddingHorizontal: 18,
+    paddingHorizontal: 16,
     paddingVertical: 10,
     fontSize: 15,
     maxHeight: 100,

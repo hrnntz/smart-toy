@@ -10,6 +10,13 @@ import {
   voiceChatWithToy,
 } from "../controllers/toyController";
 import { authenticateToken } from "../middleware/auth";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+
+const uploadsDir = path.join(__dirname, "../../uploads");
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+const upload = multer({ dest: uploadsDir });
 
 const router = Router();
 
@@ -22,6 +29,6 @@ router.put("/:id", updateToy);
 router.delete("/:id", deleteToy);
 router.patch("/:id/toggle", toggleToyConnection);
 router.post("/:id/chat", chatWithToy);
-router.post("/:id/voice-chat", voiceChatWithToy);
+router.post("/:id/voice-chat", upload.single("audio"), voiceChatWithToy);
 
 export default router;
