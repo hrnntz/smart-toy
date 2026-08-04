@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { storage } from '../../services/storage';
-import { playAudio, stopAudio } from '../../services/audioService';
+import { playAudio, pauseAudio, resumeAudio, stopAudio, isAudioPaused } from '../../services/audioService';
 
 type TabType = 'Musica' | 'Sonidos' | 'Favoritos';
 
@@ -28,6 +28,7 @@ const FAVORITES_KEY = 'musica_favoritos';
 export default function MusicaScreen() {
   const [activeTab, setActiveTab] = useState<TabType>('Musica');
   const [playingId, setPlayingId] = useState<number | null>(null);
+  const [isPaused, setIsPaused] = useState<boolean>(false);
   const [favorites, setFavorites] = useState<number[]>([]);
 
   useEffect(() => {
@@ -56,18 +57,26 @@ export default function MusicaScreen() {
 
   const togglePlay = async (track: Track) => {
     if (playingId === track.id) {
-      await stopAudio();
-      setPlayingId(null);
+      if (isPaused) {
+        await resumeAudio();
+        setIsPaused(false);
+      } else {
+        await pauseAudio();
+        setIsPaused(true);
+      }
     } else {
       setPlayingId(track.id);
+      setIsPaused(false);
       const success = await playAudio(track.uri, (status) => {
         if (status.didJustFinish) {
           setPlayingId(null);
+          setIsPaused(false);
         }
       });
       if (!success) {
         Alert.alert('Error', 'No se pudo reproducir el audio.');
         setPlayingId(null);
+        setIsPaused(false);
       }
     }
   };
@@ -126,9 +135,9 @@ export default function MusicaScreen() {
             </TouchableOpacity>
             <TouchableOpacity onPress={() => togglePlay(track)}>
               <Ionicons
-                name={playingId === track.id ? 'pause-circle' : 'play-circle'}
+                name={playingId === track.id && !isPaused ? 'pause-circle' : 'play-circle'}
                 size={36}
-                color={playingId === track.id ? '#27AE60' : '#4A90D9'}
+                color={playingId === track.id ? (isPaused ? '#E67E22' : '#27AE60') : '#4A90D9'}
               />
             </TouchableOpacity>
           </View>
@@ -137,9 +146,9 @@ export default function MusicaScreen() {
 
       {playingId !== null && (
         <View style={styles.nowPlaying}>
-          <Ionicons name="volume-high" size={18} color="#27AE60" />
-          <Text style={styles.nowPlayingText}>
-            Reproduciendo: {TRACKS.find((t) => t.id === playingId)?.title || ''}
+          <Ionicons name={isPaused ? "pause" : "volume-high"} size={18} color={isPaused ? "#E67E22" : "#27AE60"} />
+          <Text style={[styles.nowPlayingText, isPaused && { color: "#E67E22" }]}>
+            {isPaused ? 'Pausado: ' : 'Reproduciendo: '}{TRACKS.find((t) => t.id === playingId)?.title || ''}
           </Text>
         </View>
       )}

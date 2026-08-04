@@ -86,6 +86,12 @@ export const storyService = {
   delete: (id: number) => api.delete(`/story/${id}`),
 };
 
+// Servicios de minijuegos con IA
+export const gameService = {
+  generateQuestions: (gameName: string, category: string, count = 10) =>
+    api.post('/games/generate-questions', { gameName, category, count }),
+};
+
 // ✅ Servicio de autenticación (login, registro, etc.)
 export const authService = {
   login: (email: string, password: string) => api.post('/auth/login', { email, password }),

@@ -15,6 +15,7 @@ import rutinaRoutes from "./routes/rutina";
 import messageRoutes from "./routes/message";
 import storyRoutes from "./routes/story";
 import configRoutes from "./routes/config";
+import gameRoutes from "./routes/game";
 
 dotenv.config();
 
@@ -48,6 +49,7 @@ app.use("/api/rutina", rutinaRoutes);
 app.use("/api/toy", messageRoutes);
 app.use("/api/story", storyRoutes);
 app.use("/api/config", configRoutes);
+app.use("/api/games", gameRoutes);
 
 // Base de datos + servidor
 AppDataSource.initialize()

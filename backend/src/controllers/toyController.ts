@@ -3,11 +3,13 @@ import { Request, Response } from "express";
 import { AppDataSource } from "../config/database";
 import { Toy } from "../models/Toy";
 import { Child } from "../models/Child";
+import { Message } from "../models/Message";
 import { AuthRequest } from "../middleware/auth";
-import { getAIResponse } from "../services/aiService";
+import { getAIResponse, ChatHistoryMessage } from "../services/aiService";
 
 const toyRepository = AppDataSource.getRepository(Toy);
 const childRepository = AppDataSource.getRepository(Child);
+const messageRepository = AppDataSource.getRepository(Message);
 
 // ✅ Generar avatar con Pollinations.ai (gratuito, sin clave)
 const generateAvatar = (toyName: string): string => {
@@ -210,7 +212,21 @@ export const chatWithToy = async (req: AuthRequest, res: Response): Promise<void
       return;
     }
 
-    const reply = await getAIResponse(message, toy.name, toy.personality, toy.context);
+    // Obtener los últimos 15 mensajes para proporcionar contexto a la IA
+    const pastMessages = await messageRepository.find({
+      where: { toy: { id: toyId } },
+      order: { createdAt: "DESC" },
+      take: 15,
+    });
+
+    const history: ChatHistoryMessage[] = pastMessages
+      .reverse()
+      .map((msg) => ({
+        role: msg.isUser ? "user" : "assistant",
+        content: msg.content,
+      }));
+
+    const reply = await getAIResponse(message, toy.name, toy.personality, toy.context, history);
     res.status(200).json({ success: true, data: { reply } });
   } catch (error) {
     console.error("Error en chat:", error);

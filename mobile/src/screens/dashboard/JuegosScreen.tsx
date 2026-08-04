@@ -6,10 +6,12 @@ import {
   ScrollView,
   TouchableOpacity,
   Modal,
+  ActivityIndicator,
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { storage } from '../../services/storage';
+import { gameService } from '../../services/api';
 
 type Categoria = 'Todos' | 'Lógica' | 'Memoria' | 'Matemáticas' | 'Lectura';
 
@@ -21,24 +23,21 @@ interface Juego {
   categoria: Categoria;
 }
 
+interface Question {
+  question: string;
+  options: string[];
+  answer: number;
+}
+
 const JUEGOS: Juego[] = [
   { id: 1, name: 'Adivinanzas', desc: 'Ejercita tu mente con adivinanzas', icon: 'bulb-outline', categoria: 'Lógica' },
   { id: 2, name: 'Colores', desc: 'Aprende colores jugando', icon: 'color-palette-outline', categoria: 'Lógica' },
   { id: 3, name: 'Sumas simples', desc: 'Resuelve operaciones básicas', icon: 'calculator-outline', categoria: 'Matemáticas' },
   { id: 4, name: 'Memoria', desc: 'Encuentra las parejas de cartas', icon: 'brain-outline', categoria: 'Memoria' },
   { id: 5, name: 'Ordenar palabras', desc: 'Forma la palabra correcta', icon: 'text-outline', categoria: 'Lectura' },
-];
-
-const RIDDLES = [
-  { question: 'Tengo hojas y no soy árbol, hablo sin tener voz. ¿Qué soy?', options: ['Un libro', 'Una carta', 'Un periódico'], answer: 0 },
-  { question: 'Blanco por dentro, verde por fuera. Si quieres que te lo diga, espera. ¿Qué es?', options: ['Manzana', 'Pera', 'Plátano'], answer: 1 },
-  { question: 'Tengo agujas pero no sé coser, tengo números pero no sé leer. ¿Qué soy?', options: ['Reloj', 'Brújula', 'Calculadora'], answer: 0 },
-];
-
-const MATH_QUESTIONS = [
-  { question: '¿Cuánto es 3 + 5?', options: ['7', '8', '9'], answer: 1 },
-  { question: '¿Cuánto es 12 - 4?', options: ['8', '6', '10'], answer: 0 },
-  { question: '¿Cuánto es 4 + 4?', options: ['6', '8', '7'], answer: 1 },
+  { id: 6, name: 'Secuencias', desc: 'Encuentra el patrón lógico', icon: 'git-compare-outline', categoria: 'Lógica' },
+  { id: 7, name: 'Restas básicas', desc: 'Aprende a restar', icon: 'remove-circle-outline', categoria: 'Matemáticas' },
+  { id: 8, name: 'Comprensión lectora', desc: 'Lee y responde correctamente', icon: 'book-outline', categoria: 'Lectura' },
 ];
 
 const PROGRESS_KEY = 'juegos_progreso';
@@ -48,7 +47,9 @@ export default function JuegosScreen({ navigation }: any) {
   const [progreso, setProgreso] = useState<Record<number, boolean>>({});
   const [selectedJuego, setSelectedJuego] = useState<Juego | null>(null);
 
-  // Juego state
+  // AI Game state
+  const [aiQuestions, setAiQuestions] = useState<Question[]>([]);
+  const [loadingQuestions, setLoadingQuestions] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [score, setScore] = useState(0);
   const [gameFinished, setGameFinished] = useState(false);
@@ -76,24 +77,45 @@ export default function JuegosScreen({ navigation }: any) {
     }
   };
 
-  const handlePlay = (juego: Juego) => {
+  const handlePlay = async (juego: Juego) => {
     setSelectedJuego(juego);
     setCurrentQuestionIndex(0);
     setScore(0);
     setGameFinished(false);
+    setLoadingQuestions(true);
+
+    try {
+      // Solicitar 10 preguntas generadas dinámicamente por la IA de Groq
+      const res = await gameService.generateQuestions(juego.name, juego.categoria, 10);
+      if (res.data.success && Array.isArray(res.data.data) && res.data.data.length > 0) {
+        setAiQuestions(res.data.data);
+      } else {
+        throw new Error('Respuesta inválida de la IA');
+      }
+    } catch (error) {
+      console.error('Error obteniendo preguntas de la IA:', error);
+      // Fallback de preguntas locales
+      setAiQuestions([
+        { question: `¿Cuál es el primer paso en "${juego.name}"?`, options: ['Observar', 'Correr', 'Dormir'], answer: 0 },
+        { question: '¿Cuál es el resultado de 5 + 5?', options: ['8', '10', '12'], answer: 1 },
+        { question: '¿Qué animal dice miau?', options: ['Gato', 'Perro', 'Vaca'], answer: 0 },
+      ]);
+    } finally {
+      setLoadingQuestions(false);
+    }
   };
 
   const handleAnswer = (optionIndex: number) => {
-    const questions = selectedJuego?.categoria === 'Matemáticas' ? MATH_QUESTIONS : RIDDLES;
-    const currentQ = questions[currentQuestionIndex];
-    
+    const currentQ = aiQuestions[currentQuestionIndex];
+    if (!currentQ) return;
+
     let newScore = score;
     if (optionIndex === currentQ.answer) {
       newScore += 1;
       setScore(newScore);
     }
 
-    if (currentQuestionIndex + 1 < questions.length) {
+    if (currentQuestionIndex + 1 < aiQuestions.length) {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
     } else {
       setGameFinished(true);
@@ -109,15 +131,13 @@ export default function JuegosScreen({ navigation }: any) {
     ? JUEGOS
     : JUEGOS.filter((j) => j.categoria === categoriaSeleccionada);
 
-  const activeQuestions = selectedJuego?.categoria === 'Matemáticas' ? MATH_QUESTIONS : RIDDLES;
-
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={28} color="#2C3E50" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Juegos Educativos</Text>
+        <Text style={styles.headerTitle}>Juegos con IA Panda</Text>
         <View style={{ width: 36 }} />
       </View>
 
@@ -167,7 +187,7 @@ export default function JuegosScreen({ navigation }: any) {
         <View style={{ height: 20 }} />
       </ScrollView>
 
-      {/* Modal Interactivo de Minijuego */}
+      {/* Modal Interactivo de Minijuego Generado por IA */}
       <Modal visible={selectedJuego !== null} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
@@ -178,12 +198,19 @@ export default function JuegosScreen({ navigation }: any) {
               </TouchableOpacity>
             </View>
 
-            {gameFinished ? (
+            {loadingQuestions ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#4A90D9" />
+                <Text style={styles.loadingText}>
+                  🤖 Generando 10 retos con IA para "{selectedJuego?.name}"...
+                </Text>
+              </View>
+            ) : gameFinished ? (
               <View style={styles.resultContainer}>
                 <Ionicons name="trophy" size={64} color="#F1C40F" />
                 <Text style={styles.resultTitle}>¡Juego completado!</Text>
                 <Text style={styles.resultScore}>
-                  Puntaje: {score} / {activeQuestions.length}
+                  Puntaje: {score} de {aiQuestions.length} aciertos
                 </Text>
                 <TouchableOpacity
                   style={styles.closeGameButton}
@@ -194,13 +221,21 @@ export default function JuegosScreen({ navigation }: any) {
               </View>
             ) : (
               <View style={styles.questionContainer}>
+                <View style={styles.progressBarBg}>
+                  <View
+                    style={[
+                      styles.progressBarFill,
+                      { width: `${((currentQuestionIndex + 1) / (aiQuestions.length || 1)) * 100}%` },
+                    ]}
+                  />
+                </View>
                 <Text style={styles.progressText}>
-                  Pregunta {currentQuestionIndex + 1} de {activeQuestions.length}
+                  Pregunta {currentQuestionIndex + 1} de {aiQuestions.length}
                 </Text>
                 <Text style={styles.questionText}>
-                  {activeQuestions[currentQuestionIndex]?.question}
+                  {aiQuestions[currentQuestionIndex]?.question}
                 </Text>
-                {activeQuestions[currentQuestionIndex]?.options.map((option, idx) => (
+                {aiQuestions[currentQuestionIndex]?.options.map((option, idx) => (
                   <TouchableOpacity
                     key={idx}
                     style={styles.optionButton}
@@ -308,15 +343,38 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
     color: '#2C3E50',
   },
+  loadingContainer: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 15,
+    color: '#4A90D9',
+    textAlign: 'center',
+    fontWeight: '500',
+  },
   questionContainer: {
     alignItems: 'stretch',
+  },
+  progressBarBg: {
+    height: 6,
+    backgroundColor: '#EBF5FB',
+    borderRadius: 3,
+    marginBottom: 12,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: '#4A90D9',
+    borderRadius: 3,
   },
   progressText: {
     fontSize: 13,
