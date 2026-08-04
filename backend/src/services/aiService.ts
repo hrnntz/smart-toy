@@ -157,18 +157,22 @@ export const generateAIMusicTrack = async (prompt: string): Promise<{ title: str
     const { generateSpeechFromText } = require("./elevenlabsService");
     const lowerPrompt = prompt.toLowerCase();
 
-    // Streams de música relajante y sonidos ambientales variados
+    // Streams de sonidos ambientales reales de Google Actions Audio Library y Freesound
     const ambientLibrary: Record<string, string> = {
-      lluvia: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3',
-      mar: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
-      olas: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
-      bosque: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3',
-      naturaleza: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3',
-      piano: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
-      relajante: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3',
-      dormir: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-10.mp3',
-      estrellas: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-15.mp3',
-      arpa: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-16.mp3',
+      lluvia: 'https://actions.google.com/sounds/v1/weather/rain_heavy_loud.ogg',
+      mar: 'https://actions.google.com/sounds/v1/water/ocean_waves.ogg',
+      olas: 'https://actions.google.com/sounds/v1/water/ocean_waves.ogg',
+      agua: 'https://actions.google.com/sounds/v1/water/ocean_waves.ogg',
+      bosque: 'https://actions.google.com/sounds/v1/ambiences/outdoor_forest.ogg',
+      naturaleza: 'https://actions.google.com/sounds/v1/ambiences/outdoor_forest.ogg',
+      pajaro: 'https://actions.google.com/sounds/v1/ambiences/outdoor_forest.ogg',
+      piano: 'https://cdn.freesound.org/previews/518/518888_11306353-lq.mp3',
+      caja: 'https://cdn.freesound.org/previews/462/462092_9159316-lq.mp3',
+      relajante: 'https://cdn.freesound.org/previews/462/462092_9159316-lq.mp3',
+      dormir: 'https://actions.google.com/sounds/v1/ambiences/white_noise.ogg',
+      ruido: 'https://actions.google.com/sounds/v1/ambiences/white_noise.ogg',
+      viento: 'https://actions.google.com/sounds/v1/weather/wind_synthetic.ogg',
+      kalimba: 'https://www.learningcontainer.com/wp-content/uploads/2020/02/Kalimba-Lullaby-Sound.mp3',
     };
 
     for (const key of Object.keys(ambientLibrary)) {
