@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { storage } from '../../services/storage';
+import { playAudio, stopAudio } from '../../services/audioService';
 
 type TabType = 'Musica' | 'Sonidos' | 'Favoritos';
 
@@ -12,13 +13,14 @@ interface Track {
   icon: string;
   color: string;
   type: 'Musica' | 'Sonidos';
+  uri: string;
 }
 
 const TRACKS: Track[] = [
-  { id: 1, title: 'Música relajante', duration: '30 min', icon: 'musical-note', color: '#27AE60', type: 'Musica' },
-  { id: 2, title: 'Canciones infantiles', duration: '45 min', icon: 'musical-notes', color: '#E67E22', type: 'Musica' },
-  { id: 3, title: 'Sonidos de naturaleza', duration: '60 min', icon: 'leaf', color: '#3498DB', type: 'Sonidos' },
-  { id: 4, title: 'Ruido blanco', duration: '30 min', icon: 'moon', color: '#2C3E50', type: 'Sonidos' },
+  { id: 1, title: 'Música relajante', duration: '30 min', icon: 'musical-note', color: '#27AE60', type: 'Musica', uri: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3' },
+  { id: 2, title: 'Canciones infantiles', duration: '45 min', icon: 'musical-notes', color: '#E67E22', type: 'Musica', uri: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3' },
+  { id: 3, title: 'Sonidos de naturaleza', duration: '60 min', icon: 'leaf', color: '#3498DB', type: 'Sonidos', uri: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3' },
+  { id: 4, title: 'Ruido blanco', duration: '30 min', icon: 'moon', color: '#2C3E50', type: 'Sonidos', uri: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3' },
 ];
 
 const FAVORITES_KEY = 'musica_favoritos';
@@ -30,6 +32,9 @@ export default function MusicaScreen() {
 
   useEffect(() => {
     loadFavorites();
+    return () => {
+      stopAudio();
+    };
   }, []);
 
   const loadFavorites = async () => {
@@ -49,8 +54,22 @@ export default function MusicaScreen() {
     }
   };
 
-  const togglePlay = (track: Track) => {
-    setPlayingId(playingId === track.id ? null : track.id);
+  const togglePlay = async (track: Track) => {
+    if (playingId === track.id) {
+      await stopAudio();
+      setPlayingId(null);
+    } else {
+      setPlayingId(track.id);
+      const success = await playAudio(track.uri, (status) => {
+        if (status.didJustFinish) {
+          setPlayingId(null);
+        }
+      });
+      if (!success) {
+        Alert.alert('Error', 'No se pudo reproducir el audio.');
+        setPlayingId(null);
+      }
+    }
   };
 
   const toggleFavorite = (id: number) => {

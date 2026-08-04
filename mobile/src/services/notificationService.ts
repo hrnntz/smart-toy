@@ -163,10 +163,31 @@ export const requestPermissions = async (): Promise<boolean> => {
 
   try {
     const { status } = await Notifications.requestPermissionsAsync();
+    if (status === 'granted') {
+      registerPushTokenWithBackend();
+    }
     return status === 'granted';
   } catch (error) {
     console.error('Error al pedir permisos:', error);
     return false;
+  }
+};
+
+export const registerPushTokenWithBackend = async (): Promise<void> => {
+  try {
+    if (Platform.OS === 'web') return;
+    const tokenData = await Notifications.getExpoPushTokenAsync();
+    const pushToken = tokenData.data;
+    console.log('📱 Registrar Expo Push Token en Backend:', pushToken);
+    
+    const token = await storage.getItem('token');
+    const api = require('./api').api;
+    if (token && api) {
+      await api.post('/config/push-token', { pushToken });
+      console.log('✅ Push Token guardado exitosamente en Backend');
+    }
+  } catch (error) {
+    console.warn('Advertencia al registrar Push Token en backend:', error);
   }
 };
 

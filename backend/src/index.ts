@@ -1,10 +1,12 @@
 import "reflect-metadata";
 import dotenv from "dotenv";
 import express from "express";
+import http from "http";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 import { AppDataSource } from "./config/database";
+import { initSocketServer } from "./socket";
 
 import authRoutes from "./routes/auth";
 import childRoutes from "./routes/child";
@@ -17,7 +19,11 @@ import configRoutes from "./routes/config";
 dotenv.config();
 
 const app = express();
+const server = http.createServer(app);
 const PORT = Number(process.env.PORT) || 3000;
+
+// Inicializar Socket.io
+initSocketServer(server);
 
 // Middleware
 app.use(helmet());
@@ -48,10 +54,9 @@ AppDataSource.initialize()
   .then(() => {
     console.log("PostgreSQL conectado correctamente");
     console.log(`🗄️  Base de datos: ${process.env.DB_NAME} @ ${process.env.DB_HOST}`);
-    // ✅ CAMBIO AQUÍ: Escuchar en todas las interfaces (0.0.0.0)
-    app.listen(PORT, '0.0.0.0', () => {
+    server.listen(PORT, '0.0.0.0', () => {
       console.log(`Smart Toy Backend ejecutándose en http://localhost:${PORT}`);
-      console.log(`📡 Accesible desde la red local en tu IP: http://192.168.x.x:${PORT}`);
+      console.log(`📡 Socket.io y HTTP escuchando en la IP local :${PORT}`);
     });
   })
   .catch((error: any) => {

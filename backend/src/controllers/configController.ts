@@ -110,3 +110,48 @@ export const updateConfig = async (
     });
   }
 };
+
+// Actualizar push token para notificaciones
+export const updatePushToken = async (
+  req: AuthRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    const userId = req.user?.userId;
+    const { pushToken } = req.body;
+
+    if (!userId) {
+      res.status(401).json({
+        success: false,
+        message: "Usuario no autenticado"
+      });
+      return;
+    }
+
+    let config = await configRepository.findOne({
+      where: { user: { id: userId } }
+    });
+
+    if (!config) {
+      config = configRepository.create({
+        user: { id: userId }
+      });
+    }
+
+    // Guardar el pushToken en la configuración
+    (config as any).pushToken = pushToken;
+    await configRepository.save(config);
+
+    res.status(200).json({
+      success: true,
+      message: "Push Token registrado correctamente",
+      data: { pushToken }
+    });
+  } catch (error) {
+    console.error("Error guardando push token:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error registrando push token"
+    });
+  }
+};
