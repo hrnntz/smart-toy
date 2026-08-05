@@ -50,7 +50,7 @@ export default function SplashScreen({ navigation }: any) {
         ]}
       >
         <Image
-          source={require('../../../assets/logo.png')}
+          source={require('../../../assets/logo.jpg')}
           style={styles.logoImage}
           resizeMode="contain"
         />

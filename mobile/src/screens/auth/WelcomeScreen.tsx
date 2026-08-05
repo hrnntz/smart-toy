@@ -34,7 +34,7 @@ export default function WelcomeScreen() {
         <View style={[styles.circlePlaceholder, { backgroundColor: colors.primary + '20' }]} />
         <View style={[styles.circlePlaceholderSmall, { backgroundColor: colors.secondary + '30' }]} />
         <Image
-          source={require('../../../assets/logo.png')}
+          source={require('../../../assets/logo.jpg')}
           style={{ width: 150, height: 150, borderRadius: 32 }}
           resizeMode="contain"
         />
