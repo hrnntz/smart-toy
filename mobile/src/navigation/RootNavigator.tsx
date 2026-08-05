@@ -3,6 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 
 import AuthLoadingScreen from '../screens/auth/AuthLoadingScreen';
+import WelcomeScreen from '../screens/auth/WelcomeScreen';
 import LoginScreen from '../screens/auth/LoginScreen';
 import RegisterScreen from '../screens/auth/RegisterScreen';
 import TabNavigator from './TabNavigator';
@@ -43,6 +44,7 @@ export default function RootNavigator() {
         screenOptions={{ headerShown: false }}
       >
         <Stack.Screen name="AuthLoading" component={AuthLoadingScreen} />
+        <Stack.Screen name="Welcome" component={WelcomeScreen} />
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Register" component={RegisterScreen} />
         <Stack.Screen name="Home" component={TabNavigator} />

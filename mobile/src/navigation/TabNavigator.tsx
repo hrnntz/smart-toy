@@ -1,6 +1,7 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../hooks/useTheme';
 
 import HomeScreen from '../screens/dashboard/HomeScreen';
 import RutinasScreen from '../screens/dashboard/RutinasScreen';
@@ -12,6 +13,8 @@ import MasScreen from '../screens/dashboard/MasScreen';
 const Tab = createBottomTabNavigator();
 
 export default function TabNavigator() {
+  const { colors, isDark } = useTheme();
+
   return (
     <Tab.Navigator
       id="Tabs"
@@ -36,18 +39,19 @@ export default function TabNavigator() {
 
           return <Ionicons name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: '#4A90D9',
-        tabBarInactiveTintColor: '#999',
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textSecondary,
         tabBarStyle: {
-          backgroundColor: '#FFFFFF',
+          backgroundColor: colors.card,
           borderTopWidth: 1,
-          borderTopColor: '#E0E0E0',
-          height: 60,
-          paddingBottom: 5,
+          borderTopColor: colors.border,
+          height: 64,
+          paddingBottom: 8,
+          paddingTop: 4,
         },
         tabBarLabelStyle: {
           fontSize: 11,
-          fontWeight: '500',
+          fontWeight: '600',
         },
       })}
     >

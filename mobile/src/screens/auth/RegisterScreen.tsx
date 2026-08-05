@@ -1,24 +1,26 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  ActivityIndicator,
-} from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import api from '../../services/api';
 import CustomAlert from '../../components/common/CustomAlert';
+import { useTheme } from '../../hooks/useTheme';
+import { Button } from '../../components/ui/Button';
+import { Input } from '../../components/ui/Input';
 
-export default function RegisterScreen({ navigation }: any) {
+interface RegisterScreenProps {
+  onAuthSuccess?: () => void;
+  navigation?: any;
+}
+
+export default function RegisterScreen({ onAuthSuccess, navigation }: RegisterScreenProps) {
+  const { colors, typography } = useTheme();
+
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Estado para el Alert personalizado
   const [alertVisible, setAlertVisible] = useState(false);
   const [alertTitle, setAlertTitle] = useState('');
   const [alertMessage, setAlertMessage] = useState('');
@@ -48,34 +50,19 @@ export default function RegisterScreen({ navigation }: any) {
       if (response.data.success) {
         showAlert('Éxito', 'Usuario registrado correctamente');
         setTimeout(() => {
-          navigation.navigate('Login');
+          if (navigation) {
+            navigation.navigate('Login');
+          } else {
+            showAlert('Aviso', 'Por favor inicia sesión con tu nueva cuenta');
+          }
         }, 1500);
       } else {
         showAlert('Error', response.data.message || 'Error al registrar');
       }
     } catch (error: any) {
-      console.log('❌ Error capturado:', error);
-      
       let message = 'Error al conectar con el servidor';
-      
-      if (error && error.response) {
-        const status = error.response.status;
-        
-        if (status === 409) {
-          message = '❌ Este email ya está registrado. Por favor, usa otro email.';
-        } else if (status === 400) {
-          message = error.response.data?.message || '❌ Datos inválidos. Revisa los campos.';
-        } else if (status === 500) {
-          message = '❌ Error interno del servidor. Intenta más tarde.';
-        } else {
-          message = error.response.data?.message || 'Error al registrar usuario.';
-        }
-      } else if (error && error.request) {
-        message = '❌ No se pudo conectar con el servidor. ¿Está el backend corriendo?';
-      } else {
-        message = error?.message || 'Error desconocido';
-      }
-      
+      if (error?.response?.status === 409) message = '❌ Este email ya está registrado. Por favor, usa otro email.';
+      else if (error?.response?.status === 400) message = '❌ Datos inválidos. Revisa los campos.';
       showAlert('Error al registrar', message);
     } finally {
       setLoading(false);
@@ -84,51 +71,56 @@ export default function RegisterScreen({ navigation }: any) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Crear Cuenta</Text>
+      <Text style={[styles.title, { color: colors.text, fontSize: typography.size.xl }]}>
+        Crear Cuenta
+      </Text>
 
-      <TextInput
-        style={styles.input}
-        placeholder="Nombre"
-        value={name}
-        onChangeText={setName}
-      />
-
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-        autoCapitalize="none"
-        keyboardType="email-address"
-      />
-
-      <View style={styles.passwordContainer}>
-        <TextInput
-          style={styles.passwordInput}
-          placeholder="Contraseña"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry={!showPassword}
+      <View style={styles.formContainer}>
+        <Input
+          placeholder="Nombre"
+          value={name}
+          onChangeText={setName}
         />
-        <TouchableOpacity
-          style={styles.eyeButton}
-          onPress={() => setShowPassword(!showPassword)}
-        >
-          <Ionicons
-            name={showPassword ? 'eye-off' : 'eye'}
-            size={24}
-            color="#7F8C8D"
+
+        <Input
+          placeholder="Email"
+          value={email}
+          onChangeText={setEmail}
+          autoCapitalize="none"
+          keyboardType="email-address"
+        />
+
+        <View style={styles.passwordContainer}>
+          <Input
+            placeholder="Contraseña"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry={!showPassword}
+            style={{ paddingRight: 50 }}
           />
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.eyeButton}
+            onPress={() => setShowPassword(!showPassword)}
+          >
+            <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={24} color={colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
+
+        <Button
+          title="Registrarse"
+          onPress={handleRegister}
+          isLoading={loading}
+          style={styles.submitBtn}
+        />
+
+        {!onAuthSuccess && (
+          <Button
+            title="¿Ya tienes cuenta? Inicia sesión"
+            variant="ghost"
+            onPress={() => navigation?.navigate('Login')}
+          />
+        )}
       </View>
-
-      <TouchableOpacity style={styles.button} onPress={handleRegister} disabled={loading}>
-        {loading ? <ActivityIndicator color="white" /> : <Text style={styles.buttonText}>Registrarse</Text>}
-      </TouchableOpacity>
-
-      <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-        <Text style={styles.link}>¿Ya tienes cuenta? Inicia sesión</Text>
-      </TouchableOpacity>
 
       <CustomAlert
         visible={alertVisible}
@@ -142,61 +134,26 @@ export default function RegisterScreen({ navigation }: any) {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    justifyContent: 'center',
-    padding: 20,
-    backgroundColor: '#f5f5f5',
+    paddingBottom: 20,
   },
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
+    fontWeight: '700',
+    marginBottom: 20,
     textAlign: 'center',
-    marginBottom: 30,
-    color: '#2c3e50',
   },
-  input: {
-    backgroundColor: 'white',
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 15,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    fontSize: 16,
+  formContainer: {
+    width: '100%',
   },
   passwordContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'white',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    marginBottom: 15,
-  },
-  passwordInput: {
-    flex: 1,
-    padding: 15,
-    fontSize: 16,
+    position: 'relative',
   },
   eyeButton: {
-    paddingHorizontal: 15,
-    paddingVertical: 10,
+    position: 'absolute',
+    right: 15,
+    top: 22,
+    zIndex: 10,
   },
-  button: {
-    backgroundColor: '#2ecc71',
-    padding: 15,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  buttonText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  link: {
-    color: '#3498db',
-    textAlign: 'center',
-    marginTop: 20,
-    fontSize: 16,
+  submitBtn: {
+    marginTop: 24,
   },
 });
