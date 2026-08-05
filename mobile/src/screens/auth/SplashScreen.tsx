@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { View, Text, StyleSheet, Animated, Image } from 'react-native';
 import { useTheme } from '../../hooks/useTheme';
 import { storage } from '../../services/storage';
 
@@ -9,7 +9,6 @@ export default function SplashScreen({ navigation }: any) {
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
 
   useEffect(() => {
-    // Animación de entrada suave del isotipo
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -23,7 +22,6 @@ export default function SplashScreen({ navigation }: any) {
       }),
     ]).start();
 
-    // Verificación de autenticación y transición limpia
     const timer = setTimeout(async () => {
       try {
         const token = await storage.getItem('token');
@@ -51,10 +49,11 @@ export default function SplashScreen({ navigation }: any) {
           },
         ]}
       >
-        {/* Placeholder Isotipo App */}
-        <View style={[styles.isotypeCircle, { backgroundColor: colors.primary + '20', borderColor: colors.primary }]}>
-          <Text style={{ fontSize: 72 }}>🐼</Text>
-        </View>
+        <Image
+          source={require('../../../assets/logo.png')}
+          style={styles.logoImage}
+          resizeMode="contain"
+        />
         <Text style={[styles.appName, { color: colors.text, fontSize: typography.size.xxl }]}>
           Smart Toy
         </Text>
@@ -75,13 +74,10 @@ const styles = StyleSheet.create({
   logoContainer: {
     alignItems: 'center',
   },
-  isotypeCircle: {
+  logoImage: {
     width: 140,
     height: 140,
-    borderRadius: 70,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
+    borderRadius: 28,
     marginBottom: 20,
   },
   appName: {

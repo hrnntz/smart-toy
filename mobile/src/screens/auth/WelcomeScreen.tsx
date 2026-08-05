@@ -31,10 +31,13 @@ export default function WelcomeScreen() {
     <View style={[styles.container, { backgroundColor: isDark ? '#121212' : '#F0F9FF' }]}>
       {/* Área Superior Gráfica (Inspirado en Family) */}
       <View style={styles.topArea}>
-        {/* Placeholder para un arte vibrante, usamos texto o formas por ahora */}
         <View style={[styles.circlePlaceholder, { backgroundColor: colors.primary + '20' }]} />
         <View style={[styles.circlePlaceholderSmall, { backgroundColor: colors.secondary + '30' }]} />
-        <Text style={{ fontSize: 80 }}>🐼</Text>
+        <Image
+          source={require('../../../assets/logo.png')}
+          style={{ width: 150, height: 150, borderRadius: 32 }}
+          resizeMode="contain"
+        />
       </View>
 
       {/* Tarjeta Inferior Blanca/Oscura con bordes 4xl */}
