@@ -5,74 +5,91 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  StatusBar,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { storage } from '../../services/storage';
+import { useTheme } from '../../hooks/useTheme';
+import { Card } from '../../components/ui/Card';
+import { Button } from '../../components/ui/Button';
 
 export default function MasScreen({ navigation }: any) {
+  const { colors, typography, isDark } = useTheme();
+
   const handleLogout = async () => {
     await storage.removeItem('token');
     await storage.removeItem('user');
-    navigation.replace('Login');
+    navigation.replace('Welcome');
   };
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <Text style={styles.title}>Configuración</Text>
+    <ScrollView style={[styles.container, { backgroundColor: colors.background }]} showsVerticalScrollIndicator={false}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+      <Text style={[styles.title, { color: colors.text }]}>Ajustes & Más</Text>
 
-      {/* Dispositivo Panda - navega a la configuración y a la lista de juguetes */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Dispositivo Panda</Text>
+      {/* Dispositivo Panda */}
+      <Card variant="elevated" style={styles.section}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Dispositivo Panda</Text>
         <TouchableOpacity
-          style={styles.menuItem}
+          style={[styles.menuItem, { borderBottomColor: colors.border }]}
           onPress={() => navigation.navigate('Configuracion')}
         >
-          <Ionicons name="settings-outline" size={22} color="#4A90D9" />
-          <Text style={styles.menuText}>Configuración del dispositivo</Text>
-          <Ionicons name="chevron-forward" size={20} color="#CCC" style={styles.menuArrow} />
+          <Ionicons name="settings-outline" size={22} color={colors.primary} />
+          <Text style={[styles.menuText, { color: colors.text }]}>Configuración del dispositivo</Text>
+          <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
         </TouchableOpacity>
         <TouchableOpacity
-          style={styles.menuItem}
+          style={[styles.menuItem, { borderBottomColor: colors.border }]}
           onPress={() => navigation.navigate('ToyList')}
         >
-          <Ionicons name="game-controller" size={22} color="#E67E22" />
-          <Text style={styles.menuText}>Gestionar dispositivos</Text>
-          <Ionicons name="chevron-forward" size={20} color="#CCC" style={styles.menuArrow} />
+          <Ionicons name="game-controller-outline" size={22} color={colors.secondary} />
+          <Text style={[styles.menuText, { color: colors.text }]}>Gestionar dispositivos</Text>
+          <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
         </TouchableOpacity>
-      </View>
+      </Card>
 
-      {/* Perfil del niño - navega a la lista de niños */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Perfil del niño</Text>
+      {/* Perfil del niño */}
+      <Card variant="elevated" style={styles.section}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Familia y Niños</Text>
         <TouchableOpacity
-          style={styles.menuItem}
+          style={[styles.menuItem, { borderBottomColor: colors.border }]}
           onPress={() => navigation.navigate('ChildList')}
         >
-          <Ionicons name="people" size={22} color="#E67E22" />
-          <Text style={styles.menuText}>Gestionar niños</Text>
-          <Ionicons name="chevron-forward" size={20} color="#CCC" style={styles.menuArrow} />
+          <Ionicons name="people-outline" size={22} color="#F59E0B" />
+          <Text style={[styles.menuText, { color: colors.text }]}>Gestionar perfiles de niños</Text>
+          <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
         </TouchableOpacity>
-      </View>
+        <TouchableOpacity
+          style={[styles.menuItem, { borderBottomColor: colors.border }]}
+          onPress={() => navigation.navigate('Ingles')}
+        >
+          <Ionicons name="language-outline" size={22} color="#10B981" />
+          <Text style={[styles.menuText, { color: colors.text }]}>Módulo de Inglés</Text>
+          <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+        </TouchableOpacity>
+      </Card>
 
       {/* Información */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Información</Text>
-        <View style={styles.menuItem}>
-          <Ionicons name="information-circle" size={22} color="#7F8C8D" />
-          <Text style={styles.menuText}>Versión de la app: 1.0.0</Text>
+      <Card variant="elevated" style={styles.section}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>Información</Text>
+        <View style={[styles.menuItem, { borderBottomColor: colors.border }]}>
+          <Ionicons name="information-circle-outline" size={22} color={colors.textSecondary} />
+          <Text style={[styles.menuText, { color: colors.textSecondary }]}>Versión de la app: 1.0.0</Text>
         </View>
-        <TouchableOpacity style={styles.menuItem}>
-          <Ionicons name="help-circle" size={22} color="#7F8C8D" />
-          <Text style={styles.menuText}>Soporte técnico</Text>
-          <Ionicons name="chevron-forward" size={20} color="#CCC" style={styles.menuArrow} />
+        <TouchableOpacity style={[styles.menuItem, { borderBottomWidth: 0 }]}>
+          <Ionicons name="help-circle-outline" size={22} color={colors.textSecondary} />
+          <Text style={[styles.menuText, { color: colors.text }]}>Soporte técnico</Text>
+          <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
         </TouchableOpacity>
-      </View>
+      </Card>
 
       {/* Botón cerrar sesión */}
-      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-        <Ionicons name="log-out" size={24} color="white" />
-        <Text style={styles.logoutText}>Cerrar sesión</Text>
-      </TouchableOpacity>
+      <Button
+        title="Cerrar sesión"
+        variant="outline"
+        onPress={handleLogout}
+        style={{ marginVertical: 24, borderColor: colors.error }}
+      />
     </ScrollView>
   );
 }
@@ -80,61 +97,33 @@ export default function MasScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F7FA',
     paddingHorizontal: 16,
     paddingTop: 50,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#2C3E50',
+    fontSize: 26,
+    fontWeight: '800',
     marginBottom: 20,
   },
   section: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 16,
     marginBottom: 16,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
+    padding: 16,
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#2C3E50',
+    fontWeight: '700',
     marginBottom: 12,
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
   },
   menuText: {
     fontSize: 14,
-    color: '#34495E',
+    fontWeight: '600',
     flex: 1,
     marginLeft: 12,
-  },
-  menuArrow: {
-    marginLeft: 'auto',
-  },
-  logoutButton: {
-    flexDirection: 'row',
-    backgroundColor: '#E74C3C',
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    marginVertical: 20,
-  },
-  logoutText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: '600',
   },
 });

@@ -7,12 +7,18 @@ import {
   Image,
   ActivityIndicator,
   Alert,
+  StatusBar,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { API_URL } from '../../config/env';
 import io, { Socket } from 'socket.io-client';
+import { useTheme } from '../../hooks/useTheme';
+import { Card } from '../../components/ui/Card';
+import { IconButton } from '../../components/ui/IconButton';
 
 export default function SupervisionScreen({ navigation, route }: any) {
+  const { colors, typography, isDark } = useTheme();
+
   const [roomId, setRoomId] = useState('PANDA_01');
   const [isConnected, setIsConnected] = useState(false);
   const [currentFrame, setCurrentFrame] = useState<string | null>(null);
@@ -21,12 +27,10 @@ export default function SupervisionScreen({ navigation, route }: any) {
   const [socket, setSocket] = useState<Socket | null>(null);
 
   useEffect(() => {
-    // Conectar a Socket.io en la nube para recibir transmisión
     const socketServerUrl = API_URL.replace(/\/api\/?$/, '');
     const newSocket = io(socketServerUrl, { transports: ['websocket'] });
 
     newSocket.on('connect', () => {
-      console.log('📡 Visor conectado a Socket.io Nube:', newSocket.id);
       newSocket.emit('camera:join_stream', roomId);
       setIsConnected(true);
     });
@@ -48,31 +52,34 @@ export default function SupervisionScreen({ navigation, route }: any) {
   }, [roomId]);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
       {/* Header del Padre */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={26} color="#2C3E50" />
-        </TouchableOpacity>
+        <IconButton icon="arrow-back" onPress={() => navigation.goBack()} />
         <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>Supervisión en Vivo</Text>
-          <Text style={styles.headerSubtitle}>Panda Inteligente • Remoto Nube</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Supervisión en Vivo</Text>
+          <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>Panda Inteligente • Remoto Nube</Text>
         </View>
-        <TouchableOpacity
-          style={styles.broadcastButton}
+        <IconButton
+          icon="camera-reverse"
+          variant="solid"
+          color={colors.primary}
           onPress={() => navigation.navigate('CameraBroadcaster')}
-        >
-          <Ionicons name="camera-reverse" size={22} color="white" />
-        </TouchableOpacity>
+        />
       </View>
 
       {/* Pantalla de Streaming */}
-      <View style={[styles.videoContainer, nightMode && styles.nightModeOverlay]}>
+      <View style={[
+        styles.videoContainer,
+        { backgroundColor: isDark ? '#000000' : '#1E293B' },
+        nightMode && { borderColor: colors.success, borderWidth: 2 }
+      ]}>
         {currentFrame ? (
           <Image source={{ uri: currentFrame }} style={styles.streamImage} resizeMode="cover" />
         ) : (
           <View style={styles.placeholderContainer}>
-            <ActivityIndicator size="large" color="#4A90D9" />
+            <ActivityIndicator size="large" color={colors.primary} />
             <Text style={styles.placeholderTitle}>Conectando a la cámara de Panda...</Text>
             <Text style={styles.placeholderSub}>
               Asegúrate de que el teléfono secundario tenga abierto el "Modo Cámara Juguete".
@@ -82,85 +89,73 @@ export default function SupervisionScreen({ navigation, route }: any) {
 
         {/* Badge EN VIVO */}
         <View style={styles.liveBadge}>
-          <View style={styles.redDot} />
+          <View style={[styles.redDot, { backgroundColor: colors.error }]} />
           <Text style={styles.liveText}>EN VIVO (NUBE)</Text>
         </View>
       </View>
 
       {/* Panel de Controles para el Padre */}
-      <View style={styles.controlsPanel}>
-        <Text style={styles.controlsTitle}>Controles de Monitoreo</Text>
+      <Card variant="flat" style={[styles.controlsPanel, { backgroundColor: colors.card }]}>
+        <Text style={[styles.controlsTitle, { color: colors.text }]}>Controles de Monitoreo</Text>
 
         <View style={styles.buttonsRow}>
           <TouchableOpacity
-            style={[styles.controlBtn, audioEnabled && styles.controlBtnActive]}
+            style={[
+              styles.controlBtn,
+              { backgroundColor: audioEnabled ? colors.primary : colors.surface }
+            ]}
             onPress={() => setAudioEnabled(!audioEnabled)}
           >
-            <Ionicons name={audioEnabled ? 'volume-high' : 'volume-mute'} size={24} color={audioEnabled ? 'white' : '#2C3E50'} />
-            <Text style={[styles.controlText, audioEnabled && styles.controlTextActive]}>Escuchar</Text>
+            <Ionicons name={audioEnabled ? 'volume-high' : 'volume-mute'} size={24} color={audioEnabled ? '#FFFFFF' : colors.text} />
+            <Text style={[styles.controlText, { color: audioEnabled ? '#FFFFFF' : colors.text }]}>Escuchar</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.controlBtn, nightMode && styles.controlBtnActive]}
+            style={[
+              styles.controlBtn,
+              { backgroundColor: nightMode ? colors.primary : colors.surface }
+            ]}
             onPress={() => setNightMode(!nightMode)}
           >
-            <Ionicons name={nightMode ? 'moon' : 'moon-outline'} size={24} color={nightMode ? 'white' : '#2C3E50'} />
-            <Text style={[styles.controlText, nightMode && styles.controlTextActive]}>Visión Nocturna</Text>
+            <Ionicons name={nightMode ? 'moon' : 'moon-outline'} size={24} color={nightMode ? '#FFFFFF' : colors.text} />
+            <Text style={[styles.controlText, { color: nightMode ? '#FFFFFF' : colors.text }]}>Nocturna</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.controlBtn}
+            style={[styles.controlBtn, { backgroundColor: colors.surface }]}
             onPress={() => Alert.alert('Captura', 'Captura de pantalla guardada en la galería.')}
           >
-            <Ionicons name="camera" size={24} color="#2C3E50" />
-            <Text style={styles.controlText}>Capturar</Text>
+            <Ionicons name="camera" size={24} color={colors.text} />
+            <Text style={[styles.controlText, { color: colors.text }]}>Capturar</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </Card>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F5F7FA' },
+  container: { flex: 1, paddingTop: 50 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingTop: 50,
     paddingBottom: 16,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#EBF5FB',
   },
-  backButton: { padding: 4, marginRight: 8 },
-  headerTitleContainer: { flex: 1 },
-  headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#2C3E50' },
-  headerSubtitle: { fontSize: 13, color: '#7F8C8D' },
-  broadcastButton: {
-    backgroundColor: '#4A90D9',
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  headerTitleContainer: { flex: 1, marginLeft: 8 },
+  headerTitle: { fontSize: 20, fontWeight: '800' },
+  headerSubtitle: { fontSize: 13 },
   videoContainer: {
     flex: 1,
     margin: 16,
-    borderRadius: 20,
-    backgroundColor: '#1E293B',
+    borderRadius: 24,
     overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  nightModeOverlay: {
-    borderColor: '#27AE60',
-    borderWidth: 2,
-  },
   streamImage: { width: '100%', height: '100%' },
   placeholderContainer: { padding: 24, alignItems: 'center' },
-  placeholderTitle: { color: 'white', fontSize: 16, fontWeight: 'bold', marginTop: 16, textAlign: 'center' },
+  placeholderTitle: { color: 'white', fontSize: 16, fontWeight: '700', marginTop: 16, textAlign: 'center' },
   placeholderSub: { color: '#94A3B8', fontSize: 13, textAlign: 'center', marginTop: 8 },
   liveBadge: {
     position: 'absolute',
@@ -168,32 +163,29 @@ const styles = StyleSheet.create({
     left: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: 'rgba(0,0,0,0.65)',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
     gap: 6,
   },
-  redDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#EF4444' },
-  liveText: { color: 'white', fontSize: 12, fontWeight: 'bold' },
+  redDot: { width: 8, height: 8, borderRadius: 4 },
+  liveText: { color: 'white', fontSize: 12, fontWeight: '700' },
   controlsPanel: {
-    backgroundColor: 'white',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
     padding: 20,
-    elevation: 4,
+    marginBottom: 0,
+    marginHorizontal: 0,
   },
-  controlsTitle: { fontSize: 16, fontWeight: 'bold', color: '#2C3E50', marginBottom: 16 },
+  controlsTitle: { fontSize: 16, fontWeight: '800', marginBottom: 16 },
   buttonsRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
   controlBtn: {
     flex: 1,
-    backgroundColor: '#F1F5F9',
-    paddingVertical: 14,
-    borderRadius: 16,
+    paddingVertical: 16,
+    borderRadius: 20,
     alignItems: 'center',
     gap: 6,
   },
-  controlBtnActive: { backgroundColor: '#4A90D9' },
-  controlText: { fontSize: 12, color: '#2C3E50', fontWeight: '600' },
-  controlTextActive: { color: 'white' },
+  controlText: { fontSize: 12, fontWeight: '700' },
 });

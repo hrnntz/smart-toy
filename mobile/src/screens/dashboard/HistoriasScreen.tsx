@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,10 +9,14 @@ import {
   RefreshControl,
   Image,
   ActivityIndicator,
+  StatusBar,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { storyService } from '../../services/api';
+import { useTheme } from '../../hooks/useTheme';
+import { Card } from '../../components/ui/Card';
+import { Button } from '../../components/ui/Button';
 
 interface Historia {
   id: number;
@@ -24,6 +28,8 @@ interface Historia {
 }
 
 export default function HistoriasScreen({ navigation }: any) {
+  const { colors, typography, isDark } = useTheme();
+
   const [historias, setHistorias] = useState<Historia[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -88,103 +94,104 @@ export default function HistoriasScreen({ navigation }: any) {
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#4A90D9" />
+      <View style={[styles.center, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   return (
     <ScrollView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
+      showsVerticalScrollIndicator={false}
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
       }
     >
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
       <View style={styles.header}>
-        <Text style={styles.title}>Historias</Text>
-        <TouchableOpacity style={styles.generateButtonHeader} onPress={goToGenerate}>
-          <Ionicons name="sparkles" size={20} color="white" />
-          <Text style={styles.generateButtonHeaderText}>Generar</Text>
+        <Text style={[styles.title, { color: colors.text }]}>Cuentos e Historias</Text>
+        <TouchableOpacity
+          style={[styles.generateButtonHeader, { backgroundColor: colors.secondary }]}
+          onPress={goToGenerate}
+        >
+          <Ionicons name="sparkles" size={18} color="white" />
+          <Text style={styles.generateButtonHeaderText}>Crear</Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.tabRow}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'mis' && styles.tabActive]}
-          onPress={() => setActiveTab('mis')}
-        >
-          <Text style={[styles.tabText, activeTab === 'mis' && styles.tabActiveText]}>
-            Mis historias
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'ia' && styles.tabActive]}
-          onPress={() => setActiveTab('ia')}
-        >
-          <Text style={[styles.tabText, activeTab === 'ia' && styles.tabActiveText]}>
-            IA
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'favoritas' && styles.tabActive]}
-          onPress={() => setActiveTab('favoritas')}
-        >
-          <Text style={[styles.tabText, activeTab === 'favoritas' && styles.tabActiveText]}>
-            Favoritas
-          </Text>
-        </TouchableOpacity>
+        {(['mis', 'ia', 'favoritas'] as const).map((tab) => (
+          <TouchableOpacity
+            key={tab}
+            style={[
+              styles.tab,
+              { backgroundColor: activeTab === tab ? colors.primary : colors.surface }
+            ]}
+            onPress={() => setActiveTab(tab)}
+          >
+            <Text style={[
+              styles.tabText,
+              { color: activeTab === tab ? '#FFFFFF' : colors.textSecondary, fontWeight: activeTab === tab ? '700' : '500' }
+            ]}>
+              {tab === 'mis' ? 'Mis historias' : tab === 'ia' ? 'IA Cuentos' : 'Favoritas'}
+            </Text>
+          </TouchableOpacity>
+        ))}
       </View>
 
       {historias.length === 0 ? (
         <View style={styles.empty}>
-          <Ionicons name="book-outline" size={64} color="#ccc" />
-          <Text style={styles.emptyText}>No tienes historias guardadas</Text>
-          <Text style={styles.emptySub}>Genera una nueva con IA</Text>
+          <Ionicons name="book-outline" size={64} color={colors.textSecondary} />
+          <Text style={[styles.emptyText, { color: colors.text }]}>No tienes historias guardadas</Text>
+          <Text style={[styles.emptySub, { color: colors.textSecondary }]}>Genera una nueva cuento mágico con IA</Text>
         </View>
       ) : (
         historias.map((story) => (
-          <TouchableOpacity
-            key={story.id}
-            style={styles.storyCard}
-            onPress={() => openStoryDetail(story)}
-            activeOpacity={0.7}
-          >
-            {story.imagen ? (
-              <Image source={{ uri: story.imagen }} style={styles.storyImage} />
-            ) : (
-              <View style={styles.storyImagePlaceholder}>
-                <Ionicons name="book" size={28} color="#E67E22" />
+          <Card key={story.id} variant="elevated" style={styles.storyCard}>
+            <TouchableOpacity
+              style={styles.storyCardInner}
+              onPress={() => openStoryDetail(story)}
+              activeOpacity={0.8}
+            >
+              {story.imagen ? (
+                <Image source={{ uri: story.imagen }} style={styles.storyImage} />
+              ) : (
+                <View style={[styles.storyImagePlaceholder, { backgroundColor: colors.secondary + '15' }]}>
+                  <Ionicons name="book" size={26} color={colors.secondary} />
+                </View>
+              )}
+              <View style={styles.storyInfo}>
+                <Text style={[styles.storyTitle, { color: colors.text }]} numberOfLines={1}>
+                  {story.titulo}
+                </Text>
+                <Text style={[styles.storyDuration, { color: colors.textSecondary }]}>⏱ {story.duracion}</Text>
               </View>
-            )}
-            <View style={styles.storyInfo}>
-              <Text style={styles.storyTitle} numberOfLines={1}>
-                {story.titulo}
-              </Text>
-              <Text style={styles.storyDuration}>⏱ {story.duracion}</Text>
-            </View>
-            <View style={styles.cardActions}>
-              <TouchableOpacity
-                onPress={() => openStoryDetail(story)}
-                style={styles.actionButton}
-              >
-                <Ionicons name="eye" size={20} color="#3498DB" />
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => handleDelete(story.id, story.titulo)}
-                style={styles.actionButton}
-              >
-                <Ionicons name="trash" size={20} color="#E74C3C" />
-              </TouchableOpacity>
-            </View>
-          </TouchableOpacity>
+              <View style={styles.cardActions}>
+                <TouchableOpacity
+                  onPress={() => openStoryDetail(story)}
+                  style={styles.actionButton}
+                >
+                  <Ionicons name="eye" size={20} color={colors.primary} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => handleDelete(story.id, story.titulo)}
+                  style={styles.actionButton}
+                >
+                  <Ionicons name="trash" size={20} color={colors.error} />
+                </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
+          </Card>
         ))
       )}
 
-      <TouchableOpacity style={styles.generateButton} onPress={goToGenerate}>
-        <Ionicons name="sparkles" size={20} color="white" />
-        <Text style={styles.generateButtonText}>Generar historia con IA</Text>
-      </TouchableOpacity>
+      <Button
+        title="Generar historia con IA"
+        variant="secondary"
+        onPress={goToGenerate}
+        style={{ marginVertical: 20 }}
+      />
     </ScrollView>
   );
 }
@@ -192,7 +199,6 @@ export default function HistoriasScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F7FA',
     paddingHorizontal: 16,
     paddingTop: 50,
   },
@@ -200,7 +206,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F5F7FA',
   },
   header: {
     flexDirection: 'row',
@@ -209,13 +214,11 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#2C3E50',
+    fontSize: 26,
+    fontWeight: '800',
   },
   generateButtonHeader: {
     flexDirection: 'row',
-    backgroundColor: '#8E44AD',
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 20,
@@ -224,8 +227,8 @@ const styles = StyleSheet.create({
   },
   generateButtonHeaderText: {
     color: 'white',
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '700',
   },
   tabRow: {
     flexDirection: 'row',
@@ -236,18 +239,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: '#F0F0F0',
-  },
-  tabActive: {
-    backgroundColor: '#4A90D9',
   },
   tabText: {
-    fontSize: 14,
-    color: '#7F8C8D',
-  },
-  tabActiveText: {
-    color: 'white',
-    fontWeight: '600',
+    fontSize: 13,
   },
   empty: {
     alignItems: 'center',
@@ -255,39 +249,33 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#999',
+    fontWeight: '700',
     marginTop: 16,
   },
   emptySub: {
     fontSize: 14,
-    color: '#bbb',
     marginTop: 4,
   },
   storyCard: {
+    marginBottom: 12,
+    padding: 0,
+  },
+  storyCardInner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'white',
     padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
   },
   storyImage: {
     width: 48,
     height: 48,
     borderRadius: 24,
     marginRight: 12,
-    backgroundColor: '#F0F0F0',
   },
   storyImagePlaceholder: {
     width: 48,
     height: 48,
     borderRadius: 24,
     marginRight: 12,
-    backgroundColor: '#FEF5E7',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -297,34 +285,17 @@ const styles = StyleSheet.create({
   },
   storyTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#2C3E50',
+    fontWeight: '700',
   },
   storyDuration: {
     fontSize: 13,
-    color: '#7F8C8D',
     marginTop: 2,
   },
   cardActions: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 6,
   },
   actionButton: {
     padding: 6,
-  },
-  generateButton: {
-    flexDirection: 'row',
-    backgroundColor: '#8E44AD',
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    marginVertical: 20,
-  },
-  generateButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
   },
 });

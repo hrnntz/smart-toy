@@ -7,11 +7,15 @@ import {
   TouchableOpacity,
   Modal,
   ActivityIndicator,
-  Alert,
+  StatusBar,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { storage } from '../../services/storage';
 import { gameService } from '../../services/api';
+import { useTheme } from '../../hooks/useTheme';
+import { Card } from '../../components/ui/Card';
+import { Button } from '../../components/ui/Button';
+import { IconButton } from '../../components/ui/IconButton';
 
 type Categoria = 'Todos' | 'Lógica' | 'Memoria' | 'Matemáticas' | 'Lectura';
 type Dificultad = 'Fácil' | 'Medio' | 'Difícil';
@@ -45,6 +49,8 @@ const JUEGOS: Juego[] = [
 const PROGRESS_KEY = 'juegos_progreso';
 
 export default function JuegosScreen({ navigation }: any) {
+  const { colors, typography, isDark } = useTheme();
+
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<Categoria>('Todos');
   const [dificultad, setDificultad] = useState<Dificultad>('Fácil');
   const [progreso, setProgreso] = useState<Record<number, boolean>>({});
@@ -93,7 +99,6 @@ export default function JuegosScreen({ navigation }: any) {
     setLoadingQuestions(true);
 
     try {
-      // Solicitar 10 preguntas dinámicas con nivel de dificultad e explicaciones
       const res = await gameService.generateQuestions(juego.name, juego.categoria, dificultad, 10);
       if (res.data.success && Array.isArray(res.data.data) && res.data.data.length > 0) {
         setAiQuestions(res.data.data);
@@ -101,8 +106,6 @@ export default function JuegosScreen({ navigation }: any) {
         throw new Error('Respuesta de IA inválida');
       }
     } catch (error) {
-      console.error('Error obteniendo preguntas:', error);
-      // Fallback
       setAiQuestions([
         {
           question: '¿De qué color es la manzana madura?',
@@ -123,7 +126,7 @@ export default function JuegosScreen({ navigation }: any) {
   };
 
   const handleSelectOption = (optionIndex: number) => {
-    if (selectedAnswerIndex !== null) return; // Evitar múltiples selecciones
+    if (selectedAnswerIndex !== null) return;
     setSelectedAnswerIndex(optionIndex);
     setShowExplanation(true);
 
@@ -156,30 +159,29 @@ export default function JuegosScreen({ navigation }: any) {
   const currentQ = aiQuestions[currentQuestionIndex];
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={26} color="#2C3E50" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Minijuegos con IA Groq</Text>
-        <View style={{ width: 36 }} />
+        <IconButton icon="arrow-back" onPress={() => navigation.goBack()} />
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Minijuegos con IA</Text>
+        <View style={{ width: 40 }} />
       </View>
 
       {/* Selector de Dificultad */}
       <View style={styles.difficultyContainer}>
-        <Text style={styles.difficultyLabel}>Dificultad:</Text>
+        <Text style={[styles.difficultyLabel, { color: colors.textSecondary }]}>Dificultad:</Text>
         <View style={styles.difficultyRow}>
           {dificultades.map((d) => (
             <TouchableOpacity
               key={d}
               style={[
                 styles.diffChip,
-                dificultad === d && (d === 'Fácil' ? styles.diffEasy : d === 'Medio' ? styles.diffMedium : styles.diffHard),
+                { backgroundColor: dificultad === d ? colors.primary : colors.surface },
               ]}
               onPress={() => setDificultad(d)}
             >
-              <Text style={[styles.diffText, dificultad === d && styles.diffTextActive]}>{d}</Text>
+              <Text style={[styles.diffText, { color: dificultad === d ? '#FFFFFF' : colors.text }]}>{d}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -190,10 +192,16 @@ export default function JuegosScreen({ navigation }: any) {
         {categorias.map((cat) => (
           <TouchableOpacity
             key={cat}
-            style={[styles.categoryButton, categoriaSeleccionada === cat && styles.categoryButtonActive]}
+            style={[
+              styles.categoryButton,
+              { backgroundColor: categoriaSeleccionada === cat ? colors.primary : colors.surface }
+            ]}
             onPress={() => setCategoriaSeleccionada(cat)}
           >
-            <Text style={[styles.categoryText, categoriaSeleccionada === cat && styles.categoryTextActive]}>
+            <Text style={[
+              styles.categoryText,
+              { color: categoriaSeleccionada === cat ? '#FFFFFF' : colors.textSecondary, fontWeight: categoriaSeleccionada === cat ? '700' : '500' }
+            ]}>
               {cat}
             </Text>
           </TouchableOpacity>
@@ -203,20 +211,22 @@ export default function JuegosScreen({ navigation }: any) {
       {/* Lista de Juegos */}
       <ScrollView showsVerticalScrollIndicator={false}>
         {juegosFiltrados.map((juego) => (
-          <TouchableOpacity key={juego.id} style={styles.gameCard} onPress={() => handlePlay(juego)}>
-            <View style={styles.gameIcon}>
-              <Ionicons name={juego.icon as any} size={28} color="#4A90D9" />
-            </View>
-            <View style={styles.gameInfo}>
-              <Text style={styles.gameName}>{juego.name}</Text>
-              <Text style={styles.gameDesc}>{juego.desc}</Text>
-            </View>
-            {progreso[juego.id] ? (
-              <Ionicons name="checkmark-circle" size={28} color="#27AE60" />
-            ) : (
-              <Ionicons name="play-circle" size={32} color="#4A90D9" />
-            )}
-          </TouchableOpacity>
+          <Card key={juego.id} variant="elevated" style={styles.gameCard}>
+            <TouchableOpacity style={styles.gameCardInner} onPress={() => handlePlay(juego)}>
+              <View style={[styles.gameIcon, { backgroundColor: colors.primary + '15' }]}>
+                <Ionicons name={juego.icon as any} size={28} color={colors.primary} />
+              </View>
+              <View style={styles.gameInfo}>
+                <Text style={[styles.gameName, { color: colors.text }]}>{juego.name}</Text>
+                <Text style={[styles.gameDesc, { color: colors.textSecondary }]}>{juego.desc}</Text>
+              </View>
+              {progreso[juego.id] ? (
+                <Ionicons name="checkmark-circle" size={28} color={colors.success} />
+              ) : (
+                <Ionicons name="play-circle" size={32} color={colors.primary} />
+              )}
+            </TouchableOpacity>
+          </Card>
         ))}
         <View style={{ height: 20 }} />
       </ScrollView>
@@ -224,108 +234,104 @@ export default function JuegosScreen({ navigation }: any) {
       {/* Modal Interactivo de Preguntas con Explicación de IA */}
       <Modal visible={selectedJuego !== null} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
             <View style={styles.modalHeader}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.modalTitle}>{selectedJuego?.name}</Text>
-                <Text style={styles.modalSubtitle}>Nivel {dificultad} • IA Groq</Text>
+                <Text style={[styles.modalTitle, { color: colors.text }]}>{selectedJuego?.name}</Text>
+                <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]}>Nivel {dificultad} • IA Groq</Text>
               </View>
-              <TouchableOpacity onPress={() => setSelectedJuego(null)}>
-                <Ionicons name="close" size={28} color="#2C3E50" />
-              </TouchableOpacity>
+              <IconButton icon="close" onPress={() => setSelectedJuego(null)} />
             </View>
 
             {loadingQuestions ? (
               <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#4A90D9" />
-                <Text style={styles.loadingText}>
+                <ActivityIndicator size="large" color={colors.primary} />
+                <Text style={[styles.loadingText, { color: colors.primary }]}>
                   🤖 Groq IA está creando 10 retos ({dificultad}) con explicaciones...
                 </Text>
               </View>
             ) : gameFinished ? (
               <View style={styles.resultContainer}>
-                <Ionicons name="trophy" size={64} color="#F1C40F" />
-                <Text style={styles.resultTitle}>¡Felicidades!</Text>
-                <Text style={styles.resultScore}>
+                <Ionicons name="trophy" size={64} color="#F59E0B" />
+                <Text style={[styles.resultTitle, { color: colors.text }]}>¡Felicidades!</Text>
+                <Text style={[styles.resultScore, { color: colors.textSecondary }]}>
                   Lograste {score} de {aiQuestions.length} aciertos en nivel {dificultad}
                 </Text>
-                <TouchableOpacity style={styles.closeGameButton} onPress={() => setSelectedJuego(null)}>
-                  <Text style={styles.closeGameButtonText}>Volver a los juegos</Text>
-                </TouchableOpacity>
+                <Button title="Volver a los juegos" onPress={() => setSelectedJuego(null)} />
               </View>
             ) : (
               <ScrollView style={styles.questionContainer}>
-                <View style={styles.progressBarBg}>
+                <View style={[styles.progressBarBg, { backgroundColor: colors.surface }]}>
                   <View
                     style={[
                       styles.progressBarFill,
-                      { width: `${((currentQuestionIndex + 1) / (aiQuestions.length || 1)) * 100}%` },
+                      {
+                        backgroundColor: colors.primary,
+                        width: `${((currentQuestionIndex + 1) / (aiQuestions.length || 1)) * 100}%`
+                      },
                     ]}
                   />
                 </View>
-                <Text style={styles.progressText}>
+                <Text style={[styles.progressText, { color: colors.textSecondary }]}>
                   Pregunta {currentQuestionIndex + 1} de {aiQuestions.length}
                 </Text>
-                <Text style={styles.questionText}>{currentQ?.question}</Text>
+                <Text style={[styles.questionText, { color: colors.text }]}>{currentQ?.question}</Text>
 
-                {/* Opciones con Feedback de Colores */}
                 {currentQ?.options.map((option, idx) => {
                   let isSelected = selectedAnswerIndex === idx;
                   let isCorrect = idx === currentQ.answer;
 
-                  let btnStyle: any = styles.optionButton;
-                  let textStyle: any = styles.optionText;
+                  let bgColor = colors.surface;
+                  let textColor = colors.text;
 
                   if (showExplanation) {
                     if (isCorrect) {
-                      btnStyle = [styles.optionButton, styles.optionCorrect];
-                      textStyle = [styles.optionText, styles.optionCorrectText];
+                      bgColor = colors.success;
+                      textColor = '#FFFFFF';
                     } else if (isSelected) {
-                      btnStyle = [styles.optionButton, styles.optionWrong];
-                      textStyle = [styles.optionText, styles.optionWrongText];
+                      bgColor = colors.error;
+                      textColor = '#FFFFFF';
                     }
                   }
 
                   return (
                     <TouchableOpacity
                       key={idx}
-                      style={btnStyle}
+                      style={[styles.optionButton, { backgroundColor: bgColor }]}
                       onPress={() => handleSelectOption(idx)}
                       disabled={showExplanation}
                     >
-                      <Text style={textStyle}>{option}</Text>
+                      <Text style={[styles.optionText, { color: textColor, fontWeight: showExplanation ? '700' : '500' }]}>{option}</Text>
                       {showExplanation && isCorrect && <Ionicons name="checkmark-circle" size={20} color="white" />}
                       {showExplanation && isSelected && !isCorrect && <Ionicons name="close-circle" size={20} color="white" />}
                     </TouchableOpacity>
                   );
                 })}
 
-                {/* Caja de Explicación de la IA si falla o responde */}
                 {showExplanation && (
-                  <View style={styles.explanationCard}>
+                  <Card variant="flat" style={[styles.explanationCard, { backgroundColor: colors.surface }]}>
                     <View style={styles.explanationHeader}>
                       <Ionicons
                         name={selectedAnswerIndex === currentQ?.answer ? 'checkmark-circle' : 'alert-circle'}
                         size={22}
-                        color={selectedAnswerIndex === currentQ?.answer ? '#27AE60' : '#E74C3C'}
+                        color={selectedAnswerIndex === currentQ?.answer ? colors.success : colors.error}
                       />
                       <Text
                         style={[
                           styles.explanationTitle,
-                          { color: selectedAnswerIndex === currentQ?.answer ? '#27AE60' : '#E74C3C' },
+                          { color: selectedAnswerIndex === currentQ?.answer ? colors.success : colors.error },
                         ]}
                       >
-                        {selectedAnswerIndex === currentQ?.answer ? '¡Correcto!' : '¡Casi lo logras! Explicación Panda IA:'}
+                        {selectedAnswerIndex === currentQ?.answer ? '¡Correcto!' : '¡Casi lo logras! Explicación:'}
                       </Text>
                     </View>
-                    <Text style={styles.explanationBody}>{currentQ?.explanation}</Text>
+                    <Text style={[styles.explanationBody, { color: colors.text }]}>{currentQ?.explanation}</Text>
 
-                    <TouchableOpacity style={styles.nextBtn} onPress={handleNextQuestion}>
-                      <Text style={styles.nextBtnText}>
-                        {currentQuestionIndex + 1 < aiQuestions.length ? 'Siguiente Pregunta ➡️' : 'Ver Resultados 🏆'}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
+                    <Button
+                      title={currentQuestionIndex + 1 < aiQuestions.length ? 'Siguiente Pregunta ➡️' : 'Ver Resultados 🏆'}
+                      onPress={handleNextQuestion}
+                    />
+                  </Card>
                 )}
               </ScrollView>
             )}
@@ -337,56 +343,42 @@ export default function JuegosScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F5F7FA', paddingHorizontal: 16, paddingTop: 45 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  backButton: { padding: 4 },
-  headerTitle: { fontSize: 20, fontWeight: 'bold', color: '#2C3E50' },
+  container: { flex: 1, paddingHorizontal: 16, paddingTop: 50 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  headerTitle: { fontSize: 20, fontWeight: '800' },
   difficultyContainer: { marginBottom: 14 },
-  difficultyLabel: { fontSize: 13, color: '#7F8C8D', fontWeight: 'bold', marginBottom: 6 },
+  difficultyLabel: { fontSize: 13, fontWeight: '700', marginBottom: 6 },
   difficultyRow: { flexDirection: 'row', gap: 8 },
-  diffChip: { backgroundColor: '#EBF5FB', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
-  diffEasy: { backgroundColor: '#27AE60' },
-  diffMedium: { backgroundColor: '#E67E22' },
-  diffHard: { backgroundColor: '#E74C3C' },
-  diffText: { fontSize: 13, color: '#2C3E50' },
-  diffTextActive: { color: 'white', fontWeight: 'bold' },
+  diffChip: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
+  diffText: { fontSize: 13, fontWeight: '600' },
   categoriesContainer: { marginBottom: 16 },
-  categoryButton: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: '#EBF5FB', marginRight: 6 },
-  categoryButtonActive: { backgroundColor: '#4A90D9' },
-  categoryText: { fontSize: 13, color: '#2C3E50' },
-  categoryTextActive: { color: 'white', fontWeight: '600' },
-  gameCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'white', padding: 16, borderRadius: 16, marginBottom: 12, elevation: 1 },
-  gameIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#EBF5FB', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  categoryButton: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, marginRight: 8 },
+  categoryText: { fontSize: 13 },
+  gameCard: { marginBottom: 8, padding: 0 },
+  gameCardInner: { flexDirection: 'row', alignItems: 'center', padding: 16 },
+  gameIcon: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
   gameInfo: { flex: 1 },
-  gameName: { fontSize: 15, fontWeight: '600', color: '#2C3E50' },
-  gameDesc: { fontSize: 12, color: '#7F8C8D', marginTop: 2 },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 16 },
-  modalContent: { backgroundColor: 'white', borderRadius: 20, padding: 18, maxHeight: '85%' },
+  gameName: { fontSize: 16, fontWeight: '700' },
+  gameDesc: { fontSize: 12, marginTop: 2 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', padding: 16 },
+  modalContent: { borderRadius: 24, padding: 20, maxHeight: '85%' },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
-  modalTitle: { fontSize: 18, fontWeight: 'bold', color: '#2C3E50' },
-  modalSubtitle: { fontSize: 12, color: '#7F8C8D' },
+  modalTitle: { fontSize: 18, fontWeight: '800' },
+  modalSubtitle: { fontSize: 12 },
   loadingContainer: { alignItems: 'center', paddingVertical: 40 },
-  loadingText: { marginTop: 16, fontSize: 14, color: '#4A90D9', textAlign: 'center' },
+  loadingText: { marginTop: 16, fontSize: 14, textAlign: 'center', fontWeight: '600' },
   questionContainer: { flexGrow: 1 },
-  progressBarBg: { height: 6, backgroundColor: '#EBF5FB', borderRadius: 3, marginBottom: 10, overflow: 'hidden' },
-  progressBarFill: { height: '100%', backgroundColor: '#4A90D9', borderRadius: 3 },
-  progressText: { fontSize: 12, color: '#7F8C8D', marginBottom: 8 },
-  questionText: { fontSize: 17, fontWeight: '600', color: '#2C3E50', marginBottom: 16 },
-  optionButton: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F1F5F9', padding: 14, borderRadius: 12, marginBottom: 10 },
-  optionText: { fontSize: 15, color: '#2C3E50', fontWeight: '500' },
-  optionCorrect: { backgroundColor: '#27AE60' },
-  optionCorrectText: { color: 'white', fontWeight: 'bold' },
-  optionWrong: { backgroundColor: '#E74C3C' },
-  optionWrongText: { color: 'white', fontWeight: 'bold' },
-  explanationCard: { backgroundColor: '#FEF9E7', padding: 14, borderRadius: 12, borderLeftWidth: 4, borderLeftColor: '#F1C40F', marginTop: 10, marginBottom: 10 },
+  progressBarBg: { height: 6, borderRadius: 3, marginBottom: 10, overflow: 'hidden' },
+  progressBarFill: { height: '100%', borderRadius: 3 },
+  progressText: { fontSize: 12, marginBottom: 8 },
+  questionText: { fontSize: 17, fontWeight: '700', marginBottom: 16 },
+  optionButton: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 14, borderRadius: 14, marginBottom: 10 },
+  optionText: { fontSize: 15 },
+  explanationCard: { padding: 14, borderRadius: 16, marginTop: 12, marginBottom: 10 },
   explanationHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 },
-  explanationTitle: { fontSize: 14, fontWeight: 'bold' },
-  explanationBody: { fontSize: 13, color: '#2C3E50', lineHeight: 18, marginBottom: 12 },
-  nextBtn: { backgroundColor: '#4A90D9', paddingVertical: 12, borderRadius: 10, alignItems: 'center' },
-  nextBtnText: { color: 'white', fontWeight: 'bold', fontSize: 14 },
+  explanationTitle: { fontSize: 14, fontWeight: '700' },
+  explanationBody: { fontSize: 13, lineHeight: 18, marginBottom: 12 },
   resultContainer: { alignItems: 'center', paddingVertical: 20 },
-  resultTitle: { fontSize: 22, fontWeight: 'bold', color: '#2C3E50', marginTop: 12 },
-  resultScore: { fontSize: 15, color: '#7F8C8D', marginTop: 8, marginBottom: 20, textAlign: 'center' },
-  closeGameButton: { backgroundColor: '#4A90D9', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 },
-  closeGameButtonText: { color: 'white', fontSize: 15, fontWeight: 'bold' },
+  resultTitle: { fontSize: 22, fontWeight: '800', marginTop: 12 },
+  resultScore: { fontSize: 15, marginTop: 8, marginBottom: 20, textAlign: 'center' },
 });

@@ -8,12 +8,16 @@ import {
   Alert,
   RefreshControl,
   ActivityIndicator,
+  StatusBar,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { rutinaService } from '../../services/api';
-import { storage } from '../../services/storage';
 import { sendNotification } from '../../services/notificationService';
+import { useTheme } from '../../hooks/useTheme';
+import { Card } from '../../components/ui/Card';
+import { Button } from '../../components/ui/Button';
+import { IconButton } from '../../components/ui/IconButton';
 
 interface Rutina {
   id: number;
@@ -25,20 +29,19 @@ interface Rutina {
 }
 
 export default function RutinasScreen({ navigation }: any) {
+  const { colors, typography, isDark } = useTheme();
+
   const [rutinas, setRutinas] = useState<Rutina[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const loadRutinas = async () => {
     try {
-      console.log('📦 Cargando rutinas...');
       const response = await rutinaService.getAll();
-      console.log('✅ Respuesta:', response.data);
       if (response.data.success) {
         setRutinas(response.data.data || []);
       }
     } catch (error: any) {
-      console.error('❌ Error loading rutinas:', error);
       Alert.alert('Error', 'No se pudieron cargar las rutinas');
     } finally {
       setLoading(false);
@@ -58,7 +61,6 @@ export default function RutinasScreen({ navigation }: any) {
   }, []);
 
   const deleteRutina = (id: number, nombre: string) => {
-    console.log('🔴 Eliminar rutina:', nombre, 'ID:', id);
     Alert.alert(
       'Eliminar rutina',
       `¿Estás seguro que quieres eliminar "${nombre}"?`,
@@ -69,14 +71,10 @@ export default function RutinasScreen({ navigation }: any) {
           style: 'destructive',
           onPress: async () => {
             try {
-              console.log('🗑️ Eliminando ID:', id);
               const response = await rutinaService.delete(id);
-              console.log('✅ Respuesta:', response.data);
-              
               if (response.data.success) {
                 Alert.alert('Éxito', 'Rutina eliminada correctamente');
                 await loadRutinas();
-                // Notificar eliminación
                 await sendNotification(
                   'Rutina eliminada',
                   `Se ha eliminado la rutina "${nombre}"`
@@ -85,7 +83,6 @@ export default function RutinasScreen({ navigation }: any) {
                 Alert.alert('Error', response.data.message || 'No se pudo eliminar');
               }
             } catch (error: any) {
-              console.error('❌ Error:', error);
               Alert.alert('Error', 'No se pudo eliminar la rutina');
             }
           },
@@ -105,61 +102,59 @@ export default function RutinasScreen({ navigation }: any) {
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#4A90D9" />
+      <View style={[styles.center, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={28} color="#2C3E50" />
-        </TouchableOpacity>
-        <Text style={styles.title}>Rutinas</Text>
-        <TouchableOpacity
-          style={styles.addButton}
+        <IconButton icon="arrow-back" onPress={() => navigation.goBack()} />
+        <Text style={[styles.title, { color: colors.text }]}>Rutinas del Niño</Text>
+        <IconButton
+          icon="add"
+          variant="solid"
+          color={colors.primary}
           onPress={() => navigation.navigate('RutinaForm')}
-        >
-          <Ionicons name="add" size={28} color="white" />
-        </TouchableOpacity>
+        />
       </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
       >
-        <Text style={styles.subtitle}>Diarias</Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Diarias & Programadas</Text>
 
         {rutinas.length === 0 ? (
           <View style={styles.empty}>
-            <Ionicons name="calendar-outline" size={64} color="#ccc" />
-            <Text style={styles.emptyText}>No tienes rutinas creadas</Text>
-            <TouchableOpacity
-              style={styles.emptyButton}
+            <Ionicons name="calendar-outline" size={64} color={colors.textSecondary} />
+            <Text style={[styles.emptyText, { color: colors.text }]}>No tienes rutinas creadas</Text>
+            <Button
+              title="Agregar rutina"
               onPress={() => navigation.navigate('RutinaForm')}
-            >
-              <Text style={styles.emptyButtonText}>Agregar rutina</Text>
-            </TouchableOpacity>
+              style={{ marginTop: 16 }}
+            />
           </View>
         ) : (
           rutinas.map((rutina) => (
-            <View key={rutina.id} style={styles.card}>
+            <Card key={rutina.id} variant="elevated" style={styles.card}>
               <View style={styles.cardContent}>
-                <View style={styles.cardIcon}>
-                  <Ionicons name="time-outline" size={24} color="#4A90D9" />
+                <View style={[styles.cardIcon, { backgroundColor: colors.primary + '15' }]}>
+                  <Ionicons name="time-outline" size={24} color={colors.primary} />
                 </View>
                 <View style={styles.cardInfo}>
-                  <Text style={styles.cardName}>{rutina.nombre}</Text>
-                  <Text style={styles.cardTime}>
+                  <Text style={[styles.cardName, { color: colors.text }]}>{rutina.nombre}</Text>
+                  <Text style={[styles.cardTime, { color: colors.textSecondary }]}>
                     🕐 {formatHora(rutina.hora)}
                     {rutina.repetir && ' 🔁 Diario'}
                   </Text>
                   {rutina.mensaje && (
-                    <Text style={styles.cardMessage}>💬 {rutina.mensaje}</Text>
+                    <Text style={[styles.cardMessage, { color: colors.success }]}>💬 {rutina.mensaje}</Text>
                   )}
                 </View>
               </View>
@@ -168,19 +163,16 @@ export default function RutinasScreen({ navigation }: any) {
                   onPress={() => navigation.navigate('RutinaForm', { rutina })}
                   style={styles.actionButton}
                 >
-                  <Ionicons name="pencil" size={20} color="#3498DB" />
+                  <Ionicons name="pencil" size={20} color={colors.primary} />
                 </TouchableOpacity>
                 <TouchableOpacity
-                  onPress={() => {
-                    console.log('🟢 Botón eliminar presionado para:', rutina.nombre);
-                    deleteRutina(rutina.id, rutina.nombre);
-                  }}
+                  onPress={() => deleteRutina(rutina.id, rutina.nombre)}
                   style={styles.actionButton}
                 >
-                  <Ionicons name="trash" size={20} color="#E74C3C" />
+                  <Ionicons name="trash" size={20} color={colors.error} />
                 </TouchableOpacity>
               </View>
-            </View>
+            </Card>
           ))
         )}
         <View style={{ height: 20 }} />
@@ -192,50 +184,28 @@ export default function RutinasScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F7FA',
     paddingHorizontal: 16,
-    paddingTop: 40,
+    paddingTop: 50,
   },
   center: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F5F7FA',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
-  },
-  backButton: {
-    padding: 4,
+    marginBottom: 16,
   },
   title: {
     fontSize: 22,
-    fontWeight: 'bold',
-    color: '#2C3E50',
-    flex: 1,
-    textAlign: 'center',
-  },
-  addButton: {
-    backgroundColor: '#4A90D9',
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    fontWeight: '800',
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
-    color: '#7F8C8D',
-    marginBottom: 12,
-    marginTop: 8,
+    marginBottom: 16,
   },
   empty: {
     alignItems: 'center',
@@ -243,33 +213,15 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#999',
+    fontWeight: '700',
     marginTop: 16,
   },
-  emptyButton: {
-    marginTop: 20,
-    backgroundColor: '#4A90D9',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 10,
-  },
-  emptyButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-  },
   card: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 16,
     marginBottom: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
+    padding: 16,
   },
   cardContent: {
     flexDirection: 'row',
@@ -280,7 +232,6 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#EBF5FB',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -290,24 +241,22 @@ const styles = StyleSheet.create({
   },
   cardName: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#2C3E50',
+    fontWeight: '700',
   },
   cardTime: {
     fontSize: 13,
-    color: '#7F8C8D',
     marginTop: 2,
   },
   cardMessage: {
     fontSize: 13,
-    color: '#27AE60',
     marginTop: 2,
+    fontWeight: '500',
   },
   cardActions: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 8,
   },
   actionButton: {
-    padding: 8,
+    padding: 6,
   },
 });
