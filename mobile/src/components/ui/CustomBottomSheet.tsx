@@ -1,5 +1,5 @@
-import React, { useCallback, useMemo, forwardRef } from 'react';
-import { StyleSheet, View } from 'react-native';
+import React, { useCallback, forwardRef } from 'react';
+import { StyleSheet } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetView,
@@ -62,3 +62,5 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
 });
+
+export default CustomBottomSheet;
