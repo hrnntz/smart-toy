@@ -152,6 +152,12 @@ npx expo start -c
 | GitHub Actions CI/CD Pipeline | ✅ Completado |
 | Compilación de APK Release de Android | ✅ APK Generado (~74.5 MB) |
 
+Ver [`PENDIENTES.md`](./PENDIENTES.md) para el roadmap detallado.
+
+## 🔒 Notas
+
+Este es un proyecto en construcción, sin publicar en tiendas de apps. La API pública en Render está en su tier gratuito, por lo que puede tardar unos segundos en responder tras periodos de inactividad (cold start).
+
 ---
 
 ## 📱 Binario APK Compilado
