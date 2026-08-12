@@ -5,7 +5,8 @@ import { Toy } from "../models/Toy";
 import { Child } from "../models/Child";
 import { Message } from "../models/Message";
 import { AuthRequest } from "../middleware/auth";
-import { getAIResponse, ChatHistoryMessage } from "../services/aiService";
+import { getAIResponse, transcribeAudioWithWhisper, ChatHistoryMessage } from "../services/aiService";
+import { generateSpeechFromText } from "../services/elevenlabsService";
 
 const toyRepository = AppDataSource.getRepository(Toy);
 const childRepository = AppDataSource.getRepository(Child);
@@ -249,13 +250,13 @@ export const voiceChatWithToy = async (req: AuthRequest, res: Response): Promise
 
     // Si el usuario grabó audio desde el micrófono, transcribirlo con Groq Whisper
     if (req.file) {
-      const { transcribeAudioWithWhisper } = require("../services/aiService");
+      // VULN-006 fix: usando import estático en lugar de require() dinámico
       const transcribedText = await transcribeAudioWithWhisper(req.file.path);
       if (transcribedText) {
         message = transcribedText;
       }
       try {
-        const fs = require("fs");
+        const fs = await import("fs");
         if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
       } catch (err) {}
     }
@@ -287,7 +288,7 @@ export const voiceChatWithToy = async (req: AuthRequest, res: Response): Promise
     const replyText = await getAIResponse(message, toy.name, toy.personality, toy.context, history);
     
     // Convertir respuesta de texto a voz con ElevenLabs
-    const { generateSpeechFromText } = require("../services/elevenlabsService");
+    // VULN-006 fix: usando import estático en lugar de require() dinámico
     const audioDataUrl = await generateSpeechFromText(replyText, voiceId);
 
     // Guardar historial en la base de datos

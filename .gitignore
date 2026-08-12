@@ -1,4 +1,4 @@
-# =========================
+﻿# =========================
 # Dependencies
 # =========================
 node_modules/
@@ -61,5 +61,15 @@ desktop.ini
 # =========================
 coverage/
 .nyc_output/
-# heroui-agents-md
+
+# =========================
+# Security scanning (Strix)
+# =========================
+strix_runs/
+
+# =========================
+# AI Agent tooling
+# =========================
 .heroui-docs/
+skills-lock.json
+.agents/skills/*/node_modules/

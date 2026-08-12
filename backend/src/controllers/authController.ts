@@ -76,7 +76,7 @@ export const register = async (
       },
       secret,
       {
-        expiresIn: "7d"
+        expiresIn: "1h" // VULN-005 fix: reducido de 7d a 1h. TODO: implementar refresh tokens
       }
     );
 
@@ -158,7 +158,7 @@ export const login = async (
       },
       secret,
       {
-        expiresIn: "7d"
+        expiresIn: "1h" // VULN-005 fix: reducido de 7d a 1h. TODO: implementar refresh tokens
       }
     );
 
