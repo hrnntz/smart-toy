@@ -12,9 +12,13 @@ import { API_URL } from '../../config/env';
 import io, { Socket } from 'socket.io-client';
 import { Card, Label, Spinner, useThemeColor } from 'heroui-native';
 import { IconButton } from '../../components/ui/IconButton';
+import { useUser } from '../../hooks/useUser';
+import { storage } from '../../services/storage';
 
 export default function SupervisionScreen({ navigation, route }: any) {
-  const [roomId, setRoomId] = useState('PANDA_01');
+  const { user } = useUser();
+  // VULN-003 fix: roomId dinámico basado en el ID de usuario
+  const roomId = user ? `${user.id}_PANDA_01` : 'PANDA_01';
   const [isConnected, setIsConnected] = useState(false);
   const [currentFrame, setCurrentFrame] = useState<string | null>(null);
   const [audioEnabled, setAudioEnabled] = useState(true);
@@ -33,29 +37,51 @@ export default function SupervisionScreen({ navigation, route }: any) {
   ]);
 
   useEffect(() => {
-    const socketServerUrl = API_URL.replace(/\/api\/?$/, '');
-    const newSocket = io(socketServerUrl, { transports: ['websocket'] });
+    if (!user) return;
 
-    newSocket.on('connect', () => {
-      newSocket.emit('camera:join_stream', roomId);
-      setIsConnected(true);
-    });
+    let newSocket: Socket;
 
-    newSocket.on('camera:receive_frame', (data: { frame: string }) => {
-      setCurrentFrame(data.frame);
-    });
+    const connectSocket = async () => {
+      try {
+        const token = await storage.getItem('token');
+        const socketServerUrl = API_URL.replace(/\/api\/?$/, '');
+        newSocket = io(socketServerUrl, {
+          transports: ['websocket'],
+          auth: { token }, // VULN-003 fix: Enviar token en handshake
+        });
 
-    newSocket.on('camera:stream_ended', () => {
-      setCurrentFrame(null);
-      Alert.alert('Transmisión finalizada', 'La cámara del juguete se ha desconectado.');
-    });
+        newSocket.on('connect', () => {
+          newSocket.emit('camera:join_stream', roomId);
+          setIsConnected(true);
+        });
 
-    setSocket(newSocket);
+        newSocket.on('camera:receive_frame', (data: { frame: string }) => {
+          setCurrentFrame(data.frame);
+        });
+
+        newSocket.on('camera:stream_ended', () => {
+          setCurrentFrame(null);
+          Alert.alert('Transmisión finalizada', 'La cámara del juguete se ha desconectado.');
+        });
+
+        newSocket.on('connect_error', (err) => {
+          console.error('Socket connection error:', err);
+        });
+
+        setSocket(newSocket);
+      } catch (err) {
+        console.error('Error al iniciar socket:', err);
+      }
+    };
+
+    connectSocket();
 
     return () => {
-      newSocket.disconnect();
+      if (newSocket) {
+        newSocket.disconnect();
+      }
     };
-  }, [roomId]);
+  }, [user, roomId]);
 
   return (
     <View className="flex-1 bg-background pt-12">
