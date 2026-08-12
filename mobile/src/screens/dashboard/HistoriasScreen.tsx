@@ -29,7 +29,7 @@ export default function HistoriasScreen({ navigation }: any) {
 
   const [primary, secondary, danger, muted, surface] = useThemeColor([
     'accent',
-    'secondary',
+    'accent-soft',
     'danger',
     'muted',
     'surface',
@@ -128,8 +128,7 @@ export default function HistoriasScreen({ navigation }: any) {
             onPress={() => setActiveTab(tab)}
           >
             <Label
-              style={{ color: activeTab === tab ? '#FFFFFF' : muted }}
-              className={`text-sm ${activeTab === tab ? 'font-bold' : 'font-medium'}`}
+              className={`text-sm ${activeTab === tab ? 'font-bold text-white' : 'font-medium text-muted'}`}
             >
               {tab === 'mis' ? 'Mis historias' : tab === 'ia' ? 'IA Cuentos' : 'Favoritas'}
             </Label>
@@ -158,7 +157,7 @@ export default function HistoriasScreen({ navigation }: any) {
                 </View>
               )}
               <View className="flex-1 mr-2">
-                <Label className="text-base font-bold text-foreground" numberOfLines={1}>
+                <Label className="text-base font-bold text-foreground">
                   {story.titulo}
                 </Label>
                 <Label className="text-sm text-muted mt-0.5">⏱ {story.duracion}</Label>

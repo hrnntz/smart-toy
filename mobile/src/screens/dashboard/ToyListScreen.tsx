@@ -35,7 +35,7 @@ export default function ToyListScreen({ navigation }: any) {
     'success',
     'danger',
     'muted',
-    'secondary',
+    'accent-soft',
   ]);
 
   const loadToys = async () => {

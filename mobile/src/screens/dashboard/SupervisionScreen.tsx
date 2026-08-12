@@ -27,7 +27,7 @@ export default function SupervisionScreen({ navigation, route }: any) {
     'danger',
     'muted',
     'surface',
-    'card',
+    'surface',
     'background',
     'foreground'
   ]);

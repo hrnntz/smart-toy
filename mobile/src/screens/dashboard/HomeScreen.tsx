@@ -9,12 +9,12 @@ import { IconButton } from '../../components/ui/IconButton';
 
 export default function HomeScreen({ navigation }: any) {
   const primary = useThemeColor('accent');
-  const secondary = useThemeColor('secondary');
+  const secondary = useThemeColor('accent-soft');
   const accent = useThemeColor('accent');
   const danger = useThemeColor('danger');
   const warning = useThemeColor('warning');
   const success = useThemeColor('success');
-  const textSecondary = useThemeColor('foreground-muted');
+  const textSecondary = useThemeColor('muted');
 
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);

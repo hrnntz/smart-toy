@@ -49,7 +49,7 @@ export default function MusicaScreen() {
 
   const [primary, secondary, muted, surface, success] = useThemeColor([
     'accent',
-    'secondary',
+    'accent-soft',
     'muted',
     'surface',
     'success'
@@ -165,8 +165,7 @@ export default function MusicaScreen() {
             onPress={() => setActiveTab(tab)}
           >
             <Label
-              style={{ color: activeTab === tab ? '#FFFFFF' : muted }}
-              className={`text-[13px] ${activeTab === tab ? 'font-bold' : 'font-medium'}`}
+              className={`text-[13px] ${activeTab === tab ? 'font-bold text-white' : 'font-medium text-muted'}`}
             >
               {tab}
             </Label>
@@ -176,7 +175,7 @@ export default function MusicaScreen() {
 
       {/* Sección Generador de Música IA */}
       {activeTab === 'IA Generador' && (
-        <Card variant="outline" className="mb-5 border-secondary/40">
+        <Card variant="secondary" className="mb-5 border-secondary/40">
           <Card.Body>
             <View className="flex-row items-center gap-2 mb-2">
               <Ionicons name="sparkles" size={24} color={secondary} />

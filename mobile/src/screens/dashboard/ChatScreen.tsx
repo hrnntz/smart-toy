@@ -65,7 +65,7 @@ export default function ChatScreen({ navigation, route }: any) {
     'muted',
     'background',
     'surface',
-    'card'
+    'surface'
   ]);
 
   useEffect(() => {

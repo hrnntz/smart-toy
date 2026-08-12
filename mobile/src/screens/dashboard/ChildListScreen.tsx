@@ -31,7 +31,7 @@ export default function ChildListScreen({ navigation }: any) {
     'success',
     'danger',
     'muted',
-    'secondary',
+    'accent-soft',
   ]);
 
   const loadChildren = async () => {

@@ -21,7 +21,7 @@ export default function HistoriaDetalleScreen({ navigation, route }: any) {
 
   const [primary, secondary, muted, surface, background] = useThemeColor([
     'accent',
-    'secondary',
+    'accent-soft',
     'muted',
     'surface',
     'background',
@@ -54,7 +54,7 @@ export default function HistoriaDetalleScreen({ navigation, route }: any) {
       {/* Header */}
       <View className="flex-row items-center px-4 pt-12 pb-4 border-b border-separator bg-card">
         <IconButton icon="arrow-back" onPress={() => navigation.goBack()} />
-        <Label className="text-lg font-bold text-foreground flex-1 text-center mx-2" numberOfLines={1}>
+        <Label className="text-lg font-bold text-foreground flex-1 text-center mx-2">
           {titulo || 'Historia'}
         </Label>
         <Pressable className="p-2" onPress={handleShare}>

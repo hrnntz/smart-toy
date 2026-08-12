@@ -152,8 +152,7 @@ export default function ConfiguracionScreen({ navigation }: any) {
             </View>
             <Switch
               isSelected={config.eyeLights}
-              onValueChange={(value) => setConfig({ ...config, eyeLights: value })}
-              color="primary"
+              onSelectedChange={(value: boolean) => setConfig({ ...config, eyeLights: value })}
             />
           </View>
 
@@ -164,8 +163,7 @@ export default function ConfiguracionScreen({ navigation }: any) {
             </View>
             <Switch
               isSelected={config.vibration}
-              onValueChange={(value) => setConfig({ ...config, vibration: value })}
-              color="primary"
+              onSelectedChange={(value: boolean) => setConfig({ ...config, vibration: value })}
             />
           </View>
 
@@ -176,8 +174,7 @@ export default function ConfiguracionScreen({ navigation }: any) {
             </View>
             <Switch
               isSelected={config.nightMode}
-              onValueChange={(value) => setConfig({ ...config, nightMode: value })}
-              color="primary"
+              onSelectedChange={(value: boolean) => setConfig({ ...config, nightMode: value })}
             />
           </View>
         </Card.Body>

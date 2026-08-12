@@ -172,7 +172,7 @@ export default function ChildFormScreen({ navigation, route }: ChildFormScreenPr
 
           {isEditing && (
             <Button
-              variant="flat"
+              variant="tertiary"
               onPress={() => {
                 Alert.alert('Eliminar', '¿Estás seguro de eliminar este niño?', [
                   { text: 'Cancelar', style: 'cancel' },
@@ -289,7 +289,7 @@ export default function ChildFormScreen({ navigation, route }: ChildFormScreenPr
             />
 
             <Button
-              variant="flat"
+              variant="tertiary"
               onPress={() => {
                 setBirthDate('');
                 setShowCalendar(false);

@@ -14,9 +14,9 @@ import React from 'react';
 import { Button as HeroButton, Spinner, useThemeColor } from 'heroui-native';
 import type { ButtonRootProps } from 'heroui-native';
 
-type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost';
+type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'solid' | 'flat';
 
-interface ButtonProps extends Omit<ButtonRootProps, 'variant'> {
+interface ButtonProps extends Omit<ButtonRootProps, 'variant' | 'feedbackVariant' | 'animation'> {
   title: string;
   variant?: ButtonVariant;
   isLoading?: boolean;
@@ -34,13 +34,20 @@ export const Button = ({
   const foreground = useThemeColor('foreground');
 
   const spinnerColor =
-    variant === 'primary' || variant === 'secondary'
+    variant === 'primary' || variant === 'secondary' || variant === 'solid'
       ? accentForeground
       : foreground;
 
+  const mappedVariant =
+    variant === 'solid'
+      ? 'secondary'
+      : variant === 'flat'
+        ? 'tertiary'
+        : variant;
+
   return (
     <HeroButton
-      variant={variant}
+      variant={mappedVariant}
       isDisabled={isLoading || isDisabled}
       className={className ?? 'w-full'}
       {...props}

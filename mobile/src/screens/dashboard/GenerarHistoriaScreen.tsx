@@ -19,7 +19,7 @@ export default function GenerarHistoriaScreen({ navigation }: any) {
 
   const [primary, secondary, muted, surface] = useThemeColor([
     'accent',
-    'secondary',
+    'accent-soft',
     'muted',
     'surface',
   ]);

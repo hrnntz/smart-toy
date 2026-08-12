@@ -92,8 +92,7 @@ export default function ConversacionesScreen({ navigation }: any) {
                   <Label className="text-base font-bold text-foreground">{toy.name}</Label>
                   <Label className="text-xs text-muted mt-0.5">🔑 S/N: {toy.serialNumber}</Label>
                   <Label
-                    style={{ color: toy.isConnected ? success : danger }}
-                    className="text-xs font-semibold mt-1"
+                    className={`text-xs font-semibold mt-1 ${toy.isConnected ? 'text-success' : 'text-danger'}`}
                   >
                     {toy.isConnected ? '🟢 En línea • Listo para hablar' : '🔴 Desconectado'}
                   </Label>

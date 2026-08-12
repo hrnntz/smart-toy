@@ -80,7 +80,7 @@ export default function InglesScreen({ navigation }: any) {
           </Card.Body>
         </Card>
 
-        <Button variant="solid" color={success} className="w-full mb-10">
+        <Button variant="secondary" className="w-full mb-10">
           <Button.Label>Empezar lección</Button.Label>
         </Button>
       </ScrollView>

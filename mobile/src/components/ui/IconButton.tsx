@@ -24,7 +24,7 @@ const variantMap: Record<IconButtonVariant, HeroVariant> = {
   ghost: 'ghost',
 };
 
-interface IconButtonProps extends Omit<ButtonRootProps, 'variant' | 'children'> {
+interface IconButtonProps extends Omit<ButtonRootProps, 'variant' | 'children' | 'size' | 'feedbackVariant' | 'animation'> {
   icon: keyof typeof Ionicons.glyphMap;
   size?: number;
   color?: string;

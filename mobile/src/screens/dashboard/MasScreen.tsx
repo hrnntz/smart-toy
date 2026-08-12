@@ -81,8 +81,7 @@ export default function MasScreen({ navigation }: any) {
 
       {/* Botón cerrar sesión */}
       <Button
-        variant="primary"
-        color="danger"
+        variant="danger"
         onPress={handleLogout}
         className="w-full my-6"
       >

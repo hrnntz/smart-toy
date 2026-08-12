@@ -300,7 +300,7 @@ export default function JuegosScreen({ navigation }: any) {
                       onPress={() => handleSelectOption(idx)}
                       disabled={showExplanation}
                     >
-                      <Label className={`text-[15px] ${showExplanation ? 'font-bold' : 'font-medium'}`} style={{ color: textColor }}>
+                      <Label className={`text-[15px] ${showExplanation ? 'font-bold' : 'font-medium'} ${textColor === '#FFFFFF' ? 'text-white' : 'text-foreground'}`}>
                         {option}
                       </Label>
                       {showExplanation && isCorrect && <Ionicons name="checkmark-circle" size={20} color="white" />}
@@ -310,7 +310,7 @@ export default function JuegosScreen({ navigation }: any) {
                 })}
 
                 {showExplanation && (
-                  <Card variant="flat" className="p-3.5 rounded-2xl mt-3 mb-2.5 bg-surface border-0">
+                  <Card variant="secondary" className="p-3.5 rounded-2xl mt-3 mb-2.5 bg-surface border-0">
                     <Card.Body className="p-0">
                       <View className="flex-row items-center gap-1.5 mb-1.5">
                         <Ionicons
@@ -319,8 +319,7 @@ export default function JuegosScreen({ navigation }: any) {
                           color={selectedAnswerIndex === currentQ?.answer ? success : danger}
                         />
                         <Label
-                          className="text-sm font-bold"
-                          style={{ color: selectedAnswerIndex === currentQ?.answer ? success : danger }}
+                          className={`text-sm font-bold ${selectedAnswerIndex === currentQ?.answer ? 'text-success' : 'text-danger'}`}
                         >
                           {selectedAnswerIndex === currentQ?.answer ? '¡Correcto!' : '¡Casi lo logras! Explicación:'}
                         </Label>

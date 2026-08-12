@@ -169,7 +169,7 @@ export default function PerfilScreen({ navigation, route }: any) {
           </Button>
 
           <Button
-            variant="flat"
+            variant="tertiary"
             onPress={() => {
               Alert.alert('Eliminar perfil', `¿Estás seguro de eliminar a ${formData.name}?`, [
                 { text: 'Cancelar', style: 'cancel' },
