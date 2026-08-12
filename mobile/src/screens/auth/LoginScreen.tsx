@@ -1,21 +1,25 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import {
+  Button,
+  Checkbox,
+  Input,
+  Label,
+  TextField,
+  useThemeColor,
+  cn,
+} from 'heroui-native';
 import { storage } from '../../services/storage';
 import api from '../../services/api';
 import CustomAlert from '../../components/common/CustomAlert';
-import { useTheme } from '../../hooks/useTheme';
-import { Button } from '../../components/ui/Button';
-import { Input } from '../../components/ui/Input';
 
 interface LoginScreenProps {
   onAuthSuccess?: () => void;
-  navigation?: any; // Mantenemos para compatibilidad con stack antiguo
+  navigation?: any;
 }
 
 export default function LoginScreen({ onAuthSuccess, navigation }: LoginScreenProps) {
-  const { colors, typography } = useTheme();
-  
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -25,10 +29,14 @@ export default function LoginScreen({ onAuthSuccess, navigation }: LoginScreenPr
   const [alertVisible, setAlertVisible] = useState(false);
   const [alertTitle, setAlertTitle] = useState('');
   const [alertMessage, setAlertMessage] = useState('');
+  const [alertType, setAlertType] = useState<'info' | 'error'>('info');
 
-  const showAlert = (title: string, message: string) => {
+  const muted = useThemeColor('muted');
+
+  const showAlert = (title: string, message: string, type: 'info' | 'error' = 'error') => {
     setAlertTitle(title);
     setAlertMessage(message);
+    setAlertType(type);
     setAlertVisible(true);
   };
 
@@ -64,8 +72,8 @@ export default function LoginScreen({ onAuthSuccess, navigation }: LoginScreenPr
       }
     } catch (error: any) {
       let message = 'Error al conectar con el servidor';
-      if (error?.response?.status === 401) message = '❌ Email o contraseña incorrectos';
-      else if (error?.response?.status === 404) message = '❌ Usuario no encontrado';
+      if (error?.response?.status === 401) message = 'Email o contraseña incorrectos';
+      else if (error?.response?.status === 404) message = 'Usuario no encontrado';
       showAlert('Error', message);
     } finally {
       setLoading(false);
@@ -73,60 +81,85 @@ export default function LoginScreen({ onAuthSuccess, navigation }: LoginScreenPr
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={[styles.title, { color: colors.text, fontSize: typography.size.xl }]}>
+    <View className="pb-5">
+      {/* Título */}
+      <Label className="text-2xl font-bold text-center text-foreground mb-5">
         Iniciar Sesión
-      </Text>
+      </Label>
 
-      <View style={styles.formContainer}>
-        <Input
-          placeholder="Email"
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-        />
-
-        <View style={styles.passwordContainer}>
+      <View className="w-full gap-1">
+        {/* Campo Email */}
+        <TextField className="w-full">
           <Input
-            placeholder="Contraseña"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry={!showPassword}
-            style={{ paddingRight: 50 }}
+            placeholder="Email"
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
           />
-          <TouchableOpacity
-            style={styles.eyeButton}
-            onPress={() => setShowPassword(!showPassword)}
-          >
-            <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={24} color={colors.textSecondary} />
-          </TouchableOpacity>
-        </View>
+        </TextField>
 
-        <TouchableOpacity
-          style={styles.rememberContainer}
-          onPress={() => setRememberMe(!rememberMe)}
-          activeOpacity={0.7}
-        >
-          <View style={[styles.checkbox, { borderColor: colors.primary }, rememberMe && { backgroundColor: colors.primary }]}>
-            {rememberMe && <Ionicons name="checkmark" size={16} color="white" />}
+        {/* Campo Contraseña */}
+        <TextField className="w-full">
+          <View className="w-full flex-row items-center">
+            <Input
+              placeholder="Contraseña"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+              className="flex-1 pr-12"
+            />
+            <Pressable
+              className="absolute right-4 z-10"
+              onPress={() => setShowPassword(!showPassword)}
+              hitSlop={8}
+            >
+              <Ionicons
+                name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                size={20}
+                color={muted}
+              />
+            </Pressable>
           </View>
-          <Text style={[styles.rememberText, { color: colors.text }]}>Recordar sesión</Text>
-        </TouchableOpacity>
+        </TextField>
 
+        {/* Recordar sesión */}
+        <Pressable
+          className="flex-row items-center gap-2.5 my-3"
+          onPress={() => setRememberMe(!rememberMe)}
+        >
+          <Checkbox
+            isSelected={rememberMe}
+            onSelectedChange={setRememberMe}
+          />
+          <Label className="text-sm font-medium text-foreground">
+            Recordar sesión
+          </Label>
+        </Pressable>
+
+        {/* Botón principal */}
         <Button
-          title="Continuar"
+          variant="primary"
+          isDisabled={loading}
           onPress={handleLogin}
-          isLoading={loading}
-          style={styles.submitBtn}
-        />
-        
+          className="w-full mt-2"
+        >
+          {loading ? (
+            <Button.Label>Cargando...</Button.Label>
+          ) : (
+            <Button.Label>Continuar</Button.Label>
+          )}
+        </Button>
+
+        {/* Link a registro */}
         {!onAuthSuccess && (
           <Button
-            title="¿No tienes cuenta? Regístrate"
             variant="ghost"
             onPress={() => navigation?.navigate('Register')}
-          />
+            className="w-full"
+          >
+            <Button.Label>¿No tienes cuenta? Regístrate</Button.Label>
+          </Button>
         )}
       </View>
 
@@ -134,52 +167,9 @@ export default function LoginScreen({ onAuthSuccess, navigation }: LoginScreenPr
         visible={alertVisible}
         title={alertTitle}
         message={alertMessage}
+        type={alertType}
         onClose={() => setAlertVisible(false)}
       />
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    paddingBottom: 20,
-  },
-  title: {
-    fontWeight: '700',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  formContainer: {
-    width: '100%',
-  },
-  passwordContainer: {
-    position: 'relative',
-  },
-  eyeButton: {
-    position: 'absolute',
-    right: 15,
-    top: 22,
-    zIndex: 10,
-  },
-  rememberContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 12,
-  },
-  checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 6,
-    borderWidth: 2,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-  },
-  rememberText: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  submitBtn: {
-    marginTop: 16,
-  },
-});

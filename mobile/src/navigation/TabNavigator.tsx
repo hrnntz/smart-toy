@@ -1,7 +1,7 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../hooks/useTheme';
+import { useThemeColor } from 'heroui-native';
 
 import HomeScreen from '../screens/dashboard/HomeScreen';
 import RutinasScreen from '../screens/dashboard/RutinasScreen';
@@ -13,7 +13,12 @@ import MasScreen from '../screens/dashboard/MasScreen';
 const Tab = createBottomTabNavigator();
 
 export default function TabNavigator() {
-  const { colors, isDark } = useTheme();
+  const [accent, muted, surface, separator] = useThemeColor([
+    'accent',
+    'muted',
+    'surface',
+    'separator',
+  ]);
 
   return (
     <Tab.Navigator
@@ -39,14 +44,14 @@ export default function TabNavigator() {
 
           return <Ionicons name={iconName} size={size} color={color} />;
         },
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textSecondary,
+        tabBarActiveTintColor: accent,
+        tabBarInactiveTintColor: muted,
         tabBarStyle: {
-          backgroundColor: colors.card,
-          borderTopWidth: 1,
-          borderTopColor: colors.border,
-          height: 64,
-          paddingBottom: 8,
+          backgroundColor: surface,
+          borderTopWidth: 0.5,
+          borderTopColor: separator,
+          height: 68,
+          paddingBottom: 10,
           paddingTop: 4,
         },
         tabBarLabelStyle: {

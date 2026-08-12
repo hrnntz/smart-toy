@@ -1,57 +1,57 @@
+/**
+ * IconButton component — HeroUI Native v1
+ *
+ * Wraps heroui-native's Button with isIconOnly, preserving the original API
+ * (icon, size, color, variant).
+ *
+ * Variant mapping:
+ *  - 'solid'   → heroui 'secondary'
+ *  - 'outline' → heroui 'outline'
+ *  - 'ghost'   → heroui 'ghost'
+ */
 import React from 'react';
-import { TouchableOpacity, StyleSheet, TouchableOpacityProps, ViewStyle } from 'react-native';
+import { Button as HeroButton, useThemeColor } from 'heroui-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from '../../hooks/useTheme';
+import type { ButtonRootProps } from 'heroui-native';
 
-interface IconButtonProps extends TouchableOpacityProps {
+type IconButtonVariant = 'solid' | 'outline' | 'ghost';
+
+type HeroVariant = 'primary' | 'secondary' | 'tertiary' | 'outline' | 'ghost';
+
+const variantMap: Record<IconButtonVariant, HeroVariant> = {
+  solid: 'secondary',
+  outline: 'outline',
+  ghost: 'ghost',
+};
+
+interface IconButtonProps extends Omit<ButtonRootProps, 'variant' | 'children'> {
   icon: keyof typeof Ionicons.glyphMap;
   size?: number;
   color?: string;
-  variant?: 'solid' | 'outline' | 'ghost';
-  buttonStyle?: ViewStyle;
+  variant?: IconButtonVariant;
 }
 
-export const IconButton = ({ icon, size = 24, color, variant = 'ghost', buttonStyle, ...props }: IconButtonProps) => {
-  const { colors } = useTheme();
-
-  const getBackgroundColor = () => {
-    switch (variant) {
-      case 'solid': return colors.surface;
-      case 'outline': return 'transparent';
-      case 'ghost': return 'transparent';
-      default: return 'transparent';
-    }
-  };
-
-  const getIconColor = () => {
-    if (color) return color;
-    return colors.text;
-  };
+export const IconButton = ({
+  icon,
+  size = 22,
+  color,
+  variant = 'ghost',
+  className,
+  ...props
+}: IconButtonProps) => {
+  const foreground = useThemeColor('foreground');
+  const iconColor = color ?? foreground;
+  const heroVariant = variantMap[variant];
 
   return (
-    <TouchableOpacity
-      activeOpacity={0.7}
-      style={[
-        styles.container,
-        {
-          backgroundColor: getBackgroundColor(),
-          borderWidth: variant === 'outline' ? 1 : 0,
-          borderColor: colors.border,
-        },
-        buttonStyle,
-      ]}
+    <HeroButton
+      variant={heroVariant}
+      isIconOnly
+      size="md"
+      className={className}
       {...props}
     >
-      <Ionicons name={icon} size={size} color={getIconColor()} />
-    </TouchableOpacity>
+      <Ionicons name={icon} size={size} color={iconColor} />
+    </HeroButton>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    padding: 10,
-    borderRadius: 9999,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-});

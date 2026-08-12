@@ -1,20 +1,11 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  StatusBar,
-} from 'react-native';
+import { ScrollView, Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { storage } from '../../services/storage';
-import { useTheme } from '../../hooks/useTheme';
-import { Card } from '../../components/ui/Card';
-import { Button } from '../../components/ui/Button';
+import { Card, Label, Button, useThemeColor } from 'heroui-native';
 
 export default function MasScreen({ navigation }: any) {
-  const { colors, typography, isDark } = useTheme();
+  const [accent, muted] = useThemeColor(['accent', 'muted']);
 
   const handleLogout = async () => {
     await storage.removeItem('token');
@@ -23,107 +14,80 @@ export default function MasScreen({ navigation }: any) {
   };
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: colors.background }]} showsVerticalScrollIndicator={false}>
-      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
-      <Text style={[styles.title, { color: colors.text }]}>Ajustes & Más</Text>
+    <ScrollView className="flex-1 bg-background px-4 pt-14" showsVerticalScrollIndicator={false}>
+      <Label className="text-2xl font-extrabold text-foreground mb-5">Ajustes & Más</Label>
 
       {/* Dispositivo Panda */}
-      <Card variant="elevated" style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Dispositivo Panda</Text>
-        <TouchableOpacity
-          style={[styles.menuItem, { borderBottomColor: colors.border }]}
-          onPress={() => navigation.navigate('Configuracion')}
-        >
-          <Ionicons name="settings-outline" size={22} color={colors.primary} />
-          <Text style={[styles.menuText, { color: colors.text }]}>Configuración del dispositivo</Text>
-          <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.menuItem, { borderBottomColor: colors.border }]}
-          onPress={() => navigation.navigate('ToyList')}
-        >
-          <Ionicons name="game-controller-outline" size={22} color={colors.secondary} />
-          <Text style={[styles.menuText, { color: colors.text }]}>Gestionar dispositivos</Text>
-          <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-        </TouchableOpacity>
+      <Card variant="default" className="mb-4">
+        <Card.Body className="gap-0">
+          <Label className="text-base font-bold text-foreground mb-3">Dispositivo Panda</Label>
+          <Pressable
+            className="flex-row items-center py-3.5 gap-3 border-b border-separator"
+            onPress={() => navigation.navigate('Configuracion')}
+          >
+            <Ionicons name="settings-outline" size={20} color={accent} />
+            <Label className="flex-1 text-sm font-semibold text-foreground">Configuración del dispositivo</Label>
+            <Ionicons name="chevron-forward" size={18} color={muted} />
+          </Pressable>
+          <Pressable
+            className="flex-row items-center py-3.5 gap-3"
+            onPress={() => navigation.navigate('ToyList')}
+          >
+            <Ionicons name="game-controller-outline" size={20} color="#F59E0B" />
+            <Label className="flex-1 text-sm font-semibold text-foreground">Gestionar dispositivos</Label>
+            <Ionicons name="chevron-forward" size={18} color={muted} />
+          </Pressable>
+        </Card.Body>
       </Card>
 
-      {/* Perfil del niño */}
-      <Card variant="elevated" style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Familia y Niños</Text>
-        <TouchableOpacity
-          style={[styles.menuItem, { borderBottomColor: colors.border }]}
-          onPress={() => navigation.navigate('ChildList')}
-        >
-          <Ionicons name="people-outline" size={22} color="#F59E0B" />
-          <Text style={[styles.menuText, { color: colors.text }]}>Gestionar perfiles de niños</Text>
-          <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.menuItem, { borderBottomColor: colors.border }]}
-          onPress={() => navigation.navigate('Ingles')}
-        >
-          <Ionicons name="language-outline" size={22} color="#10B981" />
-          <Text style={[styles.menuText, { color: colors.text }]}>Módulo de Inglés</Text>
-          <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-        </TouchableOpacity>
+      {/* Familia y Niños */}
+      <Card variant="default" className="mb-4">
+        <Card.Body className="gap-0">
+          <Label className="text-base font-bold text-foreground mb-3">Familia y Niños</Label>
+          <Pressable
+            className="flex-row items-center py-3.5 gap-3 border-b border-separator"
+            onPress={() => navigation.navigate('ChildList')}
+          >
+            <Ionicons name="people-outline" size={20} color="#F59E0B" />
+            <Label className="flex-1 text-sm font-semibold text-foreground">Gestionar perfiles de niños</Label>
+            <Ionicons name="chevron-forward" size={18} color={muted} />
+          </Pressable>
+          <Pressable
+            className="flex-row items-center py-3.5 gap-3"
+            onPress={() => navigation.navigate('Ingles')}
+          >
+            <Ionicons name="language-outline" size={20} color="#10B981" />
+            <Label className="flex-1 text-sm font-semibold text-foreground">Módulo de Inglés</Label>
+            <Ionicons name="chevron-forward" size={18} color={muted} />
+          </Pressable>
+        </Card.Body>
       </Card>
 
       {/* Información */}
-      <Card variant="elevated" style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Información</Text>
-        <View style={[styles.menuItem, { borderBottomColor: colors.border }]}>
-          <Ionicons name="information-circle-outline" size={22} color={colors.textSecondary} />
-          <Text style={[styles.menuText, { color: colors.textSecondary }]}>Versión de la app: 1.0.0</Text>
-        </View>
-        <TouchableOpacity style={[styles.menuItem, { borderBottomWidth: 0 }]}>
-          <Ionicons name="help-circle-outline" size={22} color={colors.textSecondary} />
-          <Text style={[styles.menuText, { color: colors.text }]}>Soporte técnico</Text>
-          <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
-        </TouchableOpacity>
+      <Card variant="default" className="mb-4">
+        <Card.Body className="gap-0">
+          <Label className="text-base font-bold text-foreground mb-3">Información</Label>
+          <View className="flex-row items-center py-3.5 gap-3 border-b border-separator">
+            <Ionicons name="information-circle-outline" size={20} color={muted} />
+            <Label className="flex-1 text-sm text-muted">Versión de la app: 1.0.0</Label>
+          </View>
+          <Pressable className="flex-row items-center py-3.5 gap-3">
+            <Ionicons name="help-circle-outline" size={20} color={muted} />
+            <Label className="flex-1 text-sm font-semibold text-foreground">Soporte técnico</Label>
+            <Ionicons name="chevron-forward" size={18} color={muted} />
+          </Pressable>
+        </Card.Body>
       </Card>
 
       {/* Botón cerrar sesión */}
       <Button
-        title="Cerrar sesión"
-        variant="outline"
+        variant="primary"
+        color="danger"
         onPress={handleLogout}
-        style={{ marginVertical: 24, borderColor: colors.error }}
-      />
+        className="w-full my-6"
+      >
+        <Button.Label>Cerrar sesión</Button.Label>
+      </Button>
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 50,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: '800',
-    marginBottom: 20,
-  },
-  section: {
-    marginBottom: 16,
-    padding: 16,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    marginBottom: 12,
-  },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-  },
-  menuText: {
-    fontSize: 14,
-    fontWeight: '600',
-    flex: 1,
-    marginLeft: 12,
-  },
-});

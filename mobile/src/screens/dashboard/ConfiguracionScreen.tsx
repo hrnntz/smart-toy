@@ -1,17 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import {
   View,
-  Text,
-  StyleSheet,
   ScrollView,
-  TouchableOpacity,
-  TextInput,
-  Switch,
   Alert,
-  ActivityIndicator,
+  Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { configService } from '../../services/api';
+import { Card, Button, Label, TextField, Input, Spinner, useThemeColor, Switch } from 'heroui-native';
+import { IconButton } from '../../components/ui/IconButton';
 
 interface DeviceConfig {
   id: number;
@@ -35,6 +32,14 @@ export default function ConfiguracionScreen({ navigation }: any) {
     nightMode: false,
     wifi: null,
   });
+
+  const [primary, separator, background, surface, muted] = useThemeColor([
+    'accent',
+    'separator',
+    'background',
+    'surface',
+    'muted'
+  ]);
 
   useEffect(() => {
     loadConfig();
@@ -86,226 +91,119 @@ export default function ConfiguracionScreen({ navigation }: any) {
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#4A90D9" />
+      <View className="flex-1 justify-center items-center bg-background">
+        <Spinner size="lg" color="primary" />
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={28} color="#2C3E50" />
-        </TouchableOpacity>
-        <Text style={styles.title}>Configuración del dispositivo</Text>
-        <View style={{ width: 36 }} />
+    <ScrollView className="flex-1 bg-background px-4 pt-12" showsVerticalScrollIndicator={false}>
+      <View className="flex-row justify-between items-center mb-5">
+        <IconButton icon="arrow-back" onPress={() => navigation.goBack()} />
+        <Label className="text-lg font-bold text-foreground">Configuración del dispositivo</Label>
+        <View className="w-10" />
       </View>
 
-      {/* Nombre del dispositivo */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Dispositivo</Text>
-        <Text style={styles.label}>Nombre del Panda</Text>
-        <TextInput
-          style={styles.input}
-          value={config.deviceName}
-          onChangeText={(text) => setConfig({ ...config, deviceName: text })}
-          placeholder="Nombre del dispositivo"
-        />
-      </View>
+      <Card variant="default" className="mb-4 border-0 p-4 shadow-sm">
+        <Card.Body className="p-0">
+          <Label className="text-base font-bold text-foreground mb-4">Dispositivo</Label>
+          <Label className="text-sm font-semibold text-muted mb-1.5">Nombre del Panda</Label>
+          <TextField className="w-full">
+            <Input
+              value={config.deviceName}
+              onChangeText={(text) => setConfig({ ...config, deviceName: text })}
+              placeholder="Nombre del dispositivo"
+            />
+          </TextField>
+        </Card.Body>
+      </Card>
 
-      {/* Volumen */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Volumen</Text>
-        <View style={styles.volumeRow}>
-          <TouchableOpacity onPress={() => adjustVolume(-10)} style={styles.volumeButton}>
-            <Ionicons name="remove" size={24} color="#4A90D9" />
-          </TouchableOpacity>
-          <Ionicons name="volume-medium" size={24} color="#4A90D9" />
-          <Text style={styles.volumeText}>{config.volume}%</Text>
-          <TouchableOpacity onPress={() => adjustVolume(10)} style={styles.volumeButton}>
-            <Ionicons name="add" size={24} color="#4A90D9" />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {/* Preferencias */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Preferencias</Text>
-
-        <View style={styles.switchRow}>
-          <View style={styles.switchInfo}>
-            <Ionicons name="eye" size={22} color="#4A90D9" />
-            <Text style={styles.switchText}>Luces de los ojos</Text>
+      <Card variant="default" className="mb-4 border-0 p-4 shadow-sm">
+        <Card.Body className="p-0">
+          <Label className="text-base font-bold text-foreground mb-4">Volumen</Label>
+          <View className="flex-row items-center justify-center gap-6">
+            <Pressable
+              onPress={() => adjustVolume(-10)}
+              className="w-12 h-12 rounded-full items-center justify-center bg-primary/10"
+            >
+              <Ionicons name="remove" size={28} color={primary} />
+            </Pressable>
+            <Ionicons name="volume-medium" size={26} color={primary} />
+            <Label className="text-2xl font-bold text-foreground w-16 text-center">{config.volume}%</Label>
+            <Pressable
+              onPress={() => adjustVolume(10)}
+              className="w-12 h-12 rounded-full items-center justify-center bg-primary/10"
+            >
+              <Ionicons name="add" size={28} color={primary} />
+            </Pressable>
           </View>
-          <Switch
-            value={config.eyeLights}
-            onValueChange={(value) => setConfig({ ...config, eyeLights: value })}
-            trackColor={{ false: '#CCC', true: '#4A90D9' }}
-          />
-        </View>
+        </Card.Body>
+      </Card>
 
-        <View style={styles.switchRow}>
-          <View style={styles.switchInfo}>
-            <Ionicons name="phone-portrait" size={22} color="#E67E22" />
-            <Text style={styles.switchText}>Vibración</Text>
+      <Card variant="default" className="mb-4 border-0 p-4 shadow-sm">
+        <Card.Body className="p-0 gap-0">
+          <Label className="text-base font-bold text-foreground mb-2">Preferencias</Label>
+          
+          <View className="flex-row justify-between items-center py-3 border-b border-separator">
+            <View className="flex-row items-center gap-3">
+              <Ionicons name="eye" size={22} color={primary} />
+              <Label className="text-[15px] font-medium text-foreground">Luces de los ojos</Label>
+            </View>
+            <Switch
+              isSelected={config.eyeLights}
+              onValueChange={(value) => setConfig({ ...config, eyeLights: value })}
+              color="primary"
+            />
           </View>
-          <Switch
-            value={config.vibration}
-            onValueChange={(value) => setConfig({ ...config, vibration: value })}
-            trackColor={{ false: '#CCC', true: '#4A90D9' }}
-          />
-        </View>
 
-        <View style={styles.switchRow}>
-          <View style={styles.switchInfo}>
-            <Ionicons name="moon" size={22} color="#2C3E50" />
-            <Text style={styles.switchText}>Modo noche</Text>
+          <View className="flex-row justify-between items-center py-3 border-b border-separator">
+            <View className="flex-row items-center gap-3">
+              <Ionicons name="phone-portrait" size={22} color="#E67E22" />
+              <Label className="text-[15px] font-medium text-foreground">Vibración</Label>
+            </View>
+            <Switch
+              isSelected={config.vibration}
+              onValueChange={(value) => setConfig({ ...config, vibration: value })}
+              color="primary"
+            />
           </View>
-          <Switch
-            value={config.nightMode}
-            onValueChange={(value) => setConfig({ ...config, nightMode: value })}
-            trackColor={{ false: '#CCC', true: '#4A90D9' }}
-          />
-        </View>
-      </View>
 
-      {/* WiFi */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Red WiFi</Text>
-        <TextInput
-          style={styles.input}
-          value={config.wifi || ''}
-          onChangeText={(text) => setConfig({ ...config, wifi: text })}
-          placeholder="Nombre de la red WiFi"
-        />
-      </View>
+          <View className="flex-row justify-between items-center py-3">
+            <View className="flex-row items-center gap-3">
+              <Ionicons name="moon" size={22} color="#2C3E50" />
+              <Label className="text-[15px] font-medium text-foreground">Modo noche</Label>
+            </View>
+            <Switch
+              isSelected={config.nightMode}
+              onValueChange={(value) => setConfig({ ...config, nightMode: value })}
+              color="primary"
+            />
+          </View>
+        </Card.Body>
+      </Card>
 
-      <TouchableOpacity
-        style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+      <Card variant="default" className="mb-4 border-0 p-4 shadow-sm">
+        <Card.Body className="p-0">
+          <Label className="text-base font-bold text-foreground mb-4">Red WiFi</Label>
+          <TextField className="w-full">
+            <Input
+              value={config.wifi || ''}
+              onChangeText={(text) => setConfig({ ...config, wifi: text })}
+              placeholder="Nombre de la red WiFi"
+            />
+          </TextField>
+        </Card.Body>
+      </Card>
+
+      <Button
+        variant="primary"
         onPress={handleSave}
-        disabled={saving}
+        isDisabled={saving}
+        className="w-full mb-10"
       >
-        {saving ? (
-          <ActivityIndicator color="white" />
-        ) : (
-          <Text style={styles.saveButtonText}>Guardar configuración</Text>
-        )}
-      </TouchableOpacity>
+        {saving ? <Spinner size="sm" color="default" /> : <Button.Label>Guardar configuración</Button.Label>}
+      </Button>
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F7FA',
-    paddingHorizontal: 16,
-    paddingTop: 40,
-  },
-  center: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F5F7FA',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  backButton: {
-    padding: 4,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#2C3E50',
-    flex: 1,
-    textAlign: 'center',
-  },
-  section: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#2C3E50',
-    marginBottom: 12,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#7F8C8D',
-    marginBottom: 6,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    backgroundColor: '#F9F9F9',
-  },
-  volumeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 16,
-  },
-  volumeButton: {
-    backgroundColor: '#EBF5FB',
-    borderRadius: 20,
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  volumeText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#2C3E50',
-    minWidth: 50,
-    textAlign: 'center',
-  },
-  switchRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-  },
-  switchInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  switchText: {
-    fontSize: 15,
-    color: '#34495E',
-  },
-  saveButton: {
-    backgroundColor: '#4A90D9',
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginVertical: 20,
-  },
-  saveButtonDisabled: {
-    opacity: 0.6,
-  },
-  saveButtonText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-});

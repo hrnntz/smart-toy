@@ -1,19 +1,17 @@
-// src/screens/dashboard/ToyListScreen.tsx
 import React, { useState, useCallback } from 'react';
 import {
   View,
-  Text,
-  StyleSheet,
   ScrollView,
-  TouchableOpacity,
   Alert,
   RefreshControl,
-  ActivityIndicator,
   Image,
+  Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { toyService } from '../../services/api';
+import { Card, Button, Label, Spinner, useThemeColor } from 'heroui-native';
+import { IconButton } from '../../components/ui/IconButton';
 
 interface Toy {
   id: number;
@@ -22,7 +20,7 @@ interface Toy {
   isConnected: boolean;
   personality?: string;
   context?: string;
-  avatarUrl?: string; // ✅ Avatar generado
+  avatarUrl?: string;
   createdAt: string;
   child?: { id: number; name: string };
 }
@@ -31,6 +29,14 @@ export default function ToyListScreen({ navigation }: any) {
   const [toys, setToys] = useState<Toy[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  const [primary, success, danger, muted, secondary] = useThemeColor([
+    'accent',
+    'success',
+    'danger',
+    'muted',
+    'secondary',
+  ]);
 
   const loadToys = async () => {
     try {
@@ -88,106 +94,92 @@ export default function ToyListScreen({ navigation }: any) {
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#4A90D9" />
+      <View className="flex-1 justify-center items-center bg-background">
+        <Spinner size="lg" color="primary" />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={28} color="#2C3E50" />
-        </TouchableOpacity>
-        <Text style={styles.title}>Mis Juguetes</Text>
-        <TouchableOpacity style={styles.addButton} onPress={() => navigation.navigate('ToyForm')}>
-          <Ionicons name="add" size={28} color="white" />
-        </TouchableOpacity>
+    <View className="flex-1 bg-background px-4 pt-12">
+      <View className="flex-row justify-between items-center mb-5">
+        <IconButton icon="arrow-back" onPress={() => navigation.goBack()} />
+        <Label className="text-2xl font-extrabold text-foreground">Mis Juguetes</Label>
+        <IconButton
+          icon="add"
+          variant="solid"
+          color={primary}
+          onPress={() => navigation.navigate('ToyForm')}
+        />
       </View>
 
-      <ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={primary} />}
+      >
         {toys.length === 0 ? (
-          <View style={styles.empty}>
-            <Ionicons name="game-controller-outline" size={64} color="#ccc" />
-            <Text style={styles.emptyText}>No tienes juguetes registrados</Text>
-            <TouchableOpacity style={styles.emptyButton} onPress={() => navigation.navigate('ToyForm')}>
-              <Text style={styles.emptyButtonText}>Agregar juguete</Text>
-            </TouchableOpacity>
+          <View className="items-center mt-16">
+            <Ionicons name="game-controller-outline" size={64} color={muted} />
+            <Label className="text-base font-bold text-foreground mt-4 mb-4">No tienes juguetes registrados</Label>
+            <Button variant="primary" onPress={() => navigation.navigate('ToyForm')}>
+              <Button.Label>Agregar juguete</Button.Label>
+            </Button>
           </View>
         ) : (
           toys.map(toy => (
-            <View key={toy.id} style={styles.card}>
-              <View style={styles.cardContent}>
-                {/* ✅ Avatar del juguete */}
-                <Image
-                  source={{ uri: toy.avatarUrl || 'https://via.placeholder.com/48' }}
-                  style={styles.avatar}
-                />
-                <View style={styles.cardInfo}>
-                  <Text style={styles.cardName}>{toy.name}</Text>
-                  <Text style={styles.cardSerial}>🔑 {toy.serialNumber}</Text>
-                  {toy.child && <Text style={styles.cardChild}>👶 {toy.child.name}</Text>}
+            <Card key={toy.id} variant="default" className="mb-3">
+              <Card.Body className="p-4">
+                <View className="flex-row items-center mb-3">
+                  <Image
+                    source={{ uri: toy.avatarUrl || 'https://via.placeholder.com/48' }}
+                    className="w-12 h-12 rounded-full mr-3 bg-surface"
+                  />
+                  <View className="flex-1">
+                    <Label className="text-base font-bold text-foreground">{toy.name}</Label>
+                    <Label className="text-[13px] text-muted mt-0.5">🔑 {toy.serialNumber}</Label>
+                    {toy.child && <Label className="text-[13px] text-success font-medium mt-0.5">👶 {toy.child.name}</Label>}
+                  </View>
                 </View>
-              </View>
-              <View style={styles.cardActions}>
-                <TouchableOpacity
-                  onPress={() => navigation.navigate('Chat', {
-                    toyId: toy.id,
-                    toyName: toy.name,
-                    avatarUrl: toy.avatarUrl,
-                  })}
-                  style={styles.chatButton}
-                >
-                  <Ionicons name="chatbubble" size={16} color="white" />
-                  <Text style={styles.chatButtonText}>Chat</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => handleToggle(toy.id)}
-                  style={[styles.connectionButton, toy.isConnected ? styles.connected : styles.disconnected]}
-                >
-                  <Ionicons name={toy.isConnected ? 'bluetooth' : 'bluetooth-outline'} size={16} color="white" />
-                  <Text style={styles.connectionText}>{toy.isConnected ? 'Conectado' : 'Conectar'}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => navigation.navigate('ToyForm', { toy })} style={styles.actionButton}>
-                  <Ionicons name="pencil" size={20} color="#3498DB" />
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => deleteToy(toy.id, toy.name)} style={styles.actionButton}>
-                  <Ionicons name="trash" size={20} color="#E74C3C" />
-                </TouchableOpacity>
-              </View>
-            </View>
+                
+                <View className="flex-row items-center gap-2 flex-wrap">
+                  <Pressable
+                    className="flex-row items-center bg-[#8E44AD] px-2.5 py-1.5 rounded-2xl gap-1.5"
+                    onPress={() => navigation.navigate('Chat', {
+                      toyId: toy.id,
+                      toyName: toy.name,
+                      avatarUrl: toy.avatarUrl,
+                    })}
+                  >
+                    <Ionicons name="chatbubble" size={16} color="white" />
+                    <Label className="text-white text-[11px] font-bold">Chat</Label>
+                  </Pressable>
+
+                  <Pressable
+                    className="flex-row items-center px-2.5 py-1.5 rounded-2xl gap-1.5"
+                    style={{ backgroundColor: toy.isConnected ? success : muted }}
+                    onPress={() => handleToggle(toy.id)}
+                  >
+                    <Ionicons name={toy.isConnected ? 'bluetooth' : 'bluetooth-outline'} size={16} color="white" />
+                    <Label className="text-white text-[11px] font-bold">
+                      {toy.isConnected ? 'Conectado' : 'Conectar'}
+                    </Label>
+                  </Pressable>
+
+                  <View className="flex-1" />
+
+                  <Pressable onPress={() => navigation.navigate('ToyForm', { toy })} className="p-1.5">
+                    <Ionicons name="pencil" size={20} color={primary} />
+                  </Pressable>
+                  <Pressable onPress={() => deleteToy(toy.id, toy.name)} className="p-1.5">
+                    <Ionicons name="trash" size={20} color={danger} />
+                  </Pressable>
+                </View>
+              </Card.Body>
+            </Card>
           ))
         )}
+        <View className="h-5" />
       </ScrollView>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F5F7FA', paddingHorizontal: 16, paddingTop: 40 },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  backButton: { padding: 4 },
-  title: { fontSize: 22, fontWeight: 'bold', color: '#2C3E50', flex: 1, textAlign: 'center' },
-  addButton: { backgroundColor: '#4A90D9', width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
-  empty: { alignItems: 'center', marginTop: 60 },
-  emptyText: { fontSize: 16, color: '#999', marginTop: 16 },
-  emptyButton: { marginTop: 20, backgroundColor: '#4A90D9', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 10 },
-  emptyButtonText: { color: 'white', fontSize: 16, fontWeight: '600' },
-  card: { backgroundColor: 'white', borderRadius: 12, padding: 16, marginBottom: 12, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 },
-  cardContent: { flexDirection: 'row', alignItems: 'center', flex: 1 },
-  avatar: { width: 48, height: 48, borderRadius: 24, marginRight: 12, backgroundColor: '#F0F0F0' },
-  cardInfo: { flex: 1 },
-  cardName: { fontSize: 16, fontWeight: '600', color: '#2C3E50' },
-  cardSerial: { fontSize: 13, color: '#7F8C8D', marginTop: 2 },
-  cardChild: { fontSize: 13, color: '#27AE60', marginTop: 2 },
-  cardActions: { flexDirection: 'row', alignItems: 'center', marginTop: 12, gap: 6, flexWrap: 'wrap' },
-  chatButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#8E44AD', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 16, gap: 4 },
-  chatButtonText: { color: 'white', fontSize: 11, fontWeight: '600' },
-  connectionButton: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 16, gap: 4 },
-  connected: { backgroundColor: '#27AE60' },
-  disconnected: { backgroundColor: '#7F8C8D' },
-  connectionText: { color: 'white', fontSize: 11, fontWeight: '600' },
-  actionButton: { padding: 6 },
-});

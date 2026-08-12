@@ -1,22 +1,16 @@
 import React, { useState, useCallback } from 'react';
 import {
   View,
-  Text,
-  StyleSheet,
   ScrollView,
-  TouchableOpacity,
   Alert,
   RefreshControl,
-  ActivityIndicator,
-  StatusBar,
+  Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { rutinaService } from '../../services/api';
 import { sendNotification } from '../../services/notificationService';
-import { useTheme } from '../../hooks/useTheme';
-import { Card } from '../../components/ui/Card';
-import { Button } from '../../components/ui/Button';
+import { Card, Button, Label, Spinner, useThemeColor } from 'heroui-native';
 import { IconButton } from '../../components/ui/IconButton';
 
 interface Rutina {
@@ -29,11 +23,16 @@ interface Rutina {
 }
 
 export default function RutinasScreen({ navigation }: any) {
-  const { colors, typography, isDark } = useTheme();
-
   const [rutinas, setRutinas] = useState<Rutina[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  const [primary, success, danger, muted] = useThemeColor([
+    'accent',
+    'success',
+    'danger',
+    'muted',
+  ]);
 
   const loadRutinas = async () => {
     try {
@@ -102,22 +101,21 @@ export default function RutinasScreen({ navigation }: any) {
 
   if (loading) {
     return (
-      <View style={[styles.center, { backgroundColor: colors.background }]}>
-        <ActivityIndicator size="large" color={colors.primary} />
+      <View className="flex-1 justify-center items-center bg-background">
+        <Spinner size="lg" color="primary" />
       </View>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
-      <View style={styles.header}>
+    <View className="flex-1 bg-background px-4 pt-12">
+      <View className="flex-row justify-between items-center mb-4">
         <IconButton icon="arrow-back" onPress={() => navigation.goBack()} />
-        <Text style={[styles.title, { color: colors.text }]}>Rutinas del Niño</Text>
+        <Label className="text-2xl font-extrabold text-foreground">Rutinas del Niño</Label>
         <IconButton
           icon="add"
           variant="solid"
-          color={colors.primary}
+          color={primary}
           onPress={() => navigation.navigate('RutinaForm')}
         />
       </View>
@@ -125,138 +123,61 @@ export default function RutinasScreen({ navigation }: any) {
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={primary} />
         }
       >
-        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Diarias & Programadas</Text>
+        <Label className="text-sm font-semibold text-muted mb-4">Diarias & Programadas</Label>
 
         {rutinas.length === 0 ? (
-          <View style={styles.empty}>
-            <Ionicons name="calendar-outline" size={64} color={colors.textSecondary} />
-            <Text style={[styles.emptyText, { color: colors.text }]}>No tienes rutinas creadas</Text>
+          <View className="items-center mt-16">
+            <Ionicons name="calendar-outline" size={64} color={muted} />
+            <Label className="text-base font-bold text-foreground mt-4 mb-4">No tienes rutinas creadas</Label>
             <Button
-              title="Agregar rutina"
+              variant="primary"
               onPress={() => navigation.navigate('RutinaForm')}
-              style={{ marginTop: 16 }}
-            />
+            >
+              <Button.Label>Agregar rutina</Button.Label>
+            </Button>
           </View>
         ) : (
           rutinas.map((rutina) => (
-            <Card key={rutina.id} variant="elevated" style={styles.card}>
-              <View style={styles.cardContent}>
-                <View style={[styles.cardIcon, { backgroundColor: colors.primary + '15' }]}>
-                  <Ionicons name="time-outline" size={24} color={colors.primary} />
+            <Card key={rutina.id} variant="default" className="mb-3">
+              <Card.Body className="flex-row items-center justify-between py-4">
+                <View className="flex-row items-center flex-1">
+                  <View className="w-11 h-11 rounded-full bg-primary/15 justify-center items-center mr-3">
+                    <Ionicons name="time-outline" size={24} color={primary} />
+                  </View>
+                  <View className="flex-1">
+                    <Label className="text-base font-bold text-foreground">{rutina.nombre}</Label>
+                    <Label className="text-sm text-muted mt-0.5">
+                      🕐 {formatHora(rutina.hora)}
+                      {rutina.repetir && ' 🔁 Diario'}
+                    </Label>
+                    {rutina.mensaje && (
+                      <Label className="text-sm text-success font-medium mt-0.5">💬 {rutina.mensaje}</Label>
+                    )}
+                  </View>
                 </View>
-                <View style={styles.cardInfo}>
-                  <Text style={[styles.cardName, { color: colors.text }]}>{rutina.nombre}</Text>
-                  <Text style={[styles.cardTime, { color: colors.textSecondary }]}>
-                    🕐 {formatHora(rutina.hora)}
-                    {rutina.repetir && ' 🔁 Diario'}
-                  </Text>
-                  {rutina.mensaje && (
-                    <Text style={[styles.cardMessage, { color: colors.success }]}>💬 {rutina.mensaje}</Text>
-                  )}
+                <View className="flex-row gap-2">
+                  <Pressable
+                    onPress={() => navigation.navigate('RutinaForm', { rutina })}
+                    className="p-1.5"
+                  >
+                    <Ionicons name="pencil" size={20} color={primary} />
+                  </Pressable>
+                  <Pressable
+                    onPress={() => deleteRutina(rutina.id, rutina.nombre)}
+                    className="p-1.5"
+                  >
+                    <Ionicons name="trash" size={20} color={danger} />
+                  </Pressable>
                 </View>
-              </View>
-              <View style={styles.cardActions}>
-                <TouchableOpacity
-                  onPress={() => navigation.navigate('RutinaForm', { rutina })}
-                  style={styles.actionButton}
-                >
-                  <Ionicons name="pencil" size={20} color={colors.primary} />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => deleteRutina(rutina.id, rutina.nombre)}
-                  style={styles.actionButton}
-                >
-                  <Ionicons name="trash" size={20} color={colors.error} />
-                </TouchableOpacity>
-              </View>
+              </Card.Body>
             </Card>
           ))
         )}
-        <View style={{ height: 20 }} />
+        <View className="h-5" />
       </ScrollView>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 50,
-  },
-  center: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: '800',
-  },
-  subtitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 16,
-  },
-  empty: {
-    alignItems: 'center',
-    marginTop: 60,
-  },
-  emptyText: {
-    fontSize: 16,
-    fontWeight: '700',
-    marginTop: 16,
-  },
-  card: {
-    marginBottom: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
-  },
-  cardContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  cardIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  cardInfo: {
-    flex: 1,
-  },
-  cardName: {
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  cardTime: {
-    fontSize: 13,
-    marginTop: 2,
-  },
-  cardMessage: {
-    fontSize: 13,
-    marginTop: 2,
-    fontWeight: '500',
-  },
-  cardActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  actionButton: {
-    padding: 6,
-  },
-});

@@ -1,16 +1,15 @@
 import React, { useState } from 'react';
 import {
   View,
-  Text,
-  StyleSheet,
   ScrollView,
-  TouchableOpacity,
-  Image,
   Share,
-  ActivityIndicator,
+  Image,
   Dimensions,
+  Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Card, Label, Spinner, useThemeColor, Button } from 'heroui-native';
+import { IconButton } from '../../components/ui/IconButton';
 
 const { width } = Dimensions.get('window');
 
@@ -19,6 +18,14 @@ export default function HistoriaDetalleScreen({ navigation, route }: any) {
   const { titulo, contenido, imagen, duracion } = historia || {};
   const [imageLoading, setImageLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
+
+  const [primary, secondary, muted, surface, background] = useThemeColor([
+    'accent',
+    'secondary',
+    'muted',
+    'surface',
+    'background',
+  ]);
 
   const handleShare = async () => {
     try {
@@ -33,37 +40,36 @@ export default function HistoriaDetalleScreen({ navigation, route }: any) {
 
   if (!historia) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.centerText}>No se encontró la historia</Text>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButtonCenter}>
-          <Text style={styles.backButtonText}>Volver</Text>
-        </TouchableOpacity>
+      <View className="flex-1 justify-center items-center bg-background px-4">
+        <Label className="text-lg text-muted mb-5">No se encontró la historia</Label>
+        <Button variant="primary" onPress={() => navigation.goBack()}>
+          <Button.Label>Volver</Button.Label>
+        </Button>
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView className="flex-1 bg-background" showsVerticalScrollIndicator={false}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={28} color="#2C3E50" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle} numberOfLines={1}>
+      <View className="flex-row items-center px-4 pt-12 pb-4 border-b border-separator bg-card">
+        <IconButton icon="arrow-back" onPress={() => navigation.goBack()} />
+        <Label className="text-lg font-bold text-foreground flex-1 text-center mx-2" numberOfLines={1}>
           {titulo || 'Historia'}
-        </Text>
-        <TouchableOpacity onPress={handleShare} style={styles.shareButton}>
-          <Ionicons name="share-social" size={24} color="#2C3E50" />
-        </TouchableOpacity>
+        </Label>
+        <Pressable className="p-2" onPress={handleShare}>
+          <Ionicons name="share-social" size={24} color={primary} />
+        </Pressable>
       </View>
 
-      {/* Imagen - ahora con tamaño controlado y sin parpadeos */}
+      {/* Imagen */}
       {imagen && !imageError ? (
-        <View style={styles.imageContainer}>
+        <View className="w-full h-52 bg-surface justify-center items-center mt-2 relative">
           <Image
             source={{ uri: imagen }}
-            style={styles.storyImage}
-            resizeMode="contain"
+            className="w-full h-full rounded-xl mx-4"
+            style={{ width: width - 32 }}
+            resizeMode="cover"
             onLoadStart={() => setImageLoading(true)}
             onLoadEnd={() => setImageLoading(false)}
             onError={() => {
@@ -72,160 +78,39 @@ export default function HistoriaDetalleScreen({ navigation, route }: any) {
             }}
           />
           {imageLoading && (
-            <View style={styles.imageLoader}>
-              <ActivityIndicator size="large" color="#8E44AD" />
+            <View className="absolute inset-0 justify-center items-center bg-white/80 rounded-xl mx-4" style={{ width: width - 32 }}>
+              <Spinner size="lg" color="secondary" />
             </View>
           )}
         </View>
       ) : (
-        <View style={[styles.imageContainer, styles.imagePlaceholder]}>
-          <Ionicons name="book" size={48} color="#8E44AD" />
-          <Text style={styles.imagePlaceholderText}>Imagen no disponible</Text>
+        <View className="mx-4 h-[150px] bg-surface rounded-xl justify-center items-center mt-2">
+          <Ionicons name="book" size={48} color={secondary} />
+          <Label className="text-sm text-muted mt-2">Imagen no disponible</Label>
         </View>
       )}
 
       {/* Contenido */}
-      <View style={styles.contentContainer}>
-        <Text style={styles.titulo}>{titulo}</Text>
-        <Text style={styles.duracion}>⏱ {duracion || '10 min'}</Text>
-        <View style={styles.divider} />
-        <Text style={styles.contenido}>{contenido}</Text>
-      </View>
+      <Card variant="default" className="m-4 p-5 border-0 shadow-sm">
+        <Card.Body className="p-0">
+          <Label className="text-2xl font-extrabold text-foreground mb-1">{titulo}</Label>
+          <Label className="text-sm text-muted mb-3">⏱ {duracion || '10 min'}</Label>
+          
+          <View className="h-px bg-separator my-3" />
+          
+          <Label className="text-base leading-6 text-foreground font-medium">{contenido}</Label>
+        </Card.Body>
+      </Card>
 
       {isNew && (
-        <View style={styles.badgeContainer}>
-          <Text style={styles.badge}>✨ Nueva historia generada con IA</Text>
+        <View className="items-center mb-6 px-4">
+          <View className="bg-secondary px-4 py-2 rounded-full">
+            <Label className="text-white text-sm font-bold">✨ Nueva historia generada con IA</Label>
+          </View>
         </View>
       )}
+      
+      <View className="h-10" />
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F7FA',
-  },
-  center: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  centerText: {
-    fontSize: 18,
-    color: '#7F8C8D',
-    marginBottom: 20,
-  },
-  backButtonCenter: {
-    backgroundColor: '#4A90D9',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 10,
-  },
-  backButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 50,
-    paddingBottom: 16,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-  },
-  backButton: { padding: 4 },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#2C3E50',
-    flex: 1,
-    textAlign: 'center',
-  },
-  shareButton: { padding: 4 },
-  imageContainer: {
-    width: '100%',
-    height: 200,
-    backgroundColor: '#F5F7FA',
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-    marginTop: 8,
-  },
-  storyImage: {
-    width: '100%',
-    height: 200,
-    borderRadius: 12,
-  },
-  imageLoader: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.8)',
-    borderRadius: 12,
-  },
-  imagePlaceholder: {
-    backgroundColor: '#F0F0F0',
-    borderRadius: 12,
-    marginHorizontal: 16,
-    width: width - 32,
-    height: 150,
-  },
-  imagePlaceholderText: {
-    marginTop: 8,
-    color: '#999',
-    fontSize: 14,
-  },
-  contentContainer: {
-    padding: 20,
-    backgroundColor: 'white',
-    margin: 16,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  titulo: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#2C3E50',
-    marginBottom: 4,
-  },
-  duracion: {
-    fontSize: 14,
-    color: '#7F8C8D',
-    marginBottom: 12,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#E0E0E0',
-    marginVertical: 12,
-  },
-  contenido: {
-    fontSize: 16,
-    lineHeight: 24,
-    color: '#2C3E50',
-  },
-  badgeContainer: {
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  badge: {
-    backgroundColor: '#8E44AD',
-    color: 'white',
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 20,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-});

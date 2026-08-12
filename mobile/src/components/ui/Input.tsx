@@ -1,61 +1,53 @@
+/**
+ * Input component — HeroUI Native v1
+ *
+ * Wraps heroui-native's TextField + Label + Input + FieldError compound pattern.
+ * Preserves the original API (label, error props + all TextInputProps) so existing
+ * screens need no changes.
+ */
 import React from 'react';
-import { TextInput, StyleSheet, TextInputProps, View, Text } from 'react-native';
-import { useTheme } from '../../hooks/useTheme';
+import {
+  TextField,
+  Input as HeroInput,
+  Label,
+  FieldError,
+  Description,
+} from 'heroui-native';
+import type { TextInputProps } from 'react-native';
 
 interface InputProps extends TextInputProps {
   label?: string;
   error?: string;
+  description?: string;
+  isRequired?: boolean;
+  className?: string;
+  inputClassName?: string;
 }
 
-export const Input = ({ label, error, style, ...props }: InputProps) => {
-  const { colors, borderRadius, typography } = useTheme();
+export const Input = ({
+  label,
+  error,
+  description,
+  isRequired = false,
+  className,
+  inputClassName,
+  ...props
+}: InputProps) => {
+  const isInvalid = !!error;
 
   return (
-    <View style={styles.container}>
-      {label && (
-        <Text style={[styles.label, { color: colors.textSecondary, fontSize: typography.size.sm }]}>
-          {label}
-        </Text>
-      )}
-      <TextInput
-        style={[
-          styles.input,
-          {
-            backgroundColor: colors.surface,
-            borderColor: error ? colors.error : colors.border,
-            color: colors.text,
-            borderRadius: borderRadius.lg,
-          },
-          style,
-        ]}
-        placeholderTextColor={colors.textSecondary}
+    <TextField
+      isRequired={isRequired}
+      isInvalid={isInvalid}
+      className={className ?? 'w-full my-1'}
+    >
+      {label && <Label>{label}</Label>}
+      <HeroInput
+        className={inputClassName}
         {...props}
       />
-      {error && (
-        <Text style={[styles.error, { color: colors.error, fontSize: typography.size.xs }]}>
-          {error}
-        </Text>
-      )}
-    </View>
+      {description && !error && <Description>{description}</Description>}
+      {error && <FieldError>{error}</FieldError>}
+    </TextField>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    width: '100%',
-    marginVertical: 8,
-  },
-  label: {
-    marginBottom: 6,
-    fontWeight: '500',
-  },
-  input: {
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderWidth: 1,
-    fontSize: 16,
-  },
-  error: {
-    marginTop: 4,
-  },
-});

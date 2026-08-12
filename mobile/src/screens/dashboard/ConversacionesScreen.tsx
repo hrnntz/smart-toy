@@ -1,19 +1,14 @@
 import React, { useState, useCallback } from 'react';
 import {
   View,
-  Text,
-  StyleSheet,
   ScrollView,
-  TouchableOpacity,
-  ActivityIndicator,
   Image,
-  StatusBar,
+  Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { toyService } from '../../services/api';
-import { useTheme } from '../../hooks/useTheme';
-import { Card } from '../../components/ui/Card';
+import { Card, Label, Spinner, useThemeColor } from 'heroui-native';
 import { IconButton } from '../../components/ui/IconButton';
 
 interface Toy {
@@ -25,10 +20,15 @@ interface Toy {
 }
 
 export default function ConversacionesScreen({ navigation }: any) {
-  const { colors, typography, isDark } = useTheme();
-
   const [toys, setToys] = useState<Toy[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const [primary, muted, success, danger] = useThemeColor([
+    'accent',
+    'muted',
+    'success',
+    'danger',
+  ]);
 
   useFocusEffect(
     useCallback(() => {
@@ -57,74 +57,56 @@ export default function ConversacionesScreen({ navigation }: any) {
 
   if (loading) {
     return (
-      <View style={[styles.center, { backgroundColor: colors.background }]}>
-        <ActivityIndicator size="large" color={colors.primary} />
+      <View className="flex-1 justify-center items-center bg-background">
+        <Spinner size="lg" color="primary" />
       </View>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
-      <View style={styles.header}>
+    <View className="flex-1 bg-background px-4 pt-12">
+      <View className="flex-row items-center mb-5">
         <IconButton icon="arrow-back" onPress={() => navigation.goBack()} />
-        <View style={styles.headerTitleContainer}>
-          <Text style={[styles.title, { color: colors.text }]}>Conversaciones</Text>
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Supervisión de chats del juguete</Text>
+        <View className="flex-1 ml-2">
+          <Label className="text-2xl font-extrabold text-foreground">Conversaciones</Label>
+          <Label className="text-[13px] text-muted mt-0.5">Supervisión de chats del juguete</Label>
         </View>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
         {toys.length === 0 ? (
-          <View style={styles.empty}>
-            <Ionicons name="chatbubbles-outline" size={64} color={colors.textSecondary} />
-            <Text style={[styles.emptyText, { color: colors.text }]}>No hay juguetes vinculados para chatear</Text>
-            <Text style={[styles.emptySub, { color: colors.textSecondary }]}>Registra un juguete desde "Mis Juguetes"</Text>
+          <View className="items-center mt-16">
+            <Ionicons name="chatbubbles-outline" size={64} color={muted} />
+            <Label className="text-base font-bold text-foreground mt-4">No hay juguetes vinculados para chatear</Label>
+            <Label className="text-[13px] text-muted mt-1">Registra un juguete desde "Mis Juguetes"</Label>
           </View>
         ) : (
           toys.map((toy) => (
-            <Card key={toy.id} variant="elevated" style={styles.card}>
-              <TouchableOpacity style={styles.cardInner} onPress={() => openChat(toy)}>
+            <Card key={toy.id} variant="default" className="mb-3">
+              <Pressable className="flex-row items-center p-4" onPress={() => openChat(toy)}>
                 <Image
                   source={{ uri: toy.avatarUrl || 'https://image.pollinations.ai/prompt/cute%20panda%20toy?width=100&height=100' }}
-                  style={styles.avatar}
+                  className="w-13 h-13 rounded-full mr-3.5"
                 />
-                <View style={styles.cardInfo}>
-                  <Text style={[styles.cardName, { color: colors.text }]}>{toy.name}</Text>
-                  <Text style={[styles.cardSerial, { color: colors.textSecondary }]}>🔑 S/N: {toy.serialNumber}</Text>
-                  <Text style={[styles.cardStatus, { color: toy.isConnected ? colors.success : colors.error }]}>
+                <View className="flex-1">
+                  <Label className="text-base font-bold text-foreground">{toy.name}</Label>
+                  <Label className="text-xs text-muted mt-0.5">🔑 S/N: {toy.serialNumber}</Label>
+                  <Label
+                    style={{ color: toy.isConnected ? success : danger }}
+                    className="text-xs font-semibold mt-1"
+                  >
                     {toy.isConnected ? '🟢 En línea • Listo para hablar' : '🔴 Desconectado'}
-                  </Text>
+                  </Label>
                 </View>
-                <View style={[styles.chatBadge, { backgroundColor: colors.primary + '15' }]}>
-                  <Ionicons name="chatbubble-ellipses" size={22} color={colors.primary} />
+                <View className="w-11 h-11 rounded-full bg-primary/15 justify-center items-center">
+                  <Ionicons name="chatbubble-ellipses" size={22} color={primary} />
                 </View>
-              </TouchableOpacity>
+              </Pressable>
             </Card>
           ))
         )}
-        <View style={{ height: 20 }} />
+        <View className="h-5" />
       </ScrollView>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, paddingHorizontal: 16, paddingTop: 50 },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
-  headerTitleContainer: { flex: 1, marginLeft: 8 },
-  title: { fontSize: 24, fontWeight: '800' },
-  subtitle: { fontSize: 13, marginTop: 2 },
-  empty: { alignItems: 'center', marginTop: 60 },
-  emptyText: { fontSize: 16, marginTop: 16, fontWeight: '700' },
-  emptySub: { fontSize: 13, marginTop: 4 },
-  card: { marginBottom: 12, padding: 0 },
-  cardInner: { flexDirection: 'row', alignItems: 'center', padding: 16 },
-  avatar: { width: 52, height: 52, borderRadius: 26, marginRight: 14 },
-  cardInfo: { flex: 1 },
-  cardName: { fontSize: 16, fontWeight: '700' },
-  cardSerial: { fontSize: 12, marginTop: 2 },
-  cardStatus: { fontSize: 12, marginTop: 4, fontWeight: '600' },
-  chatBadge: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
-});

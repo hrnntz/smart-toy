@@ -1,16 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import {
   View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-  ActivityIndicator,
   ScrollView,
+  Alert,
+  Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { toyService, childService } from '../../services/api';
+import { Card, Button, Label, TextField, Input, Spinner, useThemeColor } from 'heroui-native';
+import { IconButton } from '../../components/ui/IconButton';
 
 interface Child {
   id: number;
@@ -45,6 +43,8 @@ export default function ToyFormScreen({ navigation, route }: ToyFormScreenProps)
   const [children, setChildren] = useState<Child[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadingChildren, setLoadingChildren] = useState(true);
+
+  const [primary, surface] = useThemeColor(['accent', 'surface']);
 
   const loadChildren = async () => {
     try {
@@ -84,16 +84,12 @@ export default function ToyFormScreen({ navigation, route }: ToyFormScreenProps)
         context: context.trim() || undefined,
       };
 
-      console.log('📤 Enviando datos:', data);
-
       let response;
       if (isEditing) {
         response = await toyService.update(toy.id, data);
       } else {
         response = await toyService.create(data);
       }
-
-      console.log('✅ Respuesta del servidor:', response.data);
 
       if (response.data.success) {
         Alert.alert('Éxito', isEditing ? 'Juguete actualizado' : 'Juguete creado');
@@ -102,7 +98,6 @@ export default function ToyFormScreen({ navigation, route }: ToyFormScreenProps)
         Alert.alert('Error', response.data.message || 'Error al guardar');
       }
     } catch (error: any) {
-      console.error('❌ Error saving toy:', error);
       Alert.alert('Error', error.response?.data?.message || 'Error al conectar con el servidor');
     } finally {
       setLoading(false);
@@ -110,178 +105,106 @@ export default function ToyFormScreen({ navigation, route }: ToyFormScreenProps)
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={28} color="#2C3E50" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>
+    <ScrollView className="flex-1 bg-background px-4 pt-12">
+      <View className="flex-row justify-between items-center mb-5">
+        <IconButton icon="arrow-back" onPress={() => navigation.goBack()} />
+        <Label className="text-2xl font-extrabold text-foreground">
           {isEditing ? 'Editar Juguete' : 'Nuevo Juguete'}
-        </Text>
-        <View style={{ width: 28 }} />
+        </Label>
+        <View className="w-10" />
       </View>
 
-      <View style={styles.form}>
-        <Text style={styles.label}>Nombre *</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Nombre del juguete"
-          value={name}
-          onChangeText={setName}
-        />
+      <Card variant="default" className="p-5 mb-5 border-0">
+        <Card.Body className="p-0">
+          <Label className="text-sm font-semibold text-foreground mb-1.5">Nombre *</Label>
+          <TextField className="w-full mb-4">
+            <Input
+              placeholder="Nombre del juguete"
+              value={name}
+              onChangeText={setName}
+            />
+          </TextField>
 
-        <Text style={styles.label}>Número de serie *</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Ej: TOY-001-ABC"
-          value={serialNumber}
-          onChangeText={setSerialNumber}
-        />
+          <Label className="text-sm font-semibold text-foreground mb-1.5">Número de serie *</Label>
+          <TextField className="w-full mb-4">
+            <Input
+              placeholder="Ej: TOY-001-ABC"
+              value={serialNumber}
+              onChangeText={setSerialNumber}
+            />
+          </TextField>
 
-        <Text style={styles.label}>Asignar a niño (opcional)</Text>
-        {loadingChildren ? (
-          <ActivityIndicator size="small" color="#4A90D9" />
-        ) : (
-          <View style={styles.childSelector}>
-            <TouchableOpacity
-              style={[
-                styles.childOption,
-                childId === undefined && styles.childOptionSelected,
-              ]}
-              onPress={() => setChildId(undefined)}
-            >
-              <Text style={styles.childOptionText}>Sin asignar</Text>
-            </TouchableOpacity>
-            {children.map((child) => (
-              <TouchableOpacity
-                key={child.id}
-                style={[
-                  styles.childOption,
-                  childId === child.id && styles.childOptionSelected,
-                ]}
-                onPress={() => setChildId(child.id)}
+          <Label className="text-sm font-semibold text-foreground mb-1.5">Asignar a niño (opcional)</Label>
+          {loadingChildren ? (
+            <View className="py-2 items-start">
+              <Spinner size="sm" color="primary" />
+            </View>
+          ) : (
+            <View className="flex-row flex-wrap gap-2 mb-4">
+              <Pressable
+                className="px-3.5 py-2 rounded-full border-2"
+                style={{
+                  backgroundColor: childId === undefined ? 'rgba(74, 144, 217, 0.1)' : surface,
+                  borderColor: childId === undefined ? primary : 'transparent'
+                }}
+                onPress={() => setChildId(undefined)}
               >
-                <Text style={styles.childOptionText}>{child.name}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
+                <Label className={`text-sm ${childId === undefined ? 'text-primary font-bold' : 'text-foreground'}`}>
+                  Sin asignar
+                </Label>
+              </Pressable>
+              {children.map((child) => (
+                <Pressable
+                  key={child.id}
+                  className="px-3.5 py-2 rounded-full border-2"
+                  style={{
+                    backgroundColor: childId === child.id ? 'rgba(74, 144, 217, 0.1)' : surface,
+                    borderColor: childId === child.id ? primary : 'transparent'
+                  }}
+                  onPress={() => setChildId(child.id)}
+                >
+                  <Label className={`text-sm ${childId === child.id ? 'text-primary font-bold' : 'text-foreground'}`}>
+                    {child.name}
+                  </Label>
+                </Pressable>
+              ))}
+            </View>
+          )}
 
-        <Text style={styles.label}>Personalidad (para IA)</Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          placeholder="Ej: Alegre, curioso, amable, divertido..."
-          value={personality}
-          onChangeText={setPersonality}
-          multiline
-          numberOfLines={2}
-        />
+          <Label className="text-sm font-semibold text-foreground mb-1.5">Personalidad (para IA)</Label>
+          <TextField className="w-full mb-4">
+            <Input
+              placeholder="Ej: Alegre, curioso, amable..."
+              value={personality}
+              onChangeText={setPersonality}
+              multiline
+              numberOfLines={2}
+              className="min-h-[60px]"
+            />
+          </TextField>
 
-        <Text style={styles.label}>Contexto / Historia (para IA)</Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          placeholder="Ej: Eres un panda que vive en el bosque y le encanta contar historias..."
-          value={context}
-          onChangeText={setContext}
-          multiline
-          numberOfLines={4}
-        />
+          <Label className="text-sm font-semibold text-foreground mb-1.5">Contexto / Historia (para IA)</Label>
+          <TextField className="w-full mb-6">
+            <Input
+              placeholder="Ej: Eres un panda que vive en el bosque..."
+              value={context}
+              onChangeText={setContext}
+              multiline
+              numberOfLines={4}
+              className="min-h-[100px]"
+            />
+          </TextField>
 
-        <TouchableOpacity
-          style={[styles.saveButton, loading && styles.saveButtonDisabled]}
-          onPress={handleSave}
-          disabled={loading}
-        >
-          {loading ? <ActivityIndicator color="white" /> : <Text style={styles.saveButtonText}>Guardar</Text>}
-        </TouchableOpacity>
-      </View>
+          <Button
+            variant="primary"
+            onPress={handleSave}
+            isDisabled={loading}
+            className="w-full"
+          >
+            {loading ? <Spinner size="sm" color="default" /> : <Button.Label>Guardar</Button.Label>}
+          </Button>
+        </Card.Body>
+      </Card>
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F7FA',
-    paddingHorizontal: 16,
-    paddingTop: 40,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  backButton: {
-    padding: 4,
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#2C3E50',
-  },
-  form: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2C3E50',
-    marginBottom: 6,
-    marginTop: 12,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    backgroundColor: '#F9F9F9',
-  },
-  textArea: {
-    textAlignVertical: 'top',
-  },
-  childSelector: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 16,
-  },
-  childOption: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#F0F0F0',
-    marginRight: 8,
-    marginBottom: 8,
-  },
-  childOptionSelected: {
-    backgroundColor: '#4A90D9',
-  },
-  childOptionText: {
-    fontSize: 14,
-    color: '#2C3E50',
-  },
-  saveButton: {
-    backgroundColor: '#4A90D9',
-    padding: 16,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  saveButtonDisabled: {
-    opacity: 0.6,
-  },
-  saveButtonText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-});

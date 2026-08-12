@@ -1,20 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import {
   View,
-  Text,
-  StyleSheet,
   ScrollView,
-  TouchableOpacity,
   Modal,
-  ActivityIndicator,
-  StatusBar,
+  Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { storage } from '../../services/storage';
 import { gameService } from '../../services/api';
-import { useTheme } from '../../hooks/useTheme';
-import { Card } from '../../components/ui/Card';
-import { Button } from '../../components/ui/Button';
+import { Card, Button, Label, Spinner, useThemeColor } from 'heroui-native';
 import { IconButton } from '../../components/ui/IconButton';
 
 type Categoria = 'Todos' | 'Lógica' | 'Memoria' | 'Matemáticas' | 'Lectura';
@@ -49,8 +43,6 @@ const JUEGOS: Juego[] = [
 const PROGRESS_KEY = 'juegos_progreso';
 
 export default function JuegosScreen({ navigation }: any) {
-  const { colors, typography, isDark } = useTheme();
-
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<Categoria>('Todos');
   const [dificultad, setDificultad] = useState<Dificultad>('Fácil');
   const [progreso, setProgreso] = useState<Record<number, boolean>>({});
@@ -64,6 +56,16 @@ export default function JuegosScreen({ navigation }: any) {
   const [selectedAnswerIndex, setSelectedAnswerIndex] = useState<number | null>(null);
   const [showExplanation, setShowExplanation] = useState(false);
   const [gameFinished, setGameFinished] = useState(false);
+
+  const [primary, success, danger, warning, muted, surface, text] = useThemeColor([
+    'accent',
+    'success',
+    'danger',
+    'warning',
+    'muted',
+    'surface',
+    'foreground'
+  ]);
 
   const categorias: Categoria[] = ['Todos', 'Lógica', 'Memoria', 'Matemáticas', 'Lectura'];
   const dificultades: Dificultad[] = ['Fácil', 'Medio', 'Difícil'];
@@ -159,178 +161,183 @@ export default function JuegosScreen({ navigation }: any) {
   const currentQ = aiQuestions[currentQuestionIndex];
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+    <View className="flex-1 bg-background px-4 pt-12">
       {/* Header */}
-      <View style={styles.header}>
+      <View className="flex-row items-center justify-between mb-4">
         <IconButton icon="arrow-back" onPress={() => navigation.goBack()} />
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Minijuegos con IA</Text>
-        <View style={{ width: 40 }} />
+        <Label className="text-xl font-extrabold text-foreground">Minijuegos con IA</Label>
+        <View className="w-10" />
       </View>
 
       {/* Selector de Dificultad */}
-      <View style={styles.difficultyContainer}>
-        <Text style={[styles.difficultyLabel, { color: colors.textSecondary }]}>Dificultad:</Text>
-        <View style={styles.difficultyRow}>
+      <View className="mb-4">
+        <Label className="text-[13px] font-bold text-muted mb-1.5">Dificultad:</Label>
+        <View className="flex-row gap-2">
           {dificultades.map((d) => (
-            <TouchableOpacity
+            <Pressable
               key={d}
-              style={[
-                styles.diffChip,
-                { backgroundColor: dificultad === d ? colors.primary : colors.surface },
-              ]}
+              className="px-4 py-2 rounded-full"
+              style={{ backgroundColor: dificultad === d ? primary : surface }}
               onPress={() => setDificultad(d)}
             >
-              <Text style={[styles.diffText, { color: dificultad === d ? '#FFFFFF' : colors.text }]}>{d}</Text>
-            </TouchableOpacity>
+              <Label className={`text-[13px] font-semibold ${dificultad === d ? 'text-white' : 'text-foreground'}`}>
+                {d}
+              </Label>
+            </Pressable>
           ))}
         </View>
       </View>
 
       {/* Categorías */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoriesContainer}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-4" contentContainerStyle={{ paddingRight: 16 }}>
         {categorias.map((cat) => (
-          <TouchableOpacity
+          <Pressable
             key={cat}
-            style={[
-              styles.categoryButton,
-              { backgroundColor: categoriaSeleccionada === cat ? colors.primary : colors.surface }
-            ]}
+            className="px-3.5 py-2 rounded-full mr-2"
+            style={{ backgroundColor: categoriaSeleccionada === cat ? primary : surface }}
             onPress={() => setCategoriaSeleccionada(cat)}
           >
-            <Text style={[
-              styles.categoryText,
-              { color: categoriaSeleccionada === cat ? '#FFFFFF' : colors.textSecondary, fontWeight: categoriaSeleccionada === cat ? '700' : '500' }
-            ]}>
+            <Label className={`text-[13px] ${categoriaSeleccionada === cat ? 'text-white font-bold' : 'text-muted font-medium'}`}>
               {cat}
-            </Text>
-          </TouchableOpacity>
+            </Label>
+          </Pressable>
         ))}
       </ScrollView>
 
       {/* Lista de Juegos */}
       <ScrollView showsVerticalScrollIndicator={false}>
         {juegosFiltrados.map((juego) => (
-          <Card key={juego.id} variant="elevated" style={styles.gameCard}>
-            <TouchableOpacity style={styles.gameCardInner} onPress={() => handlePlay(juego)}>
-              <View style={[styles.gameIcon, { backgroundColor: colors.primary + '15' }]}>
-                <Ionicons name={juego.icon as any} size={28} color={colors.primary} />
+          <Card key={juego.id} variant="default" className="mb-2">
+            <Pressable className="flex-row items-center p-4" onPress={() => handlePlay(juego)}>
+              <View className="w-11 h-11 rounded-full bg-primary/15 justify-center items-center mr-3">
+                <Ionicons name={juego.icon as any} size={24} color={primary} />
               </View>
-              <View style={styles.gameInfo}>
-                <Text style={[styles.gameName, { color: colors.text }]}>{juego.name}</Text>
-                <Text style={[styles.gameDesc, { color: colors.textSecondary }]}>{juego.desc}</Text>
+              <View className="flex-1 mr-2">
+                <Label className="text-base font-bold text-foreground">{juego.name}</Label>
+                <Label className="text-xs text-muted mt-0.5">{juego.desc}</Label>
               </View>
               {progreso[juego.id] ? (
-                <Ionicons name="checkmark-circle" size={28} color={colors.success} />
+                <Ionicons name="checkmark-circle" size={28} color={success} />
               ) : (
-                <Ionicons name="play-circle" size={32} color={colors.primary} />
+                <Ionicons name="play-circle" size={32} color={primary} />
               )}
-            </TouchableOpacity>
+            </Pressable>
           </Card>
         ))}
-        <View style={{ height: 20 }} />
+        <View className="h-5" />
       </ScrollView>
 
       {/* Modal Interactivo de Preguntas con Explicación de IA */}
       <Modal visible={selectedJuego !== null} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
-            <View style={styles.modalHeader}>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.modalTitle, { color: colors.text }]}>{selectedJuego?.name}</Text>
-                <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]}>Nivel {dificultad} • IA Groq</Text>
+        <View className="flex-1 bg-black/60 justify-center p-4">
+          <View className="bg-card rounded-[24px] p-5 max-h-[85%]">
+            <View className="flex-row justify-between items-center mb-3.5">
+              <View className="flex-1">
+                <Label className="text-lg font-extrabold text-foreground">{selectedJuego?.name}</Label>
+                <Label className="text-xs text-muted">Nivel {dificultad} • IA Groq</Label>
               </View>
               <IconButton icon="close" onPress={() => setSelectedJuego(null)} />
             </View>
 
             {loadingQuestions ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={colors.primary} />
-                <Text style={[styles.loadingText, { color: colors.primary }]}>
+              <View className="items-center py-10">
+                <Spinner size="lg" color="primary" />
+                <Label className="mt-4 text-sm text-center font-semibold text-primary">
                   🤖 Groq IA está creando 10 retos ({dificultad}) con explicaciones...
-                </Text>
+                </Label>
               </View>
             ) : gameFinished ? (
-              <View style={styles.resultContainer}>
-                <Ionicons name="trophy" size={64} color="#F59E0B" />
-                <Text style={[styles.resultTitle, { color: colors.text }]}>¡Felicidades!</Text>
-                <Text style={[styles.resultScore, { color: colors.textSecondary }]}>
+              <View className="items-center py-5">
+                <Ionicons name="trophy" size={64} color={warning} />
+                <Label className="text-[22px] font-extrabold text-foreground mt-3">¡Felicidades!</Label>
+                <Label className="text-[15px] text-muted mt-2 mb-5 text-center">
                   Lograste {score} de {aiQuestions.length} aciertos en nivel {dificultad}
-                </Text>
-                <Button title="Volver a los juegos" onPress={() => setSelectedJuego(null)} />
+                </Label>
+                <Button variant="primary" onPress={() => setSelectedJuego(null)}>
+                  <Button.Label>Volver a los juegos</Button.Label>
+                </Button>
               </View>
             ) : (
-              <ScrollView style={styles.questionContainer}>
-                <View style={[styles.progressBarBg, { backgroundColor: colors.surface }]}>
+              <ScrollView className="flex-grow">
+                <View className="h-1.5 rounded-full bg-surface mb-2.5 overflow-hidden">
                   <View
-                    style={[
-                      styles.progressBarFill,
-                      {
-                        backgroundColor: colors.primary,
-                        width: `${((currentQuestionIndex + 1) / (aiQuestions.length || 1)) * 100}%`
-                      },
-                    ]}
+                    className="h-full rounded-full"
+                    style={{
+                      backgroundColor: primary,
+                      width: `${((currentQuestionIndex + 1) / (aiQuestions.length || 1)) * 100}%`
+                    }}
                   />
                 </View>
-                <Text style={[styles.progressText, { color: colors.textSecondary }]}>
+                <Label className="text-xs text-muted mb-2">
                   Pregunta {currentQuestionIndex + 1} de {aiQuestions.length}
-                </Text>
-                <Text style={[styles.questionText, { color: colors.text }]}>{currentQ?.question}</Text>
+                </Label>
+                <Label className="text-[17px] font-bold text-foreground mb-4">
+                  {currentQ?.question}
+                </Label>
 
                 {currentQ?.options.map((option, idx) => {
                   let isSelected = selectedAnswerIndex === idx;
                   let isCorrect = idx === currentQ.answer;
 
-                  let bgColor = colors.surface;
-                  let textColor = colors.text;
+                  let bgColor = surface;
+                  let textColor = text;
 
                   if (showExplanation) {
                     if (isCorrect) {
-                      bgColor = colors.success;
+                      bgColor = success;
                       textColor = '#FFFFFF';
                     } else if (isSelected) {
-                      bgColor = colors.error;
+                      bgColor = danger;
                       textColor = '#FFFFFF';
                     }
                   }
 
                   return (
-                    <TouchableOpacity
+                    <Pressable
                       key={idx}
-                      style={[styles.optionButton, { backgroundColor: bgColor }]}
+                      className="flex-row justify-between items-center p-3.5 rounded-2xl mb-2.5"
+                      style={{ backgroundColor: bgColor }}
                       onPress={() => handleSelectOption(idx)}
                       disabled={showExplanation}
                     >
-                      <Text style={[styles.optionText, { color: textColor, fontWeight: showExplanation ? '700' : '500' }]}>{option}</Text>
+                      <Label className={`text-[15px] ${showExplanation ? 'font-bold' : 'font-medium'}`} style={{ color: textColor }}>
+                        {option}
+                      </Label>
                       {showExplanation && isCorrect && <Ionicons name="checkmark-circle" size={20} color="white" />}
                       {showExplanation && isSelected && !isCorrect && <Ionicons name="close-circle" size={20} color="white" />}
-                    </TouchableOpacity>
+                    </Pressable>
                   );
                 })}
 
                 {showExplanation && (
-                  <Card variant="flat" style={[styles.explanationCard, { backgroundColor: colors.surface }]}>
-                    <View style={styles.explanationHeader}>
-                      <Ionicons
-                        name={selectedAnswerIndex === currentQ?.answer ? 'checkmark-circle' : 'alert-circle'}
-                        size={22}
-                        color={selectedAnswerIndex === currentQ?.answer ? colors.success : colors.error}
-                      />
-                      <Text
-                        style={[
-                          styles.explanationTitle,
-                          { color: selectedAnswerIndex === currentQ?.answer ? colors.success : colors.error },
-                        ]}
-                      >
-                        {selectedAnswerIndex === currentQ?.answer ? '¡Correcto!' : '¡Casi lo logras! Explicación:'}
-                      </Text>
-                    </View>
-                    <Text style={[styles.explanationBody, { color: colors.text }]}>{currentQ?.explanation}</Text>
+                  <Card variant="flat" className="p-3.5 rounded-2xl mt-3 mb-2.5 bg-surface border-0">
+                    <Card.Body className="p-0">
+                      <View className="flex-row items-center gap-1.5 mb-1.5">
+                        <Ionicons
+                          name={selectedAnswerIndex === currentQ?.answer ? 'checkmark-circle' : 'alert-circle'}
+                          size={22}
+                          color={selectedAnswerIndex === currentQ?.answer ? success : danger}
+                        />
+                        <Label
+                          className="text-sm font-bold"
+                          style={{ color: selectedAnswerIndex === currentQ?.answer ? success : danger }}
+                        >
+                          {selectedAnswerIndex === currentQ?.answer ? '¡Correcto!' : '¡Casi lo logras! Explicación:'}
+                        </Label>
+                      </View>
+                      <Label className="text-[13px] leading-[18px] text-foreground mb-3">
+                        {currentQ?.explanation}
+                      </Label>
 
-                    <Button
-                      title={currentQuestionIndex + 1 < aiQuestions.length ? 'Siguiente Pregunta ➡️' : 'Ver Resultados 🏆'}
-                      onPress={handleNextQuestion}
-                    />
+                      <Button
+                        variant="primary"
+                        onPress={handleNextQuestion}
+                      >
+                        <Button.Label>
+                          {currentQuestionIndex + 1 < aiQuestions.length ? 'Siguiente Pregunta ➡️' : 'Ver Resultados 🏆'}
+                        </Button.Label>
+                      </Button>
+                    </Card.Body>
                   </Card>
                 )}
               </ScrollView>
@@ -341,44 +348,3 @@ export default function JuegosScreen({ navigation }: any) {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, paddingHorizontal: 16, paddingTop: 50 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  headerTitle: { fontSize: 20, fontWeight: '800' },
-  difficultyContainer: { marginBottom: 14 },
-  difficultyLabel: { fontSize: 13, fontWeight: '700', marginBottom: 6 },
-  difficultyRow: { flexDirection: 'row', gap: 8 },
-  diffChip: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
-  diffText: { fontSize: 13, fontWeight: '600' },
-  categoriesContainer: { marginBottom: 16 },
-  categoryButton: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, marginRight: 8 },
-  categoryText: { fontSize: 13 },
-  gameCard: { marginBottom: 8, padding: 0 },
-  gameCardInner: { flexDirection: 'row', alignItems: 'center', padding: 16 },
-  gameIcon: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-  gameInfo: { flex: 1 },
-  gameName: { fontSize: 16, fontWeight: '700' },
-  gameDesc: { fontSize: 12, marginTop: 2 },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', padding: 16 },
-  modalContent: { borderRadius: 24, padding: 20, maxHeight: '85%' },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
-  modalTitle: { fontSize: 18, fontWeight: '800' },
-  modalSubtitle: { fontSize: 12 },
-  loadingContainer: { alignItems: 'center', paddingVertical: 40 },
-  loadingText: { marginTop: 16, fontSize: 14, textAlign: 'center', fontWeight: '600' },
-  questionContainer: { flexGrow: 1 },
-  progressBarBg: { height: 6, borderRadius: 3, marginBottom: 10, overflow: 'hidden' },
-  progressBarFill: { height: '100%', borderRadius: 3 },
-  progressText: { fontSize: 12, marginBottom: 8 },
-  questionText: { fontSize: 17, fontWeight: '700', marginBottom: 16 },
-  optionButton: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 14, borderRadius: 14, marginBottom: 10 },
-  optionText: { fontSize: 15 },
-  explanationCard: { padding: 14, borderRadius: 16, marginTop: 12, marginBottom: 10 },
-  explanationHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 },
-  explanationTitle: { fontSize: 14, fontWeight: '700' },
-  explanationBody: { fontSize: 13, lineHeight: 18, marginBottom: 12 },
-  resultContainer: { alignItems: 'center', paddingVertical: 20 },
-  resultTitle: { fontSize: 22, fontWeight: '800', marginTop: 12 },
-  resultScore: { fontSize: 15, marginTop: 8, marginBottom: 20, textAlign: 'center' },
-});

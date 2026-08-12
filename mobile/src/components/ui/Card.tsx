@@ -1,37 +1,59 @@
+/**
+ * Card component — HeroUI Native v1
+ *
+ * Re-exports heroui-native's Card with a compatibility shim for the old API
+ * (variant: 'elevated' | 'flat' | 'outline').
+ *
+ * Variant mapping:
+ *  - 'elevated' → heroui 'default'  (surface shadow)
+ *  - 'flat'     → heroui 'secondary'
+ *  - 'outline'  → heroui 'default' + custom className border
+ *
+ * Also re-exports Card sub-components for direct use: Card.Header, Card.Body,
+ * Card.Footer, Card.Title, Card.Description.
+ */
 import React from 'react';
-import { View, StyleSheet, ViewProps } from 'react-native';
-import { useTheme } from '../../hooks/useTheme';
+import { Card as HeroCard } from 'heroui-native';
+import type { ViewProps } from 'react-native';
+
+type OldVariant = 'elevated' | 'flat' | 'outline';
+type HeroVariant = 'default' | 'secondary' | 'tertiary' | 'transparent';
+
+const variantMap: Record<OldVariant, HeroVariant> = {
+  elevated: 'default',
+  flat: 'secondary',
+  outline: 'default',
+};
 
 interface CardProps extends ViewProps {
   children: React.ReactNode;
-  variant?: 'elevated' | 'flat' | 'outline';
+  variant?: OldVariant;
+  className?: string;
 }
 
-export const Card = ({ children, style, variant = 'elevated', ...props }: CardProps) => {
-  const { colors, borderRadius, shadows } = useTheme();
+export const Card = ({
+  children,
+  variant = 'elevated',
+  className,
+  ...props
+}: CardProps) => {
+  const heroVariant = variantMap[variant];
+  const outlineClass = variant === 'outline' ? 'border border-separator' : '';
 
   return (
-    <View
-      style={[
-        styles.card,
-        {
-          backgroundColor: colors.card,
-          borderRadius: borderRadius.xxl,
-        },
-        variant === 'elevated' && shadows,
-        variant === 'outline' && { borderWidth: 1, borderColor: colors.border },
-        style,
-      ]}
+    <HeroCard
+      variant={heroVariant}
+      className={[outlineClass, className].filter(Boolean).join(' ')}
       {...props}
     >
       {children}
-    </View>
+    </HeroCard>
   );
 };
 
-const styles = StyleSheet.create({
-  card: {
-    padding: 20,
-    marginVertical: 8,
-  },
-});
+// Re-export sub-components for composition
+Card.Header = HeroCard.Header;
+Card.Body = HeroCard.Body;
+Card.Footer = HeroCard.Footer;
+Card.Title = HeroCard.Title;
+Card.Description = HeroCard.Description;

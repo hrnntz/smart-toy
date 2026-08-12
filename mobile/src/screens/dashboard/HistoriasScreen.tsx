@@ -1,22 +1,16 @@
 import React, { useState, useCallback } from 'react';
 import {
   View,
-  Text,
-  StyleSheet,
   ScrollView,
-  TouchableOpacity,
   Alert,
   RefreshControl,
   Image,
-  ActivityIndicator,
-  StatusBar,
+  Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { storyService } from '../../services/api';
-import { useTheme } from '../../hooks/useTheme';
-import { Card } from '../../components/ui/Card';
-import { Button } from '../../components/ui/Button';
+import { Card, Button, Label, Spinner, useThemeColor } from 'heroui-native';
 
 interface Historia {
   id: number;
@@ -28,12 +22,18 @@ interface Historia {
 }
 
 export default function HistoriasScreen({ navigation }: any) {
-  const { colors, typography, isDark } = useTheme();
-
   const [historias, setHistorias] = useState<Historia[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<'mis' | 'ia' | 'favoritas'>('mis');
+
+  const [primary, secondary, danger, muted, surface] = useThemeColor([
+    'accent',
+    'secondary',
+    'danger',
+    'muted',
+    'surface',
+  ]);
 
   const loadHistorias = async () => {
     try {
@@ -94,208 +94,102 @@ export default function HistoriasScreen({ navigation }: any) {
 
   if (loading) {
     return (
-      <View style={[styles.center, { backgroundColor: colors.background }]}>
-        <ActivityIndicator size="large" color={colors.primary} />
+      <View className="flex-1 justify-center items-center bg-background">
+        <Spinner size="lg" color="primary" />
       </View>
     );
   }
 
   return (
     <ScrollView
-      style={[styles.container, { backgroundColor: colors.background }]}
+      className="flex-1 bg-background px-4 pt-12"
       showsVerticalScrollIndicator={false}
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={primary} />
       }
     >
-      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
-      <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.text }]}>Cuentos e Historias</Text>
-        <TouchableOpacity
-          style={[styles.generateButtonHeader, { backgroundColor: colors.secondary }]}
+      <View className="flex-row justify-between items-center mb-4">
+        <Label className="text-2xl font-extrabold text-foreground">Cuentos e Historias</Label>
+        <Pressable
+          className="flex-row bg-secondary px-3.5 py-2 rounded-full items-center gap-1.5"
           onPress={goToGenerate}
         >
-          <Ionicons name="sparkles" size={18} color="white" />
-          <Text style={styles.generateButtonHeaderText}>Crear</Text>
-        </TouchableOpacity>
+          <Ionicons name="sparkles" size={16} color="white" />
+          <Label className="text-white text-xs font-bold">Crear</Label>
+        </Pressable>
       </View>
 
-      <View style={styles.tabRow}>
+      <View className="flex-row mb-5 gap-2">
         {(['mis', 'ia', 'favoritas'] as const).map((tab) => (
-          <TouchableOpacity
+          <Pressable
             key={tab}
-            style={[
-              styles.tab,
-              { backgroundColor: activeTab === tab ? colors.primary : colors.surface }
-            ]}
+            style={{ backgroundColor: activeTab === tab ? primary : surface }}
+            className="px-4 py-2 rounded-full"
             onPress={() => setActiveTab(tab)}
           >
-            <Text style={[
-              styles.tabText,
-              { color: activeTab === tab ? '#FFFFFF' : colors.textSecondary, fontWeight: activeTab === tab ? '700' : '500' }
-            ]}>
+            <Label
+              style={{ color: activeTab === tab ? '#FFFFFF' : muted }}
+              className={`text-sm ${activeTab === tab ? 'font-bold' : 'font-medium'}`}
+            >
               {tab === 'mis' ? 'Mis historias' : tab === 'ia' ? 'IA Cuentos' : 'Favoritas'}
-            </Text>
-          </TouchableOpacity>
+            </Label>
+          </Pressable>
         ))}
       </View>
 
       {historias.length === 0 ? (
-        <View style={styles.empty}>
-          <Ionicons name="book-outline" size={64} color={colors.textSecondary} />
-          <Text style={[styles.emptyText, { color: colors.text }]}>No tienes historias guardadas</Text>
-          <Text style={[styles.emptySub, { color: colors.textSecondary }]}>Genera una nueva cuento mágico con IA</Text>
+        <View className="items-center mt-16">
+          <Ionicons name="book-outline" size={64} color={muted} />
+          <Label className="text-base font-bold text-foreground mt-4">No tienes historias guardadas</Label>
+          <Label className="text-sm text-muted mt-1">Genera una nueva cuento mágico con IA</Label>
         </View>
       ) : (
         historias.map((story) => (
-          <Card key={story.id} variant="elevated" style={styles.storyCard}>
-            <TouchableOpacity
-              style={styles.storyCardInner}
+          <Card key={story.id} variant="default" className="mb-3">
+            <Pressable
+              className="flex-row items-center p-4"
               onPress={() => openStoryDetail(story)}
-              activeOpacity={0.8}
             >
               {story.imagen ? (
-                <Image source={{ uri: story.imagen }} style={styles.storyImage} />
+                <Image source={{ uri: story.imagen }} className="w-12 h-12 rounded-full mr-3" />
               ) : (
-                <View style={[styles.storyImagePlaceholder, { backgroundColor: colors.secondary + '15' }]}>
-                  <Ionicons name="book" size={26} color={colors.secondary} />
+                <View className="w-12 h-12 rounded-full bg-secondary/15 justify-center items-center mr-3">
+                  <Ionicons name="book" size={24} color={secondary} />
                 </View>
               )}
-              <View style={styles.storyInfo}>
-                <Text style={[styles.storyTitle, { color: colors.text }]} numberOfLines={1}>
+              <View className="flex-1 mr-2">
+                <Label className="text-base font-bold text-foreground" numberOfLines={1}>
                   {story.titulo}
-                </Text>
-                <Text style={[styles.storyDuration, { color: colors.textSecondary }]}>⏱ {story.duracion}</Text>
+                </Label>
+                <Label className="text-sm text-muted mt-0.5">⏱ {story.duracion}</Label>
               </View>
-              <View style={styles.cardActions}>
-                <TouchableOpacity
+              <View className="flex-row gap-1.5">
+                <Pressable
                   onPress={() => openStoryDetail(story)}
-                  style={styles.actionButton}
+                  className="p-1.5"
                 >
-                  <Ionicons name="eye" size={20} color={colors.primary} />
-                </TouchableOpacity>
-                <TouchableOpacity
+                  <Ionicons name="eye" size={20} color={primary} />
+                </Pressable>
+                <Pressable
                   onPress={() => handleDelete(story.id, story.titulo)}
-                  style={styles.actionButton}
+                  className="p-1.5"
                 >
-                  <Ionicons name="trash" size={20} color={colors.error} />
-                </TouchableOpacity>
+                  <Ionicons name="trash" size={20} color={danger} />
+                </Pressable>
               </View>
-            </TouchableOpacity>
+            </Pressable>
           </Card>
         ))
       )}
 
       <Button
-        title="Generar historia con IA"
         variant="secondary"
         onPress={goToGenerate}
-        style={{ marginVertical: 20 }}
-      />
+        className="w-full my-5"
+      >
+        <Button.Label>Generar historia con IA</Button.Label>
+      </Button>
+      <View className="h-5" />
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 50,
-  },
-  center: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: '800',
-  },
-  generateButtonHeader: {
-    flexDirection: 'row',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    alignItems: 'center',
-    gap: 6,
-  },
-  generateButtonHeaderText: {
-    color: 'white',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  tabRow: {
-    flexDirection: 'row',
-    marginBottom: 20,
-    gap: 8,
-  },
-  tab: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  tabText: {
-    fontSize: 13,
-  },
-  empty: {
-    alignItems: 'center',
-    marginTop: 60,
-  },
-  emptyText: {
-    fontSize: 16,
-    fontWeight: '700',
-    marginTop: 16,
-  },
-  emptySub: {
-    fontSize: 14,
-    marginTop: 4,
-  },
-  storyCard: {
-    marginBottom: 12,
-    padding: 0,
-  },
-  storyCardInner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-  },
-  storyImage: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    marginRight: 12,
-  },
-  storyImagePlaceholder: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    marginRight: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  storyInfo: {
-    flex: 1,
-    marginRight: 8,
-  },
-  storyTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  storyDuration: {
-    fontSize: 13,
-    marginTop: 2,
-  },
-  cardActions: {
-    flexDirection: 'row',
-    gap: 6,
-  },
-  actionButton: {
-    padding: 6,
-  },
-});

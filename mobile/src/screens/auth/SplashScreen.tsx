@@ -1,14 +1,14 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, Image } from 'react-native';
-import { useTheme } from '../../hooks/useTheme';
+import { View, Image, Animated } from 'react-native';
+import { Label, Spinner } from 'heroui-native';
 import { storage } from '../../services/storage';
 
 export default function SplashScreen({ navigation }: any) {
-  const { colors, typography } = useTheme();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
 
   useEffect(() => {
+    // Animación de entrada (preservada intacta)
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -33,60 +33,39 @@ export default function SplashScreen({ navigation }: any) {
       } catch (error) {
         navigation.replace('Welcome');
       }
-    }, 1500);
+    }, 1800);
 
     return () => clearTimeout(timer);
   }, []);
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View className="flex-1 justify-center items-center bg-background">
       <Animated.View
-        style={[
-          styles.logoContainer,
-          {
-            opacity: fadeAnim,
-            transform: [{ scale: scaleAnim }],
-          },
-        ]}
+        style={{
+          alignItems: 'center',
+          opacity: fadeAnim,
+          transform: [{ scale: scaleAnim }],
+        }}
       >
         <Image
           source={require('../../../assets/logo.jpg')}
-          style={styles.logoImage}
+          style={{ width: 140, height: 140, borderRadius: 28, marginBottom: 20 }}
           resizeMode="contain"
         />
-        <Text style={[styles.appName, { color: colors.text, fontSize: typography.size.xxl }]}>
+
+        <Label className="text-3xl font-extrabold text-foreground tracking-wide">
           Smart Toy
-        </Text>
-        <Text style={[styles.appSub, { color: colors.textSecondary }]}>
-          Aprende & Juega
-        </Text>
+        </Label>
+        <Label className="text-sm font-medium text-muted mt-1">
+          Aprende &amp; Juega
+        </Label>
+
+        <Spinner
+          size="sm"
+          color="default"
+          className="mt-8"
+        />
       </Animated.View>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  logoContainer: {
-    alignItems: 'center',
-  },
-  logoImage: {
-    width: 140,
-    height: 140,
-    borderRadius: 28,
-    marginBottom: 20,
-  },
-  appName: {
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  appSub: {
-    fontSize: 14,
-    marginTop: 4,
-    fontWeight: '500',
-  },
-});

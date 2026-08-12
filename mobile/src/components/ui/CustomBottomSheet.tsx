@@ -1,12 +1,17 @@
+/**
+ * CustomBottomSheet component — HeroUI Native v1
+ *
+ * Wraps @gorhom/bottom-sheet with theme-aware styling using heroui-native's
+ * useThemeColor hook. Replaces the old useTheme hook entirely.
+ */
 import React, { useCallback, forwardRef } from 'react';
-import { StyleSheet } from 'react-native';
 import {
   BottomSheetModal,
   BottomSheetView,
   BottomSheetBackdrop,
   BottomSheetBackdropProps,
 } from '@gorhom/bottom-sheet';
-import { useTheme } from '../../hooks/useTheme';
+import { useThemeColor } from 'heroui-native';
 
 export interface CustomBottomSheetProps {
   children: React.ReactNode;
@@ -16,7 +21,7 @@ export interface CustomBottomSheetProps {
 
 export const CustomBottomSheet = forwardRef<BottomSheetModal, CustomBottomSheetProps>(
   ({ children, snapPoints = ['50%', '90%'], onDismiss }, ref) => {
-    const { colors, borderRadius } = useTheme();
+    const [background, separator] = useThemeColor(['overlay', 'separator']);
 
     const renderBackdrop = useCallback(
       (props: BottomSheetBackdropProps) => (
@@ -38,29 +43,21 @@ export const CustomBottomSheet = forwardRef<BottomSheetModal, CustomBottomSheetP
         onDismiss={onDismiss}
         backdropComponent={renderBackdrop}
         backgroundStyle={{
-          backgroundColor: colors.background,
-          borderRadius: borderRadius.xxxl,
+          backgroundColor: background,
+          borderTopLeftRadius: 32,
+          borderTopRightRadius: 32,
         }}
         handleIndicatorStyle={{
-          backgroundColor: colors.border,
+          backgroundColor: separator,
           width: 40,
         }}
       >
-        <BottomSheetView style={styles.contentContainer}>
+        <BottomSheetView className="flex-1 px-6 pt-2 pb-6">
           {children}
         </BottomSheetView>
       </BottomSheetModal>
     );
   }
 );
-
-const styles = StyleSheet.create({
-  contentContainer: {
-    flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 8,
-    paddingBottom: 24,
-  },
-});
 
 export default CustomBottomSheet;

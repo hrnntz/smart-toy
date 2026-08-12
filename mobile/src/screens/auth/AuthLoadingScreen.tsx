@@ -1,17 +1,14 @@
 import React, { useEffect } from 'react';
-import { View, ActivityIndicator, StyleSheet, Text } from 'react-native';
+import { View } from 'react-native';
+import { Label, Spinner } from 'heroui-native';
 import { storage } from '../../services/storage';
-import { useTheme } from '../../hooks/useTheme';
 
 export default function AuthLoadingScreen({ navigation }: any) {
-  const { colors, typography } = useTheme();
-
   useEffect(() => {
     const checkAuth = async () => {
       try {
         const token = await storage.getItem('token');
         if (token) {
-          // Redirigir a Home
           navigation.replace('Home');
         } else {
           navigation.replace('Welcome');
@@ -25,20 +22,9 @@ export default function AuthLoadingScreen({ navigation }: any) {
   }, []);
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Text style={[styles.logo, { color: colors.primary, fontSize: typography.size.xxxl }]}>🐼</Text>
-      <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 20 }} />
+    <View className="flex-1 justify-center items-center bg-background gap-5">
+      <Label className="text-5xl">🐼</Label>
+      <Spinner size="lg" color="default" />
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  logo: {
-    fontWeight: 'bold',
-  },
-});

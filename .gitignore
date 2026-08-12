@@ -61,3 +61,5 @@ desktop.ini
 # =========================
 coverage/
 .nyc_output/
+# heroui-agents-md
+.heroui-docs/

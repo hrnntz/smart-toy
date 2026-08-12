@@ -1,22 +1,20 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
   ScrollView,
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   Image,
   Alert,
   Modal,
+  Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import { toyService } from '../../services/api';
 import { playAudio, stopAudio } from '../../services/audioService';
+import { Card, Button, Label, TextField, Input, Spinner, useThemeColor } from 'heroui-native';
+import { IconButton } from '../../components/ui/IconButton';
 
 interface Message {
   id: string;
@@ -60,6 +58,16 @@ export default function ChatScreen({ navigation, route }: any) {
   const isProcessingRef = useRef(false);
   const scrollViewRef = useRef<ScrollView>(null);
 
+  const [primary, success, danger, muted, background, surface, card] = useThemeColor([
+    'accent',
+    'success',
+    'danger',
+    'muted',
+    'background',
+    'surface',
+    'card'
+  ]);
+
   useEffect(() => {
     if (toyId) {
       loadMessages();
@@ -99,26 +107,17 @@ export default function ChatScreen({ navigation, route }: any) {
     }
   };
 
-  // 🎙️ Iniciar grabación evadiendo bucles
   const startRecording = async () => {
     if (isProcessingRef.current || loading || isRecording) return;
     try {
-      await stopAudio(); // Detener cualquier reproducción en curso
-
+      await stopAudio();
       const permission = await Audio.requestPermissionsAsync();
       if (permission.status !== 'granted') {
         Alert.alert('Permiso Denegado', 'Se requiere acceso al micrófono para hablar con Panda.');
         return;
       }
-
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-      });
-
-      const { recording: newRecording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY
-      );
+      await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
+      const { recording: newRecording } = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
       setRecording(newRecording);
       setIsRecording(true);
     } catch (err) {
@@ -127,7 +126,6 @@ export default function ChatScreen({ navigation, route }: any) {
     }
   };
 
-  // ⏹️ Detener grabación de audio y enviar a backend
   const stopRecording = async () => {
     if (!recording || isProcessingRef.current) return;
     isProcessingRef.current = true;
@@ -138,12 +136,7 @@ export default function ChatScreen({ navigation, route }: any) {
       await recording.stopAndUnloadAsync();
       const uri = recording.getURI();
       setRecording(null);
-
-      // Cambiar modo de audio a modo reproducción para altavoces
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: false,
-        playsInSilentModeIOS: true,
-      });
+      await Audio.setAudioModeAsync({ allowsRecordingIOS: false, playsInSilentModeIOS: true });
 
       if (!uri || !toyId) {
         isProcessingRef.current = false;
@@ -151,7 +144,6 @@ export default function ChatScreen({ navigation, route }: any) {
         return;
       }
 
-      // Enviar audio con la voz seleccionada
       const res = await toyService.voiceChatWithAudio(toyId, uri, selectedVoice);
 
       if (res.data.success && res.data.data) {
@@ -161,24 +153,11 @@ export default function ChatScreen({ navigation, route }: any) {
 
         setMessages((prev) => [
           ...prev,
-          {
-            id: Date.now().toString(),
-            text: userText,
-            isUser: true,
-            timestamp: new Date(),
-          },
-          {
-            id: (Date.now() + 1).toString(),
-            text: replyText,
-            isUser: false,
-            timestamp: new Date(),
-            audioUrl,
-          },
+          { id: Date.now().toString(), text: userText, isUser: true, timestamp: new Date() },
+          { id: (Date.now() + 1).toString(), text: replyText, isUser: false, timestamp: new Date(), audioUrl },
         ]);
 
-        if (audioUrl) {
-          await playAudio(audioUrl);
-        }
+        if (audioUrl) await playAudio(audioUrl);
       }
     } catch (error) {
       console.error('Error procesando voz:', error);
@@ -194,12 +173,7 @@ export default function ChatScreen({ navigation, route }: any) {
     if (!text || !toyId || isProcessingRef.current) return;
 
     isProcessingRef.current = true;
-    const userMsg: Message = {
-      id: Date.now().toString(),
-      text,
-      isUser: true,
-      timestamp: new Date(),
-    };
+    const userMsg: Message = { id: Date.now().toString(), text, isUser: true, timestamp: new Date() };
     setMessages((prev) => [...prev, userMsg]);
     if (!textToSend) setInputText('');
     setLoading(true);
@@ -231,9 +205,7 @@ export default function ChatScreen({ navigation, route }: any) {
 
       setMessages((prev) => [...prev, botMsg]);
 
-      if (audioUrl) {
-        await playAudio(audioUrl);
-      }
+      if (audioUrl) await playAudio(audioUrl);
     } catch (error) {
       console.error('Error en chat:', error);
     } finally {
@@ -245,153 +217,155 @@ export default function ChatScreen({ navigation, route }: any) {
   const currentVoiceObj = VOICE_OPTIONS.find((v) => v.id === selectedVoice) || VOICE_OPTIONS[0];
 
   return (
-    <View style={styles.mainWrapper}>
-      {/* Header del Chat */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={26} color="#2C3E50" />
-        </TouchableOpacity>
+    <View className="flex-1 bg-background">
+      {/* Header */}
+      <View className="flex-row items-center px-4 pt-[50px] pb-3.5 bg-card border-b border-separator shadow-sm z-10">
+        <Pressable onPress={() => navigation.goBack()} className="p-1 mr-2">
+          <Ionicons name="arrow-back" size={26} color={primary} />
+        </Pressable>
         <Image
           source={{ uri: avatarUrl || 'https://image.pollinations.ai/prompt/cute%20panda%20toy?width=100&height=100' }}
-          style={styles.headerAvatar}
+          className="w-10 h-10 rounded-full mr-2.5 bg-surface"
         />
-        <View style={styles.headerTitleContainer}>
-          <Text style={styles.headerTitle}>{toyName || 'Panda Inteligente'}</Text>
-          <Text style={styles.headerStatus}>🟢 Voz: {currentVoiceObj.name.split(' ')[0]}</Text>
+        <View className="flex-1">
+          <Label className="text-base font-bold text-foreground">{toyName || 'Panda Inteligente'}</Label>
+          <Label className="text-xs font-semibold text-success mt-0.5">🟢 Voz: {currentVoiceObj.name.split(' ')[0]}</Label>
         </View>
 
-        {/* Botón Selector de Voz */}
-        <TouchableOpacity style={styles.voiceSelectBtn} onPress={() => setShowVoiceModal(true)}>
-          <Ionicons name="mic-circle" size={26} color="#8E44AD" />
-        </TouchableOpacity>
+        <Pressable className="p-1.5 mr-1" onPress={() => setShowVoiceModal(true)}>
+          <Ionicons name="mic-circle" size={28} color="#8E44AD" />
+        </Pressable>
 
-        {/* Toggle de Mute/Voz */}
-        <TouchableOpacity
-          style={[styles.voiceToggle, voiceMode && styles.voiceToggleActive]}
+        <Pressable
+          className={`p-2 rounded-full ${voiceMode ? 'bg-primary' : 'bg-surface'}`}
           onPress={() => setVoiceMode(!voiceMode)}
         >
-          <Ionicons name="volume-medium" size={20} color={voiceMode ? 'white' : '#7F8C8D'} />
-        </TouchableOpacity>
+          <Ionicons name="volume-medium" size={20} color={voiceMode ? 'white' : muted} />
+        </Pressable>
       </View>
 
       <KeyboardAvoidingView
-        style={styles.flexContainer}
+        className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
-        {/* Lista de Mensajes */}
         <ScrollView
           ref={scrollViewRef}
-          style={styles.messagesContainer}
-          contentContainerStyle={styles.messagesContent}
+          className="flex-1 px-4"
+          contentContainerStyle={{ paddingVertical: 16 }}
           onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
         >
           {messages.map((msg) => (
-            <View key={msg.id} style={[styles.messageRow, msg.isUser ? styles.userRow : styles.botRow]}>
+            <View key={msg.id} className={`flex-row items-end mb-3 ${msg.isUser ? 'justify-end' : 'justify-start'}`}>
               {!msg.isUser && (
                 <Image
                   source={{ uri: avatarUrl || 'https://image.pollinations.ai/prompt/cute%20panda%20toy?width=100&height=100' }}
-                  style={styles.avatar}
+                  className="w-8 h-8 rounded-full mr-2 bg-surface"
                 />
               )}
-              <View style={[styles.messageBubble, msg.isUser ? styles.userBubble : styles.botBubble]}>
-                <Text style={msg.isUser ? styles.userText : styles.botText}>{msg.text}</Text>
+              <View
+                className={`max-w-[78%] p-3.5 rounded-2xl ${msg.isUser ? 'bg-primary rounded-br-sm' : 'bg-card rounded-bl-sm shadow-sm'}`}
+              >
+                <Label className={`text-[15px] leading-5 ${msg.isUser ? 'text-white' : 'text-foreground'}`}>
+                  {msg.text}
+                </Label>
                 {msg.audioUrl && (
-                  <TouchableOpacity
-                    style={styles.audioPlayBtn}
+                  <Pressable
+                    className="flex-row items-center bg-[#E8F8F5] px-2.5 py-1.5 rounded-xl mt-2 gap-1.5"
                     onPress={() => msg.audioUrl && playAudio(msg.audioUrl)}
                   >
-                    <Ionicons name="play-circle" size={22} color="#27AE60" />
-                    <Text style={styles.audioPlayText}>Escuchar Voz de Panda</Text>
-                  </TouchableOpacity>
+                    <Ionicons name="play-circle" size={20} color={success} />
+                    <Label className="text-xs font-bold text-success">Escuchar Voz</Label>
+                  </Pressable>
                 )}
-                <Text style={styles.timestamp}>
+                <Label className={`text-[10px] mt-1.5 self-end ${msg.isUser ? 'text-white/70' : 'text-muted'}`}>
                   {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </Text>
+                </Label>
               </View>
             </View>
           ))}
 
           {isRecording && (
-            <View style={styles.recordingIndicator}>
-              <Ionicons name="mic-sharp" size={24} color="#E74C3C" />
-              <Text style={styles.recordingText}>🎙️ Grabando... suelta para enviar</Text>
+            <View className="flex-row items-center justify-center bg-danger/10 p-3 rounded-2xl mb-3 gap-2">
+              <Ionicons name="mic-sharp" size={24} color={danger} />
+              <Label className="font-bold text-danger text-sm">🎙️ Grabando... suelta para enviar</Label>
             </View>
           )}
 
           {loading && (
-            <View style={[styles.messageRow, styles.botRow]}>
-              <View style={[styles.messageBubble, styles.botBubble, styles.loadingBubble]}>
-                <ActivityIndicator size="small" color="#4A90D9" />
-                <Text style={styles.loadingBubbleText}>Panda está procesando la respuesta de voz...</Text>
+            <View className="flex-row items-end mb-3 justify-start">
+              <View className="max-w-[78%] p-3.5 bg-card rounded-2xl rounded-bl-sm shadow-sm flex-row items-center gap-2">
+                <Spinner size="sm" color="primary" />
+                <Label className="text-[13px] text-muted">Procesando respuesta...</Label>
               </View>
             </View>
           )}
         </ScrollView>
 
         {/* Barra de Entrada */}
-        <View style={styles.inputContainer}>
-          <TouchableOpacity
-            style={[styles.micButton, isRecording && styles.micButtonRecording, loading && styles.micButtonDisabled]}
+        <View className="flex-row p-3 bg-card border-t border-separator items-center gap-2.5">
+          <Pressable
+            className={`w-11 h-11 rounded-full justify-center items-center ${loading ? 'bg-muted' : isRecording ? 'bg-danger' : 'bg-success'}`}
             onPressIn={startRecording}
             onPressOut={stopRecording}
             disabled={loading}
           >
             <Ionicons name={isRecording ? "stop-circle" : "mic"} size={24} color="white" />
-          </TouchableOpacity>
+          </Pressable>
 
-          <TextInput
-            style={styles.input}
-            placeholder="Mantén el micro para hablar..."
-            placeholderTextColor="#94A3B8"
-            value={inputText}
-            onChangeText={setInputText}
-            multiline
-            maxLength={500}
-          />
-          <TouchableOpacity
-            style={[styles.sendButton, (!inputText.trim() || loading) && styles.sendButtonDisabled]}
+          <TextField className="flex-1 bg-surface rounded-full px-4 max-h-[100px] border-0">
+            <Input
+              placeholder="Habla o escribe aquí..."
+              value={inputText}
+              onChangeText={setInputText}
+              multiline
+              maxLength={500}
+              className="py-2 text-[15px]"
+            />
+          </TextField>
+
+          <Pressable
+            className={`w-11 h-11 rounded-full justify-center items-center ${(!inputText.trim() || loading) ? 'bg-muted' : 'bg-primary'}`}
             onPress={() => sendMessage()}
             disabled={!inputText.trim() || loading}
           >
             <Ionicons name="send" size={20} color="white" />
-          </TouchableOpacity>
+          </Pressable>
         </View>
       </KeyboardAvoidingView>
 
-      {/* Modal Selector de Voces de Personajes */}
       <Modal visible={showVoiceModal} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
+        <View className="flex-1 bg-black/50 justify-end">
+          <View className="bg-card rounded-t-[24px] p-5 max-h-[80%]">
+            <View className="flex-row justify-between items-center mb-4">
               <View>
-                <Text style={styles.modalTitle}>Elige la Voz de Panda</Text>
-                <Text style={styles.modalSubtitle}>10 voces oficiales estilo caricatura</Text>
+                <Label className="text-lg font-bold text-foreground">Elige la Voz de Panda</Label>
+                <Label className="text-[13px] text-muted mt-0.5">10 voces oficiales estilo caricatura</Label>
               </View>
-              <TouchableOpacity onPress={() => setShowVoiceModal(false)}>
-                <Ionicons name="close" size={26} color="#2C3E50" />
-              </TouchableOpacity>
+              <Pressable onPress={() => setShowVoiceModal(false)} className="p-1">
+                <Ionicons name="close" size={26} color={primary} />
+              </Pressable>
             </View>
 
-            <ScrollView style={styles.voiceList}>
+            <ScrollView className="mb-2">
               {VOICE_OPTIONS.map((v) => (
-                <TouchableOpacity
+                <Pressable
                   key={v.id}
-                  style={[styles.voiceCard, selectedVoice === v.id && styles.voiceCardActive]}
+                  className={`flex-row items-center p-3.5 rounded-2xl mb-2.5 ${selectedVoice === v.id ? 'bg-[#F3E8FF] border border-[#8E44AD]' : 'bg-surface'}`}
                   onPress={() => {
                     setSelectedVoice(v.id);
                     setShowVoiceModal(false);
                   }}
                 >
-                  <View style={[styles.voiceIconBg, selectedVoice === v.id && styles.voiceIconBgActive]}>
+                  <View className={`w-10 h-10 rounded-full justify-center items-center mr-3 ${selectedVoice === v.id ? 'bg-[#8E44AD]' : 'bg-[#F3E8FF]'}`}>
                     <Ionicons name={v.icon as any} size={22} color={selectedVoice === v.id ? 'white' : '#8E44AD'} />
                   </View>
-                  <View style={styles.voiceInfo}>
-                    <Text style={[styles.voiceName, selectedVoice === v.id && styles.voiceNameActive]}>{v.name}</Text>
-                    <Text style={styles.voiceDesc}>{v.desc}</Text>
+                  <View className="flex-1">
+                    <Label className={`text-[15px] font-bold ${selectedVoice === v.id ? 'text-[#8E44AD]' : 'text-foreground'}`}>{v.name}</Label>
+                    <Label className="text-xs text-muted mt-0.5">{v.desc}</Label>
                   </View>
                   {selectedVoice === v.id && <Ionicons name="checkmark-circle" size={24} color="#8E44AD" />}
-                </TouchableOpacity>
+                </Pressable>
               ))}
             </ScrollView>
           </View>
@@ -400,113 +374,3 @@ export default function ChatScreen({ navigation, route }: any) {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  mainWrapper: { flex: 1, backgroundColor: '#F8FAFC' },
-  flexContainer: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 50,
-    paddingBottom: 14,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-    elevation: 2,
-    zIndex: 10,
-  },
-  backButton: { padding: 4, marginRight: 8 },
-  headerAvatar: { width: 40, height: 40, borderRadius: 20, marginRight: 10, backgroundColor: '#E2E8F0' },
-  headerTitleContainer: { flex: 1 },
-  headerTitle: { fontSize: 16, fontWeight: 'bold', color: '#1E293B' },
-  headerStatus: { fontSize: 12, color: '#27AE60', marginTop: 1 },
-  voiceSelectBtn: { padding: 6, marginRight: 4 },
-  voiceToggle: {
-    padding: 8,
-    borderRadius: 20,
-    backgroundColor: '#F1F5F9',
-  },
-  voiceToggleActive: { backgroundColor: '#4A90D9' },
-  messagesContainer: { flex: 1, paddingHorizontal: 16 },
-  messagesContent: { paddingVertical: 16 },
-  messageRow: { flexDirection: 'row', alignItems: 'flex-end', marginBottom: 12 },
-  userRow: { justifyContent: 'flex-end' },
-  botRow: { justifyContent: 'flex-start' },
-  avatar: { width: 32, height: 32, borderRadius: 16, marginRight: 8, backgroundColor: '#E2E8F0' },
-  messageBubble: { maxWidth: '78%', padding: 14, borderRadius: 18 },
-  userBubble: { backgroundColor: '#4A90D9', borderBottomRightRadius: 4 },
-  botBubble: { backgroundColor: 'white', borderBottomLeftRadius: 4, elevation: 1 },
-  userText: { color: 'white', fontSize: 15, lineHeight: 20 },
-  botText: { color: '#1E293B', fontSize: 15, lineHeight: 20 },
-  audioPlayBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#E8F8F5',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 12,
-    marginTop: 8,
-    gap: 6,
-  },
-  audioPlayText: { fontSize: 12, color: '#27AE60', fontWeight: 'bold' },
-  timestamp: { fontSize: 10, color: '#94A3B8', marginTop: 6, alignSelf: 'flex-end' },
-  recordingIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FDEDEC',
-    padding: 12,
-    borderRadius: 16,
-    marginBottom: 12,
-    gap: 8,
-  },
-  recordingText: { color: '#E74C3C', fontWeight: 'bold', fontSize: 14 },
-  loadingBubble: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  loadingBubbleText: { fontSize: 13, color: '#64748B' },
-  inputContainer: {
-    flexDirection: 'row',
-    padding: 12,
-    backgroundColor: 'white',
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
-    alignItems: 'center',
-    gap: 10,
-  },
-  micButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#27AE60',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  micButtonRecording: { backgroundColor: '#E74C3C' },
-  micButtonDisabled: { backgroundColor: '#CBD5E1' },
-  input: {
-    flex: 1,
-    backgroundColor: '#F1F5F9',
-    borderRadius: 24,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    fontSize: 15,
-    maxHeight: 100,
-    color: '#1E293B',
-  },
-  sendButton: { backgroundColor: '#4A90D9', width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
-  sendButtonDisabled: { backgroundColor: '#CBD5E1' },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  modalContent: { backgroundColor: 'white', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: '80%' },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  modalTitle: { fontSize: 18, fontWeight: 'bold', color: '#1E293B' },
-  modalSubtitle: { fontSize: 13, color: '#64748B', marginTop: 2 },
-  voiceList: { marginBottom: 10 },
-  voiceCard: { flexDirection: 'row', alignItems: 'center', padding: 14, borderRadius: 16, backgroundColor: '#F8FAFC', marginBottom: 10 },
-  voiceCardActive: { backgroundColor: '#F3E8FF', borderWidth: 1, borderColor: '#8E44AD' },
-  voiceIconBg: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#F3E8FF', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-  voiceIconBgActive: { backgroundColor: '#8E44AD' },
-  voiceInfo: { flex: 1 },
-  voiceName: { fontSize: 15, fontWeight: 'bold', color: '#1E293B' },
-  voiceNameActive: { color: '#8E44AD' },
-  voiceDesc: { fontSize: 12, color: '#64748B', marginTop: 2 },
-});

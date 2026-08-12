@@ -1,30 +1,36 @@
 import React, { useState, useEffect } from 'react';
 import {
   View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Image,
-  ActivityIndicator,
+  ScrollView,
+  Modal,
   Alert,
-  StatusBar,
+  Image,
+  Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { API_URL } from '../../config/env';
 import io, { Socket } from 'socket.io-client';
-import { useTheme } from '../../hooks/useTheme';
-import { Card } from '../../components/ui/Card';
+import { Card, Label, Spinner, useThemeColor } from 'heroui-native';
 import { IconButton } from '../../components/ui/IconButton';
 
 export default function SupervisionScreen({ navigation, route }: any) {
-  const { colors, typography, isDark } = useTheme();
-
   const [roomId, setRoomId] = useState('PANDA_01');
   const [isConnected, setIsConnected] = useState(false);
   const [currentFrame, setCurrentFrame] = useState<string | null>(null);
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [nightMode, setNightMode] = useState(false);
   const [socket, setSocket] = useState<Socket | null>(null);
+
+  const [primary, success, danger, muted, surface, card, background, text] = useThemeColor([
+    'accent',
+    'success',
+    'danger',
+    'muted',
+    'surface',
+    'card',
+    'background',
+    'foreground'
+  ]);
 
   useEffect(() => {
     const socketServerUrl = API_URL.replace(/\/api\/?$/, '');
@@ -52,140 +58,86 @@ export default function SupervisionScreen({ navigation, route }: any) {
   }, [roomId]);
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+    <View className="flex-1 bg-background pt-12">
       {/* Header del Padre */}
-      <View style={styles.header}>
+      <View className="flex-row items-center px-4 pb-4">
         <IconButton icon="arrow-back" onPress={() => navigation.goBack()} />
-        <View style={styles.headerTitleContainer}>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>Supervisión en Vivo</Text>
-          <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>Panda Inteligente • Remoto Nube</Text>
+        <View className="flex-1 ml-2">
+          <Label className="text-xl font-extrabold text-foreground">Supervisión en Vivo</Label>
+          <Label className="text-[13px] text-muted">Panda Inteligente • Remoto Nube</Label>
         </View>
         <IconButton
           icon="camera-reverse"
           variant="solid"
-          color={colors.primary}
+          color={primary}
           onPress={() => navigation.navigate('CameraBroadcaster')}
         />
       </View>
 
       {/* Pantalla de Streaming */}
-      <View style={[
-        styles.videoContainer,
-        { backgroundColor: isDark ? '#000000' : '#1E293B' },
-        nightMode && { borderColor: colors.success, borderWidth: 2 }
-      ]}>
+      <View
+        className={`flex-1 mx-4 rounded-3xl overflow-hidden justify-center items-center ${
+          nightMode ? 'border-2' : ''
+        }`}
+        style={{
+          backgroundColor: '#1E293B',
+          borderColor: nightMode ? success : 'transparent',
+        }}
+      >
         {currentFrame ? (
-          <Image source={{ uri: currentFrame }} style={styles.streamImage} resizeMode="cover" />
+          <Image source={{ uri: currentFrame }} className="w-full h-full" resizeMode="cover" />
         ) : (
-          <View style={styles.placeholderContainer}>
-            <ActivityIndicator size="large" color={colors.primary} />
-            <Text style={styles.placeholderTitle}>Conectando a la cámara de Panda...</Text>
-            <Text style={styles.placeholderSub}>
+          <View className="p-6 items-center">
+            <Spinner size="lg" color="primary" />
+            <Label className="text-white text-base font-bold mt-4 text-center">Conectando a la cámara de Panda...</Label>
+            <Label className="text-[#94A3B8] text-[13px] text-center mt-2">
               Asegúrate de que el teléfono secundario tenga abierto el "Modo Cámara Juguete".
-            </Text>
+            </Label>
           </View>
         )}
 
         {/* Badge EN VIVO */}
-        <View style={styles.liveBadge}>
-          <View style={[styles.redDot, { backgroundColor: colors.error }]} />
-          <Text style={styles.liveText}>EN VIVO (NUBE)</Text>
+        <View className="absolute top-4 left-4 flex-row items-center bg-black/65 px-3 py-1.5 rounded-full gap-1.5">
+          <View className="w-2 h-2 rounded-full" style={{ backgroundColor: danger }} />
+          <Label className="text-white text-xs font-bold">EN VIVO (NUBE)</Label>
         </View>
       </View>
 
       {/* Panel de Controles para el Padre */}
-      <Card variant="flat" style={[styles.controlsPanel, { backgroundColor: colors.card }]}>
-        <Text style={[styles.controlsTitle, { color: colors.text }]}>Controles de Monitoreo</Text>
+      <Card variant="default" className="rounded-t-[32px] rounded-b-none p-5 mt-4 border-0">
+        <Card.Body className="p-0">
+          <Label className="text-base font-extrabold text-foreground mb-4">Controles de Monitoreo</Label>
 
-        <View style={styles.buttonsRow}>
-          <TouchableOpacity
-            style={[
-              styles.controlBtn,
-              { backgroundColor: audioEnabled ? colors.primary : colors.surface }
-            ]}
-            onPress={() => setAudioEnabled(!audioEnabled)}
-          >
-            <Ionicons name={audioEnabled ? 'volume-high' : 'volume-mute'} size={24} color={audioEnabled ? '#FFFFFF' : colors.text} />
-            <Text style={[styles.controlText, { color: audioEnabled ? '#FFFFFF' : colors.text }]}>Escuchar</Text>
-          </TouchableOpacity>
+          <View className="flex-row justify-between gap-3">
+            <Pressable
+              className="flex-1 py-4 rounded-[20px] items-center gap-1.5"
+              style={{ backgroundColor: audioEnabled ? primary : surface }}
+              onPress={() => setAudioEnabled(!audioEnabled)}
+            >
+              <Ionicons name={audioEnabled ? 'volume-high' : 'volume-mute'} size={24} color={audioEnabled ? '#FFFFFF' : text} />
+              <Label className={`text-xs font-bold ${audioEnabled ? 'text-white' : 'text-foreground'}`}>Escuchar</Label>
+            </Pressable>
 
-          <TouchableOpacity
-            style={[
-              styles.controlBtn,
-              { backgroundColor: nightMode ? colors.primary : colors.surface }
-            ]}
-            onPress={() => setNightMode(!nightMode)}
-          >
-            <Ionicons name={nightMode ? 'moon' : 'moon-outline'} size={24} color={nightMode ? '#FFFFFF' : colors.text} />
-            <Text style={[styles.controlText, { color: nightMode ? '#FFFFFF' : colors.text }]}>Nocturna</Text>
-          </TouchableOpacity>
+            <Pressable
+              className="flex-1 py-4 rounded-[20px] items-center gap-1.5"
+              style={{ backgroundColor: nightMode ? primary : surface }}
+              onPress={() => setNightMode(!nightMode)}
+            >
+              <Ionicons name={nightMode ? 'moon' : 'moon-outline'} size={24} color={nightMode ? '#FFFFFF' : text} />
+              <Label className={`text-xs font-bold ${nightMode ? 'text-white' : 'text-foreground'}`}>Nocturna</Label>
+            </Pressable>
 
-          <TouchableOpacity
-            style={[styles.controlBtn, { backgroundColor: colors.surface }]}
-            onPress={() => Alert.alert('Captura', 'Captura de pantalla guardada en la galería.')}
-          >
-            <Ionicons name="camera" size={24} color={colors.text} />
-            <Text style={[styles.controlText, { color: colors.text }]}>Capturar</Text>
-          </TouchableOpacity>
-        </View>
+            <Pressable
+              className="flex-1 py-4 rounded-[20px] items-center gap-1.5"
+              style={{ backgroundColor: surface }}
+              onPress={() => Alert.alert('Captura', 'Captura de pantalla guardada en la galería.')}
+            >
+              <Ionicons name="camera" size={24} color={text} />
+              <Label className="text-xs font-bold text-foreground">Capturar</Label>
+            </Pressable>
+          </View>
+        </Card.Body>
       </Card>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, paddingTop: 50 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingBottom: 16,
-  },
-  headerTitleContainer: { flex: 1, marginLeft: 8 },
-  headerTitle: { fontSize: 20, fontWeight: '800' },
-  headerSubtitle: { fontSize: 13 },
-  videoContainer: {
-    flex: 1,
-    margin: 16,
-    borderRadius: 24,
-    overflow: 'hidden',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  streamImage: { width: '100%', height: '100%' },
-  placeholderContainer: { padding: 24, alignItems: 'center' },
-  placeholderTitle: { color: 'white', fontSize: 16, fontWeight: '700', marginTop: 16, textAlign: 'center' },
-  placeholderSub: { color: '#94A3B8', fontSize: 13, textAlign: 'center', marginTop: 8 },
-  liveBadge: {
-    position: 'absolute',
-    top: 16,
-    left: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.65)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    gap: 6,
-  },
-  redDot: { width: 8, height: 8, borderRadius: 4 },
-  liveText: { color: 'white', fontSize: 12, fontWeight: '700' },
-  controlsPanel: {
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    padding: 20,
-    marginBottom: 0,
-    marginHorizontal: 0,
-  },
-  controlsTitle: { fontSize: 16, fontWeight: '800', marginBottom: 16 },
-  buttonsRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
-  controlBtn: {
-    flex: 1,
-    paddingVertical: 16,
-    borderRadius: 20,
-    alignItems: 'center',
-    gap: 6,
-  },
-  controlText: { fontSize: 12, fontWeight: '700' },
-});

@@ -1,81 +1,55 @@
+/**
+ * Button component — HeroUI Native v1
+ *
+ * Thin wrapper around heroui-native's Button that preserves the original API
+ * (variant names, isLoading, title prop) so existing screens need minimal changes.
+ *
+ * Variant mapping:
+ *  - 'primary'   → heroui 'primary'
+ *  - 'secondary' → heroui 'secondary'
+ *  - 'outline'   → heroui 'outline'
+ *  - 'ghost'     → heroui 'ghost'
+ */
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, TouchableOpacityProps } from 'react-native';
-import { useTheme } from '../../hooks/useTheme';
+import { Button as HeroButton, Spinner, useThemeColor } from 'heroui-native';
+import type { ButtonRootProps } from 'heroui-native';
 
-interface ButtonProps extends TouchableOpacityProps {
+type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost';
+
+interface ButtonProps extends Omit<ButtonRootProps, 'variant'> {
   title: string;
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
+  variant?: ButtonVariant;
   isLoading?: boolean;
 }
 
-export const Button = ({ title, variant = 'primary', isLoading = false, style, ...props }: ButtonProps) => {
-  const { colors, borderRadius, typography } = useTheme();
+export const Button = ({
+  title,
+  variant = 'primary',
+  isLoading = false,
+  className,
+  isDisabled,
+  ...props
+}: ButtonProps) => {
+  const accentForeground = useThemeColor('accent-foreground');
+  const foreground = useThemeColor('foreground');
 
-  const getBackgroundColor = () => {
-    switch (variant) {
-      case 'primary': return colors.primary;
-      case 'secondary': return colors.secondary;
-      case 'outline': return 'transparent';
-      case 'ghost': return 'transparent';
-      default: return colors.primary;
-    }
-  };
-
-  const getTextColor = () => {
-    switch (variant) {
-      case 'primary':
-      case 'secondary':
-        return '#FFFFFF';
-      case 'outline':
-      case 'ghost':
-        return colors.text;
-      default:
-        return '#FFFFFF';
-    }
-  };
-
-  const getBorderColor = () => {
-    if (variant === 'outline') return colors.border;
-    return 'transparent';
-  };
+  const spinnerColor =
+    variant === 'primary' || variant === 'secondary'
+      ? accentForeground
+      : foreground;
 
   return (
-    <TouchableOpacity
-      activeOpacity={0.8}
-      style={[
-        styles.button,
-        {
-          backgroundColor: getBackgroundColor(),
-          borderRadius: borderRadius.full,
-          borderColor: getBorderColor(),
-          borderWidth: variant === 'outline' ? 1 : 0,
-        },
-        style,
-      ]}
-      disabled={isLoading || props.disabled}
+    <HeroButton
+      variant={variant}
+      isDisabled={isLoading || isDisabled}
+      className={className ?? 'w-full'}
       {...props}
     >
       {isLoading ? (
-        <ActivityIndicator color={getTextColor()} />
+        <Spinner color={spinnerColor} />
       ) : (
-        <Text style={[styles.text, { color: getTextColor(), fontSize: typography.size.md }]}>
-          {title}
-        </Text>
+        <HeroButton.Label>{title}</HeroButton.Label>
       )}
-    </TouchableOpacity>
+    </HeroButton>
   );
 };
-
-const styles = StyleSheet.create({
-  button: {
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginVertical: 8,
-    width: '100%',
-  },
-  text: {
-    fontWeight: '600',
-  },
-});
