@@ -1,16 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import {
   View,
-  Text,
-  StyleSheet,
   ScrollView,
-  TouchableOpacity,
-  TextInput,
   Alert,
-  ActivityIndicator,
+  Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { childService } from '../../services/api';
+import { Card, Button, Label, TextField, Input, Spinner, useThemeColor } from 'heroui-native';
+import { IconButton } from '../../components/ui/IconButton';
 
 export default function PerfilScreen({ navigation, route }: any) {
   const child = route?.params?.child;
@@ -22,13 +20,19 @@ export default function PerfilScreen({ navigation, route }: any) {
     id: child?.id || 0,
     name: child?.name || '',
     birthDate: child?.birthDate || '',
-    // Campos adicionales del perfil (se guardan en la base de datos)
     age: '',
     language: 'Español',
     bedtime: '08:30 PM',
     energyLevel: 'Media',
     personality: 'Amigable y divertido',
   });
+
+  const [primary, danger, surface, background] = useThemeColor([
+    'accent',
+    'danger',
+    'surface',
+    'background',
+  ]);
 
   useEffect(() => {
     if (child) {
@@ -44,7 +48,6 @@ export default function PerfilScreen({ navigation, route }: any) {
 
     setSaving(true);
     try {
-      // Actualizar el niño en la base de datos
       const response = await childService.update(formData.id, {
         name: formData.name,
         birthDate: formData.birthDate || undefined,
@@ -66,120 +69,109 @@ export default function PerfilScreen({ navigation, route }: any) {
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#4A90D9" />
+      <View className="flex-1 justify-center items-center bg-background">
+        <Spinner size="lg" color="primary" />
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={28} color="#2C3E50" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Editar Perfil</Text>
-        <View style={{ width: 36 }} />
+    <ScrollView className="flex-1 bg-background px-4 pt-12" showsVerticalScrollIndicator={false}>
+      <View className="flex-row justify-between items-center mb-5">
+        <IconButton icon="arrow-back" onPress={() => navigation.goBack()} />
+        <Label className="text-2xl font-extrabold text-foreground">Editar Perfil</Label>
+        <View className="w-10" />
       </View>
 
-      <View style={styles.form}>
-        <Text style={styles.label}>Nombre *</Text>
-        <TextInput
-          style={styles.input}
-          value={formData.name}
-          onChangeText={(text) => setFormData({ ...formData, name: text })}
-          placeholder="Nombre del niño"
-        />
+      <Card variant="default" className="p-5 mb-5 border-0 shadow-sm">
+        <Card.Body className="p-0">
+          <Label className="text-sm font-semibold text-foreground mb-1.5">Nombre *</Label>
+          <TextField className="w-full mb-4">
+            <Input
+              value={formData.name}
+              onChangeText={(text) => setFormData({ ...formData, name: text })}
+              placeholder="Nombre del niño"
+            />
+          </TextField>
 
-        <Text style={styles.label}>Fecha de nacimiento</Text>
-        <TextInput
-          style={styles.input}
-          value={formData.birthDate}
-          onChangeText={(text) => setFormData({ ...formData, birthDate: text })}
-          placeholder="YYYY-MM-DD (ej: 2020-05-15)"
-        />
+          <Label className="text-sm font-semibold text-foreground mb-1.5">Fecha de nacimiento</Label>
+          <TextField className="w-full mb-4">
+            <Input
+              value={formData.birthDate}
+              onChangeText={(text) => setFormData({ ...formData, birthDate: text })}
+              placeholder="YYYY-MM-DD (ej: 2020-05-15)"
+            />
+          </TextField>
 
-        <Text style={styles.label}>Idioma</Text>
-        <TextInput
-          style={styles.input}
-          value={formData.language}
-          onChangeText={(text) => setFormData({ ...formData, language: text })}
-          placeholder="Idioma"
-        />
+          <Label className="text-sm font-semibold text-foreground mb-1.5">Idioma</Label>
+          <TextField className="w-full mb-4">
+            <Input
+              value={formData.language}
+              onChangeText={(text) => setFormData({ ...formData, language: text })}
+              placeholder="Idioma"
+            />
+          </TextField>
 
-        <Text style={styles.label}>Hora de dormir</Text>
-        <TextInput
-          style={styles.input}
-          value={formData.bedtime}
-          onChangeText={(text) => setFormData({ ...formData, bedtime: text })}
-          placeholder="Ej: 08:30 PM"
-        />
+          <Label className="text-sm font-semibold text-foreground mb-1.5">Hora de dormir</Label>
+          <TextField className="w-full mb-4">
+            <Input
+              value={formData.bedtime}
+              onChangeText={(text) => setFormData({ ...formData, bedtime: text })}
+              placeholder="Ej: 08:30 PM"
+            />
+          </TextField>
 
-        <Text style={styles.label}>Nivel de energía</Text>
-        <View style={styles.optionsRow}>
-          {['Baja', 'Media', 'Alta'].map((level) => (
-            <TouchableOpacity
-              key={level}
-              style={[
-                styles.optionButton,
-                formData.energyLevel === level && styles.optionButtonActive,
-              ]}
-              onPress={() => setFormData({ ...formData, energyLevel: level })}
-            >
-              <Text
-                style={[
-                  styles.optionText,
-                  formData.energyLevel === level && styles.optionTextActive,
-                ]}
+          <Label className="text-sm font-semibold text-foreground mb-1.5">Nivel de energía</Label>
+          <View className="flex-row flex-wrap gap-2 mb-4">
+            {['Baja', 'Media', 'Alta'].map((level) => (
+              <Pressable
+                key={level}
+                className="px-4 py-2 rounded-full border-2"
+                style={{
+                  backgroundColor: formData.energyLevel === level ? 'rgba(74, 144, 217, 0.1)' : surface,
+                  borderColor: formData.energyLevel === level ? primary : 'transparent'
+                }}
+                onPress={() => setFormData({ ...formData, energyLevel: level })}
               >
-                {level}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+                <Label className={`text-sm ${formData.energyLevel === level ? 'text-primary font-bold' : 'text-foreground'}`}>
+                  {level}
+                </Label>
+              </Pressable>
+            ))}
+          </View>
 
-        <Text style={styles.label}>Personalidad de Panda</Text>
-        <View style={styles.optionsRow}>
-          {['Amigable y divertido', 'Tranquilo', 'Educativo'].map((type) => (
-            <TouchableOpacity
-              key={type}
-              style={[
-                styles.optionButton,
-                formData.personality === type && styles.optionButtonActive,
-              ]}
-              onPress={() => setFormData({ ...formData, personality: type })}
-            >
-              <Text
-                style={[
-                  styles.optionText,
-                  formData.personality === type && styles.optionTextActive,
-                ]}
+          <Label className="text-sm font-semibold text-foreground mb-1.5">Personalidad de Panda</Label>
+          <View className="flex-row flex-wrap gap-2 mb-6">
+            {['Amigable y divertido', 'Tranquilo', 'Educativo'].map((type) => (
+              <Pressable
+                key={type}
+                className="px-4 py-2 rounded-full border-2"
+                style={{
+                  backgroundColor: formData.personality === type ? 'rgba(74, 144, 217, 0.1)' : surface,
+                  borderColor: formData.personality === type ? primary : 'transparent'
+                }}
+                onPress={() => setFormData({ ...formData, personality: type })}
               >
-                {type}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+                <Label className={`text-sm ${formData.personality === type ? 'text-primary font-bold' : 'text-foreground'}`}>
+                  {type}
+                </Label>
+              </Pressable>
+            ))}
+          </View>
 
-        <TouchableOpacity
-          style={[styles.saveButton, saving && styles.saveButtonDisabled]}
-          onPress={handleSave}
-          disabled={saving}
-        >
-          {saving ? (
-            <ActivityIndicator color="white" />
-          ) : (
-            <Text style={styles.saveButtonText}>Guardar perfil</Text>
-          )}
-        </TouchableOpacity>
+          <Button
+            variant="primary"
+            onPress={handleSave}
+            isDisabled={saving}
+            className="w-full"
+          >
+            {saving ? <Spinner size="sm" color="default" /> : <Button.Label>Guardar perfil</Button.Label>}
+          </Button>
 
-        <TouchableOpacity
-          style={styles.deleteButton}
-          onPress={() => {
-            Alert.alert(
-              'Eliminar perfil',
-              `¿Estás seguro de eliminar a ${formData.name}?`,
-              [
+          <Button
+            variant="tertiary"
+            onPress={() => {
+              Alert.alert('Eliminar perfil', `¿Estás seguro de eliminar a ${formData.name}?`, [
                 { text: 'Cancelar', style: 'cancel' },
                 {
                   text: 'Eliminar',
@@ -194,116 +186,15 @@ export default function PerfilScreen({ navigation, route }: any) {
                     }
                   },
                 },
-              ]
-            );
-          }}
-        >
-          <Text style={styles.deleteButtonText}>Eliminar perfil</Text>
-        </TouchableOpacity>
-      </View>
+              ]);
+            }}
+            className="w-full mt-3"
+          >
+            <Button.Label className="text-danger font-semibold">Eliminar perfil</Button.Label>
+          </Button>
+        </Card.Body>
+      </Card>
+      <View className="h-10" />
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F7FA',
-    paddingHorizontal: 16,
-    paddingTop: 40,
-  },
-  center: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F5F7FA',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  backButton: {
-    padding: 4,
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#2C3E50',
-  },
-  form: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2C3E50',
-    marginBottom: 6,
-    marginTop: 12,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    backgroundColor: '#F9F9F9',
-  },
-  optionsRow: {
-    flexDirection: 'row',
-    gap: 8,
-    flexWrap: 'wrap',
-  },
-  optionButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#F0F0F0',
-    marginRight: 8,
-    marginBottom: 8,
-  },
-  optionButtonActive: {
-    backgroundColor: '#4A90D9',
-  },
-  optionText: {
-    fontSize: 14,
-    color: '#2C3E50',
-  },
-  optionTextActive: {
-    color: 'white',
-    fontWeight: '600',
-  },
-  saveButton: {
-    backgroundColor: '#4A90D9',
-    padding: 16,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  saveButtonDisabled: {
-    opacity: 0.6,
-  },
-  saveButtonText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  deleteButton: {
-    marginTop: 16,
-    alignItems: 'center',
-    padding: 12,
-  },
-  deleteButtonText: {
-    color: '#E74C3C',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});

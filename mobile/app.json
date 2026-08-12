@@ -1,14 +1,32 @@
 {
-  "android": {
-    "package": "com.anonymous.smarttoymobile"
-  },
-  "extra": {
-    "eas": {
-      "projectId": "e2411870-1162-4282-869c-7c3611fbf477"
-    }
-  },
-  "plugins": [
-    "@react-native-community/datetimepicker",
-    "expo-secure-store"
-  ]
+  "expo": {
+    "name": "Smart Toy",
+    "slug": "smart-toy-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#121212"
+    },
+    "android": {
+      "package": "com.anonymous.smarttoymobile",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#121212"
+      }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "e2411870-1162-4282-869c-7c3611fbf477"
+      }
+    },
+    "plugins": [
+      "@react-native-community/datetimepicker",
+      "expo-secure-store",
+      "expo-camera"
+    ]
+  }
 }

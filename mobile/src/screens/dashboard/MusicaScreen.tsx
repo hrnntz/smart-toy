@@ -1,9 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import {
+  View,
+  ScrollView,
+  Alert,
+  Pressable,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { storage } from '../../services/storage';
+import { musicService } from '../../services/api';
+import { playAudio, pauseAudio, resumeAudio, stopAudio } from '../../services/audioService';
+import { Card, Button, Label, Spinner, useThemeColor, TextField, Input } from 'heroui-native';
 
-type TabType = 'Musica' | 'Sonidos' | 'Favoritos';
+type TabType = 'Musica' | 'Sonidos' | 'Favoritos' | 'IA Generador';
 
 interface Track {
   id: number;
@@ -12,24 +20,46 @@ interface Track {
   icon: string;
   color: string;
   type: 'Musica' | 'Sonidos';
+  uri: string;
 }
 
-const TRACKS: Track[] = [
-  { id: 1, title: 'Música relajante', duration: '30 min', icon: 'musical-note', color: '#27AE60', type: 'Musica' },
-  { id: 2, title: 'Canciones infantiles', duration: '45 min', icon: 'musical-notes', color: '#E67E22', type: 'Musica' },
-  { id: 3, title: 'Sonidos de naturaleza', duration: '60 min', icon: 'leaf', color: '#3498DB', type: 'Sonidos' },
-  { id: 4, title: 'Ruido blanco', duration: '30 min', icon: 'moon', color: '#2C3E50', type: 'Sonidos' },
+const DEFAULT_TRACKS: Track[] = [
+  { id: 1, title: 'Caja de Música de Cuna Real', duration: '30 min', icon: 'heart', color: '#EF4444', type: 'Musica', uri: 'https://cdn.freesound.org/previews/462/462092_9159316-lq.mp3' },
+  { id: 2, title: 'Piano Suave para Bebés y Cuna', duration: '45 min', icon: 'musical-note', color: '#10B981', type: 'Musica', uri: 'https://cdn.freesound.org/previews/518/518888_11306353-lq.mp3' },
+  { id: 3, title: 'Kalimba y Nanas de Panda', duration: '25 min', icon: 'sparkles', color: '#F59E0B', type: 'Musica', uri: 'https://www.learningcontainer.com/wp-content/uploads/2020/02/Kalimba-Lullaby-Sound.mp3' },
+  { id: 4, title: 'Sonido de Lluvia Relajante Real', duration: '60 min', icon: 'leaf', color: '#06B6D4', type: 'Sonidos', uri: 'https://actions.google.com/sounds/v1/weather/rain_heavy_loud.ogg' },
+  { id: 5, title: 'Olas del Mar Pacíficas Reales', duration: '45 min', icon: 'water', color: '#3B82F6', type: 'Sonidos', uri: 'https://actions.google.com/sounds/v1/water/ocean_waves.ogg' },
+  { id: 6, title: 'Bosque Silencioso y Pájaros', duration: '40 min', icon: 'planet', color: '#10B981', type: 'Sonidos', uri: 'https://actions.google.com/sounds/v1/ambiences/outdoor_forest.ogg' },
+  { id: 7, title: 'Ruido Blanco Puro para Sueño Profundo', duration: '30 min', icon: 'moon', color: '#8B5CF6', type: 'Sonidos', uri: 'https://actions.google.com/sounds/v1/ambiences/white_noise.ogg' },
+  { id: 8, title: 'Viento Suave Nocturno', duration: '35 min', icon: 'cloudy-night', color: '#9CA3AF', type: 'Sonidos', uri: 'https://actions.google.com/sounds/v1/weather/wind_synthetic.ogg' },
 ];
 
 const FAVORITES_KEY = 'musica_favoritos';
 
 export default function MusicaScreen() {
   const [activeTab, setActiveTab] = useState<TabType>('Musica');
+  const [tracks, setTracks] = useState<Track[]>(DEFAULT_TRACKS);
   const [playingId, setPlayingId] = useState<number | null>(null);
+  const [isPaused, setIsPaused] = useState<boolean>(false);
   const [favorites, setFavorites] = useState<number[]>([]);
+  
+  // AI Music Generator State
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [generatingMusic, setGeneratingMusic] = useState(false);
+
+  const [primary, secondary, muted, surface, success] = useThemeColor([
+    'accent',
+    'accent-soft',
+    'muted',
+    'surface',
+    'success'
+  ]);
 
   useEffect(() => {
     loadFavorites();
+    return () => {
+      stopAudio();
+    };
   }, []);
 
   const loadFavorites = async () => {
@@ -49,8 +79,60 @@ export default function MusicaScreen() {
     }
   };
 
-  const togglePlay = (track: Track) => {
-    setPlayingId(playingId === track.id ? null : track.id);
+  const generateAIMusic = async (presetPrompt?: string) => {
+    const promptToUse = presetPrompt || aiPrompt.trim();
+    if (!promptToUse) return;
+
+    setGeneratingMusic(true);
+    try {
+      const res = await musicService.generateMusic(promptToUse);
+      if (res.data.success && res.data.data) {
+        const newTrack: Track = {
+          id: Date.now(),
+          title: res.data.data.title,
+          duration: res.data.data.duration || '15 min',
+          icon: 'sparkles',
+          color: secondary,
+          type: 'Musica',
+          uri: res.data.data.uri,
+        };
+        setTracks((prev) => [newTrack, ...prev]);
+        setAiPrompt('');
+        Alert.alert('¡Música Generada!', `Se ha creado "${newTrack.title}". ¡Presiona Play para escucharla!`);
+        togglePlay(newTrack);
+      }
+    } catch (error) {
+      console.error('Error generando música:', error);
+      Alert.alert('Error', 'No se pudo generar la música con IA.');
+    } finally {
+      setGeneratingMusic(false);
+    }
+  };
+
+  const togglePlay = async (track: Track) => {
+    if (playingId === track.id) {
+      if (isPaused) {
+        await resumeAudio();
+        setIsPaused(false);
+      } else {
+        await pauseAudio();
+        setIsPaused(true);
+      }
+    } else {
+      setPlayingId(track.id);
+      setIsPaused(false);
+      const success = await playAudio(track.uri, (status) => {
+        if (status.didJustFinish) {
+          setPlayingId(null);
+          setIsPaused(false);
+        }
+      });
+      if (!success) {
+        Alert.alert('Error', 'No se pudo reproducir el audio.');
+        setPlayingId(null);
+        setIsPaused(false);
+      }
+    }
   };
 
   const toggleFavorite = (id: number) => {
@@ -62,162 +144,127 @@ export default function MusicaScreen() {
   };
 
   const tracksToShow = activeTab === 'Favoritos'
-    ? TRACKS.filter((t) => favorites.includes(t.id))
+    ? tracks.filter((t) => favorites.includes(t.id))
     : activeTab === 'Musica'
-      ? TRACKS.filter((t) => t.type === 'Musica')
-      : TRACKS.filter((t) => t.type === 'Sonidos');
+      ? tracks.filter((t) => t.type === 'Musica')
+      : activeTab === 'Sonidos'
+        ? tracks.filter((t) => t.type === 'Sonidos')
+        : tracks;
 
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.title}>Música y sonidos</Text>
+    <ScrollView className="flex-1 bg-background px-4 pt-12" showsVerticalScrollIndicator={false}>
+      <Label className="text-2xl font-extrabold text-foreground mb-4">Música & Sonidos IA</Label>
 
-      <View style={styles.tabRow}>
-        {(['Musica', 'Sonidos', 'Favoritos'] as TabType[]).map((tab) => (
-          <TouchableOpacity
+      {/* Selector de Pestañas */}
+      <View className="flex-row flex-wrap mb-4 gap-2">
+        {(['Musica', 'Sonidos', 'Favoritos', 'IA Generador'] as TabType[]).map((tab) => (
+          <Pressable
             key={tab}
-            style={[styles.tab, activeTab === tab && styles.tabActive]}
+            style={{ backgroundColor: activeTab === tab ? primary : surface }}
+            className="px-3.5 py-2 rounded-full"
             onPress={() => setActiveTab(tab)}
           >
-            <Text style={[styles.tabText, activeTab === tab && styles.tabActiveText]}>{tab}</Text>
-          </TouchableOpacity>
+            <Label
+              className={`text-[13px] ${activeTab === tab ? 'font-bold text-white' : 'font-medium text-muted'}`}
+            >
+              {tab}
+            </Label>
+          </Pressable>
         ))}
       </View>
 
+      {/* Sección Generador de Música IA */}
+      {activeTab === 'IA Generador' && (
+        <Card variant="secondary" className="mb-5 border-secondary/40">
+          <Card.Body>
+            <View className="flex-row items-center gap-2 mb-2">
+              <Ionicons name="sparkles" size={24} color={secondary} />
+              <Label className="text-base font-bold text-secondary">Generador de Nanas con IA</Label>
+            </View>
+            <Label className="text-[13px] text-muted mb-3">
+              Escribe un prompt para que la IA componga una pista personalizada:
+            </Label>
+
+            <TextField className="w-full mb-3">
+              <Input
+                placeholder="Ej: Canción de cuna suave con piano..."
+                value={aiPrompt}
+                onChangeText={setAiPrompt}
+              />
+            </TextField>
+
+            <Button
+              variant="secondary"
+              onPress={() => generateAIMusic()}
+              isDisabled={!aiPrompt.trim() || generatingMusic}
+              className="w-full"
+            >
+              {generatingMusic ? <Spinner size="sm" color="default" /> : <Button.Label>Generar Música con IA</Button.Label>}
+            </Button>
+
+            <Label className="text-xs font-bold text-muted mt-4 mb-2">Prompts Sugeridos:</Label>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row">
+              {['Arpa relajante para dormir', 'Lluvia suave en el bosque', 'Sonidos del espacio y estrellas', 'Piano suave de cuna'].map((p) => (
+                <Pressable
+                  key={p}
+                  className="bg-secondary/15 px-3 py-1.5 rounded-full mr-2"
+                  onPress={() => generateAIMusic(p)}
+                >
+                  <Label className="text-xs font-semibold text-secondary">✨ {p}</Label>
+                </Pressable>
+              ))}
+            </ScrollView>
+          </Card.Body>
+        </Card>
+      )}
+
+      {/* Lista de Pistas de Audio */}
       {tracksToShow.length === 0 ? (
-        <View style={styles.empty}>
-          <Ionicons name="musical-note-outline" size={64} color="#ccc" />
-          <Text style={styles.emptyText}>
-            {activeTab === 'Favoritos' ? 'No tienes favoritos todavía. Toca el corazón en una pista.' : 'No hay pistas en esta categoría.'}
-          </Text>
+        <View className="items-center mt-10">
+          <Ionicons name="musical-note-outline" size={64} color={muted} />
+          <Label className="text-sm text-muted mt-4 text-center">
+            {activeTab === 'Favoritos' ? 'No tienes favoritos todavía. Toca el corazón en una pista.' : 'No hay pistas disponibles en esta categoría.'}
+          </Label>
         </View>
       ) : (
         tracksToShow.map((track) => (
-          <View key={track.id} style={styles.musicCard}>
-            <Ionicons name={track.icon as any} size={32} color={track.color} />
-            <View style={styles.musicInfo}>
-              <Text style={styles.musicTitle}>{track.title}</Text>
-              <Text style={styles.musicDuration}>{track.duration}</Text>
-            </View>
-            <TouchableOpacity style={styles.favButton} onPress={() => toggleFavorite(track.id)}>
-              <Ionicons
-                name={favorites.includes(track.id) ? 'heart' : 'heart-outline'}
-                size={24}
-                color={favorites.includes(track.id) ? '#E74C3C' : '#CCC'}
-              />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => togglePlay(track)}>
-              <Ionicons
-                name={playingId === track.id ? 'pause-circle' : 'play-circle'}
-                size={36}
-                color={playingId === track.id ? '#27AE60' : '#4A90D9'}
-              />
-            </TouchableOpacity>
-          </View>
+          <Card key={track.id} variant="default" className="mb-2">
+            <Card.Body className="flex-row items-center p-4">
+              <Ionicons name={track.icon as any} size={28} color={track.color} />
+              <View className="flex-1 ml-3">
+                <Label className="text-[15px] font-bold text-foreground">{track.title}</Label>
+                <Label className="text-xs text-muted mt-0.5">{track.duration}</Label>
+              </View>
+              <Pressable className="p-2 mr-1" onPress={() => toggleFavorite(track.id)}>
+                <Ionicons
+                  name={favorites.includes(track.id) ? 'heart' : 'heart-outline'}
+                  size={24}
+                  color={favorites.includes(track.id) ? '#EF4444' : muted}
+                />
+              </Pressable>
+              <Pressable onPress={() => togglePlay(track)}>
+                <Ionicons
+                  name={playingId === track.id && !isPaused ? 'pause-circle' : 'play-circle'}
+                  size={36}
+                  color={playingId === track.id ? (isPaused ? '#F59E0B' : '#10B981') : primary}
+                />
+              </Pressable>
+            </Card.Body>
+          </Card>
         ))
       )}
 
       {playingId !== null && (
-        <View style={styles.nowPlaying}>
-          <Ionicons name="volume-high" size={18} color="#27AE60" />
-          <Text style={styles.nowPlayingText}>
-            Reproduciendo: {TRACKS.find((t) => t.id === playingId)?.title || ''}
-          </Text>
-        </View>
+        <Card variant="default" className="mt-2 mb-5 bg-surface border border-separator">
+          <Card.Body className="flex-row items-center p-3.5 gap-2.5">
+            <Ionicons name={isPaused ? "pause" : "volume-high"} size={20} color={isPaused ? "#F59E0B" : success} />
+            <Label className="text-sm font-semibold text-foreground flex-1">
+              {isPaused ? 'Pausado: ' : 'Reproduciendo: '}{tracks.find((t) => t.id === playingId)?.title || ''}
+            </Label>
+          </Card.Body>
+        </Card>
       )}
+      <View className="h-8" />
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F7FA',
-    paddingHorizontal: 16,
-    paddingTop: 50,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#2C3E50',
-    marginBottom: 16,
-  },
-  tabRow: {
-    flexDirection: 'row',
-    marginBottom: 20,
-  },
-  tab: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginRight: 8,
-    backgroundColor: '#EBF5FB',
-  },
-  tabActive: {
-    backgroundColor: '#4A90D9',
-  },
-  tabText: {
-    color: '#2C3E50',
-    fontSize: 14,
-  },
-  tabActiveText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  musicCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'white',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  musicInfo: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  musicTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2C3E50',
-  },
-  musicDuration: {
-    fontSize: 13,
-    color: '#7F8C8D',
-  },
-  favButton: {
-    padding: 8,
-    marginRight: 4,
-  },
-  empty: {
-    alignItems: 'center',
-    marginTop: 60,
-  },
-  emptyText: {
-    fontSize: 16,
-    color: '#999',
-    marginTop: 16,
-    textAlign: 'center',
-    paddingHorizontal: 20,
-  },
-  nowPlaying: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#E8F8F5',
-    padding: 12,
-    borderRadius: 12,
-    marginTop: 8,
-    marginBottom: 20,
-    gap: 8,
-  },
-  nowPlayingText: {
-    fontSize: 14,
-    color: '#27AE60',
-    fontWeight: '500',
-    flex: 1,
-  },
-});

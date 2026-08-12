@@ -1,0 +1,138 @@
+@import 'tailwindcss';
+@import 'uniwind';
+
+@import 'heroui-native/styles';
+
+/* Path to heroui-native lib relative to this global.css (project root) */
+@source './node_modules/heroui-native/lib';
+
+/* ─────────────────────────────────────────────
+   Smart-Toy custom theme — overrides HeroUI Native defaults
+   Uses the project palette: Cyan primary + Violet secondary
+   ───────────────────────────────────────────── */
+@layer theme {
+  @variant light {
+    /* Accent → Cyan vibrante #06B6D4 */
+    --accent: oklch(0.71 0.15 196);
+    --accent-foreground: oklch(0.99 0 0);
+
+    /* Backgrounds */
+    --background: oklch(0.98 0.003 240);
+    --foreground: oklch(0.15 0.02 240);
+
+    /* Surface (cards, sheets) */
+    --surface: oklch(1 0 0);
+    --surface-foreground: oklch(0.18 0.02 240);
+
+    /* Muted text → #717171 */
+    --muted: oklch(0.53 0 0);
+
+    /* Default (neutral chips, tags) */
+    --default: oklch(0.95 0.005 240);
+    --default-foreground: oklch(0.25 0.02 240);
+
+    /* Status */
+    --success: oklch(0.67 0.16 162);
+    --success-foreground: oklch(0.99 0 0);
+
+    --danger: oklch(0.63 0.22 25);
+    --danger-foreground: oklch(0.99 0 0);
+
+    --warning: oklch(0.78 0.14 75);
+    --warning-foreground: oklch(0.2 0.05 75);
+
+    /* Separators / borders */
+    --separator: oklch(0.91 0.005 240);
+    --border: oklch(0 0 0 / 0%);
+
+    /* Overlay (modals, menus) */
+    --overlay: oklch(1 0 0);
+    --overlay-foreground: oklch(0.15 0.02 240);
+    --backdrop: oklch(0% 0 0 / 30%);
+
+    /* Fields */
+    --field-background: oklch(0.96 0.005 240);
+    --field-foreground: oklch(0.15 0.02 240);
+    --field-placeholder: var(--muted);
+    --field-border: transparent;
+
+    /* Shadows */
+    --surface-shadow:
+      0 2px 4px 0 rgba(0, 0, 0, 0.04),
+      0 1px 2px 0 rgba(0, 0, 0, 0.06),
+      0 0 1px 0 rgba(0, 0, 0, 0.06);
+    --overlay-shadow:
+      0 4px 16px 0 rgba(0, 0, 0, 0.08),
+      0 1px 3px 0 rgba(0, 0, 0, 0.06);
+    --field-shadow:
+      0 1px 3px 0 rgba(0, 0, 0, 0.04),
+      0 0 1px 0 rgba(0, 0, 0, 0.04);
+
+    /* Focus ring */
+    --focus: var(--accent);
+    --link: var(--accent);
+
+    /* Segment (segmented controls) */
+    --segment: oklch(1 0 0);
+    --segment-foreground: oklch(0.15 0.02 240);
+  }
+
+  @variant dark {
+    /* Accent → Verde Neón #00FF88 → mapped to oklch */
+    --accent: oklch(0.91 0.21 157);
+    --accent-foreground: oklch(0.12 0.02 157);
+
+    /* Backgrounds */
+    --background: oklch(0.14 0.005 240);
+    --foreground: oklch(0.96 0.005 240);
+
+    /* Surface */
+    --surface: oklch(0.19 0.008 240);
+    --surface-foreground: oklch(0.92 0.005 240);
+
+    /* Muted */
+    --muted: oklch(0.56 0.01 240);
+
+    /* Default */
+    --default: oklch(0.24 0.01 240);
+    --default-foreground: oklch(0.88 0.008 240);
+
+    /* Status */
+    --success: oklch(0.7 0.17 162);
+    --success-foreground: oklch(0.99 0 0);
+
+    --danger: oklch(0.65 0.22 25);
+    --danger-foreground: oklch(0.99 0 0);
+
+    --warning: oklch(0.78 0.14 75);
+    --warning-foreground: oklch(0.15 0.04 75);
+
+    /* Separators */
+    --separator: oklch(0.28 0.01 240);
+    --border: oklch(0 0 0 / 0%);
+
+    /* Overlay */
+    --overlay: oklch(0.22 0.01 240);
+    --overlay-foreground: oklch(0.92 0.005 240);
+    --backdrop: oklch(0% 0 0 / 50%);
+
+    /* Fields */
+    --field-background: var(--default);
+    --field-foreground: var(--foreground);
+    --field-placeholder: var(--muted);
+    --field-border: transparent;
+
+    /* Shadows */
+    --surface-shadow: 0 0 0 0 transparent inset;
+    --overlay-shadow: 0 0 1px 0 rgba(255, 255, 255, 0.15) inset;
+    --field-shadow: 0 0 0 0 transparent inset;
+
+    /* Focus ring */
+    --focus: var(--accent);
+    --link: var(--accent);
+
+    /* Segment */
+    --segment: oklch(0.22 0.01 240);
+    --segment-foreground: oklch(0.92 0.005 240);
+  }
+}

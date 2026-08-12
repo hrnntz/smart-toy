@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { View } from 'react-native';
+import { Label, Spinner } from 'heroui-native';
 import { storage } from '../../services/storage';
 
 export default function AuthLoadingScreen({ navigation }: any) {
@@ -8,31 +9,22 @@ export default function AuthLoadingScreen({ navigation }: any) {
       try {
         const token = await storage.getItem('token');
         if (token) {
-          // Redirigir a Home
           navigation.replace('Home');
         } else {
-          navigation.replace('Login');
+          navigation.replace('Welcome');
         }
       } catch (error) {
         console.error('Error checking auth:', error);
-        navigation.replace('Login');
+        navigation.replace('Welcome');
       }
     };
     checkAuth();
   }, []);
 
   return (
-    <View style={styles.container}>
-      <ActivityIndicator size="large" color="#4A90D9" />
+    <View className="flex-1 justify-center items-center bg-background gap-5">
+      <Label className="text-5xl">🐼</Label>
+      <Spinner size="lg" color="default" />
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F5F7FA',
-  },
-});

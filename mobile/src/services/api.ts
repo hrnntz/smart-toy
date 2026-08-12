@@ -42,6 +42,20 @@ export const toyService = {
   toggle: (id: number) => api.patch(`/toy/${id}/toggle`),
   chatWithToy: (toyId: number, message: string) =>
     api.post(`/toy/${toyId}/chat`, { message }),
+  voiceChatWithToy: (toyId: number, message: string, voiceId?: string) =>
+    api.post(`/toy/${toyId}/voice-chat`, { message, voiceId }),
+  voiceChatWithAudio: (toyId: number, audioUri: string, voiceId?: string) => {
+    const formData = new FormData();
+    formData.append('audio', {
+      uri: audioUri,
+      type: 'audio/m4a',
+      name: 'recording.m4a',
+    } as any);
+    if (voiceId) formData.append('voiceId', voiceId);
+    return api.post(`/toy/${toyId}/voice-chat`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
   // ✅ Métodos para mensajes del historial
   getMessages: (toyId: number) => api.get(`/toy/${toyId}/messages`),
   saveMessage: (toyId: number, content: string, isUser: boolean) =>
@@ -84,6 +98,17 @@ export const storyService = {
   getAll: () => api.get('/story'),
   getById: (id: number) => api.get(`/story/${id}`),
   delete: (id: number) => api.delete(`/story/${id}`),
+};
+
+// Servicios de minijuegos con IA
+export const gameService = {
+  generateQuestions: (gameName: string, category: string, difficulty = 'Medio', count = 10) =>
+    api.post('/games/generate-questions', { gameName, category, difficulty, count }),
+};
+
+// Servicios de música IA
+export const musicService = {
+  generateMusic: (prompt: string) => api.post('/music/generate', { prompt }),
 };
 
 // ✅ Servicio de autenticación (login, registro, etc.)

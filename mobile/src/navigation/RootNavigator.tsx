@@ -3,6 +3,8 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 
 import AuthLoadingScreen from '../screens/auth/AuthLoadingScreen';
+import SplashScreen from '../screens/auth/SplashScreen';
+import WelcomeScreen from '../screens/auth/WelcomeScreen';
 import LoginScreen from '../screens/auth/LoginScreen';
 import RegisterScreen from '../screens/auth/RegisterScreen';
 import TabNavigator from './TabNavigator';
@@ -23,6 +25,10 @@ import ChatScreen from '../screens/dashboard/ChatScreen';
 
 import MusicaScreen from '../screens/dashboard/MusicaScreen';
 
+// Pantallas de supervisión por cámara
+import SupervisionScreen from '../screens/dashboard/SupervisionScreen';
+import CameraBroadcasterScreen from '../screens/dashboard/CameraBroadcasterScreen';
+
 // ✅ Pantallas de historias (nuevas)
 import HistoriasScreen from '../screens/dashboard/HistoriasScreen';
 import GenerarHistoriaScreen from '../screens/dashboard/GenerarHistoriaScreen';
@@ -35,10 +41,12 @@ export default function RootNavigator() {
     <NavigationContainer>
       <Stack.Navigator
         id="Root"
-        initialRouteName="AuthLoading"
+        initialRouteName="Splash"
         screenOptions={{ headerShown: false }}
       >
+        <Stack.Screen name="Splash" component={SplashScreen} />
         <Stack.Screen name="AuthLoading" component={AuthLoadingScreen} />
+        <Stack.Screen name="Welcome" component={WelcomeScreen} />
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Register" component={RegisterScreen} />
         <Stack.Screen name="Home" component={TabNavigator} />
@@ -62,6 +70,11 @@ export default function RootNavigator() {
         <Stack.Screen name="RutinaForm" component={RutinaFormScreen} />
         <Stack.Screen name="Musica" component={MusicaScreen} />
         <Stack.Screen name="Música" component={MusicaScreen} />
+
+        {/* Pantallas de supervisión por cámara */}
+        <Stack.Screen name="Supervision" component={SupervisionScreen} />
+        <Stack.Screen name="Supervisión" component={SupervisionScreen} />
+        <Stack.Screen name="CameraBroadcaster" component={CameraBroadcasterScreen} />
 
         {/* ✅ Pantallas de historias */}
         <Stack.Screen name="Historias" component={HistoriasScreen} />

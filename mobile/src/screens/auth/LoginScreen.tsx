@@ -1,18 +1,25 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  ActivityIndicator,
-} from 'react-native';
+import { View, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import {
+  Button,
+  Checkbox,
+  Input,
+  Label,
+  TextField,
+  useThemeColor,
+  cn,
+} from 'heroui-native';
 import { storage } from '../../services/storage';
 import api from '../../services/api';
 import CustomAlert from '../../components/common/CustomAlert';
 
-export default function LoginScreen({ navigation }: any) {
+interface LoginScreenProps {
+  onAuthSuccess?: () => void;
+  navigation?: any;
+}
+
+export default function LoginScreen({ onAuthSuccess, navigation }: LoginScreenProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -22,10 +29,14 @@ export default function LoginScreen({ navigation }: any) {
   const [alertVisible, setAlertVisible] = useState(false);
   const [alertTitle, setAlertTitle] = useState('');
   const [alertMessage, setAlertMessage] = useState('');
+  const [alertType, setAlertType] = useState<'info' | 'error'>('info');
 
-  const showAlert = (title: string, message: string) => {
+  const muted = useThemeColor('muted');
+
+  const showAlert = (title: string, message: string, type: 'info' | 'error' = 'error') => {
     setAlertTitle(title);
     setAlertMessage(message);
+    setAlertType(type);
     setAlertVisible(true);
   };
 
@@ -44,53 +55,25 @@ export default function LoginScreen({ navigation }: any) {
         const token = response.data.data.token;
         const user = response.data.data.user;
 
-        console.log('✅ Login exitoso');
-        console.log('👤 Usuario:', user);
-        console.log('🔑 Token:', token.substring(0, 20) + '...');
-        console.log('📌 Remember me:', rememberMe);
-
-        // Guardar token siempre
         await storage.setItem('token', token);
-
-        // Guardar usuario solo si "Recordar sesión" está activado
         if (rememberMe) {
-          console.log('💾 Guardando usuario en storage');
           await storage.setItem('user', JSON.stringify(user));
         } else {
-          console.log('🗑️ Eliminando usuario guardado');
           await storage.removeItem('user');
         }
 
-        showAlert('Éxito', 'Login exitoso');
-        setTimeout(() => {
+        if (onAuthSuccess) {
+          onAuthSuccess();
+        } else if (navigation) {
           navigation.replace('Home');
-        }, 1500);
+        }
       } else {
         showAlert('Error', response.data.message || 'Credenciales incorrectas');
       }
     } catch (error: any) {
-      console.error('Login error:', error);
-      
       let message = 'Error al conectar con el servidor';
-      
-      if (error && error.response) {
-        const status = error.response.status;
-        
-        if (status === 401) {
-          message = '❌ Email o contraseña incorrectos';
-        } else if (status === 404) {
-          message = '❌ Usuario no encontrado';
-        } else if (status === 500) {
-          message = '❌ Error interno del servidor';
-        } else {
-          message = error.response.data?.message || 'Error al iniciar sesión';
-        }
-      } else if (error && error.request) {
-        message = '❌ No se pudo conectar con el servidor';
-      } else {
-        message = error?.message || 'Error desconocido';
-      }
-      
+      if (error?.response?.status === 401) message = 'Email o contraseña incorrectos';
+      else if (error?.response?.status === 404) message = 'Usuario no encontrado';
       showAlert('Error', message);
     } finally {
       setLoading(false);
@@ -98,160 +81,95 @@ export default function LoginScreen({ navigation }: any) {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Smart Toy</Text>
-      <Text style={styles.subtitle}>Iniciar Sesión</Text>
+    <View className="pb-5">
+      {/* Título */}
+      <Label className="text-2xl font-bold text-center text-foreground mb-5">
+        Iniciar Sesión
+      </Label>
 
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-        autoCapitalize="none"
-        keyboardType="email-address"
-      />
-
-      <View style={styles.passwordContainer}>
-        <TextInput
-          style={styles.passwordInput}
-          placeholder="Contraseña"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry={!showPassword}
-        />
-        <TouchableOpacity
-          style={styles.eyeButton}
-          onPress={() => setShowPassword(!showPassword)}
-        >
-          <Ionicons
-            name={showPassword ? 'eye-off' : 'eye'}
-            size={24}
-            color="#7F8C8D"
+      <View className="w-full gap-1">
+        {/* Campo Email */}
+        <TextField className="w-full">
+          <Input
+            placeholder="Email"
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
           />
-        </TouchableOpacity>
-      </View>
+        </TextField>
 
-      {/* Checkbox "Recordar sesión" */}
-      <View style={styles.rememberContainer}>
-        <TouchableOpacity
-          style={styles.rememberCheckbox}
-          onPress={() => setRememberMe(!rememberMe)}
-          activeOpacity={0.7}
-        >
-          <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
-            {rememberMe && <Ionicons name="checkmark" size={16} color="white" />}
+        {/* Campo Contraseña */}
+        <TextField className="w-full">
+          <View className="w-full flex-row items-center">
+            <Input
+              placeholder="Contraseña"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+              className="flex-1 pr-12"
+            />
+            <Pressable
+              className="absolute right-4 z-10"
+              onPress={() => setShowPassword(!showPassword)}
+              hitSlop={8}
+            >
+              <Ionicons
+                name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                size={20}
+                color={muted}
+              />
+            </Pressable>
           </View>
-          <Text style={styles.rememberText}>Recordar sesión</Text>
-        </TouchableOpacity>
+        </TextField>
+
+        {/* Recordar sesión */}
+        <Pressable
+          className="flex-row items-center gap-2.5 my-3"
+          onPress={() => setRememberMe(!rememberMe)}
+        >
+          <Checkbox
+            isSelected={rememberMe}
+            onSelectedChange={setRememberMe}
+          />
+          <Label className="text-sm font-medium text-foreground">
+            Recordar sesión
+          </Label>
+        </Pressable>
+
+        {/* Botón principal */}
+        <Button
+          variant="primary"
+          isDisabled={loading}
+          onPress={handleLogin}
+          className="w-full mt-2"
+        >
+          {loading ? (
+            <Button.Label>Cargando...</Button.Label>
+          ) : (
+            <Button.Label>Continuar</Button.Label>
+          )}
+        </Button>
+
+        {/* Link a registro */}
+        {!onAuthSuccess && (
+          <Button
+            variant="ghost"
+            onPress={() => navigation?.navigate('Register')}
+            className="w-full"
+          >
+            <Button.Label>¿No tienes cuenta? Regístrate</Button.Label>
+          </Button>
+        )}
       </View>
-
-      <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={loading}>
-        {loading ? <ActivityIndicator color="white" /> : <Text style={styles.buttonText}>Entrar</Text>}
-      </TouchableOpacity>
-
-      <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-        <Text style={styles.link}>¿No tienes cuenta? Regístrate</Text>
-      </TouchableOpacity>
 
       <CustomAlert
         visible={alertVisible}
         title={alertTitle}
         message={alertMessage}
+        type={alertType}
         onClose={() => setAlertVisible(false)}
       />
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    padding: 20,
-    backgroundColor: '#f5f5f5',
-  },
-  title: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 10,
-    color: '#2c3e50',
-  },
-  subtitle: {
-    fontSize: 18,
-    textAlign: 'center',
-    marginBottom: 30,
-    color: '#7f8c8d',
-  },
-  input: {
-    backgroundColor: 'white',
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 15,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    fontSize: 16,
-  },
-  passwordContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'white',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    marginBottom: 15,
-  },
-  passwordInput: {
-    flex: 1,
-    padding: 15,
-    fontSize: 16,
-  },
-  eyeButton: {
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-  },
-  rememberContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  rememberCheckbox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 4,
-    borderWidth: 2,
-    borderColor: '#4A90D9',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-  },
-  checkboxChecked: {
-    backgroundColor: '#4A90D9',
-  },
-  rememberText: {
-    fontSize: 14,
-    color: '#2C3E50',
-  },
-  button: {
-    backgroundColor: '#3498db',
-    padding: 15,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  buttonText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  link: {
-    color: '#3498db',
-    textAlign: 'center',
-    marginTop: 20,
-    fontSize: 16,
-  },
-});

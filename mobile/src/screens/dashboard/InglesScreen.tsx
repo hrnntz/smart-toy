@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import {
   View,
-  Text,
-  StyleSheet,
   ScrollView,
-  TouchableOpacity,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Card, Button, Label, useThemeColor } from 'heroui-native';
+import { IconButton } from '../../components/ui/IconButton';
 
 export default function InglesScreen({ navigation }: any) {
   const [nivel, setNivel] = useState('A2 - Básico');
@@ -15,196 +14,76 @@ export default function InglesScreen({ navigation }: any) {
   const [totalPalabras, setTotalPalabras] = useState(50);
   const [racha, setRacha] = useState(5);
 
+  const [primary, success, warning, muted, surface, background] = useThemeColor([
+    'accent',
+    'success',
+    'warning',
+    'muted',
+    'surface',
+    'background',
+  ]);
+
   return (
-    <View style={styles.container}>
-      {/* Header con botón Volver */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={28} color="#2C3E50" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Aprender Inglés</Text>
-        <View style={{ width: 36 }} />
+    <View className="flex-1 bg-background px-4 pt-12">
+      <View className="flex-row justify-between items-center mb-5">
+        <IconButton icon="arrow-back" onPress={() => navigation.goBack()} />
+        <Label className="text-2xl font-extrabold text-foreground">Aprender Inglés</Label>
+        <View className="w-10" />
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Nivel actual */}
-        <View style={styles.levelCard}>
-          <Text style={styles.levelTitle}>Nivel actual</Text>
-          <Text style={styles.levelText}>{nivel}</Text>
-          <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { width: '60%' }]} />
+        <View className="bg-primary rounded-2xl p-5 mb-4 shadow-md">
+          <Label className="text-sm font-medium text-white/80 mb-1">Nivel actual</Label>
+          <Label className="text-3xl font-bold text-white mb-3">{nivel}</Label>
+          <View className="h-2 bg-white/30 rounded-full overflow-hidden">
+            <View className="h-full bg-white rounded-full" style={{ width: '60%' }} />
           </View>
-          <Text style={styles.progressText}>60% completado</Text>
+          <Label className="text-[13px] text-white font-medium mt-2">60% completado</Label>
         </View>
 
-        {/* Plan diario */}
-        <View style={styles.card}>
-          <View style={styles.cardRow}>
-            <Ionicons name="time-outline" size={24} color="#4A90D9" />
-            <Text style={styles.cardTitle}>Plan diario</Text>
-            <Text style={styles.cardValue}>{planDiario} min</Text>
-          </View>
-        </View>
+        <Card variant="default" className="mb-3 border-0 shadow-sm">
+          <Card.Body className="p-4 flex-row items-center gap-3">
+            <Ionicons name="time-outline" size={26} color={primary} />
+            <Label className="text-base font-semibold text-foreground flex-1">Plan diario</Label>
+            <Label className="text-base font-bold text-primary">{planDiario} min</Label>
+          </Card.Body>
+        </Card>
 
-        {/* Lección de hoy */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>📚 Lección de hoy</Text>
-          <Text style={styles.lessonTitle}>Animales</Text>
-          <View style={styles.lessonProgress}>
-            <Text style={styles.lessonText}>Palabras aprendidas</Text>
-            <Text style={styles.lessonCount}>
-              {palabrasAprendidas} / {totalPalabras}
-            </Text>
-          </View>
-          <View style={styles.progressBar}>
-            <View
-              style={[
-                styles.progressFill,
-                { width: `${(palabrasAprendidas / totalPalabras) * 100}%` },
-              ]}
-            />
-          </View>
-        </View>
+        <Card variant="default" className="mb-3 border-0 shadow-sm">
+          <Card.Body className="p-4">
+            <Label className="text-base font-semibold text-foreground mb-1">📚 Lección de hoy</Label>
+            <Label className="text-xl font-bold text-foreground mb-2">Animales</Label>
+            
+            <View className="flex-row justify-between items-center mb-2">
+              <Label className="text-sm text-muted">Palabras aprendidas</Label>
+              <Label className="text-sm font-semibold text-foreground">
+                {palabrasAprendidas} / {totalPalabras}
+              </Label>
+            </View>
+            <View className="h-2 bg-surface rounded-full overflow-hidden">
+              <View
+                className="h-full rounded-full"
+                style={{
+                  backgroundColor: primary,
+                  width: `${(palabrasAprendidas / totalPalabras) * 100}%`
+                }}
+              />
+            </View>
+          </Card.Body>
+        </Card>
 
-        {/* Racha actual */}
-        <View style={styles.card}>
-          <View style={styles.cardRow}>
-            <Ionicons name="flame" size={24} color="#E67E22" />
-            <Text style={styles.cardTitle}>Racha actual</Text>
-            <Text style={styles.rachaText}>{racha} días</Text>
-          </View>
-        </View>
+        <Card variant="default" className="mb-5 border-0 shadow-sm">
+          <Card.Body className="p-4 flex-row items-center gap-3">
+            <Ionicons name="flame" size={26} color={warning} />
+            <Label className="text-base font-semibold text-foreground flex-1">Racha actual</Label>
+            <Label className="text-lg font-bold text-warning">{racha} días</Label>
+          </Card.Body>
+        </Card>
 
-        {/* Botón empezar lección */}
-        <TouchableOpacity style={styles.startButton}>
-          <Text style={styles.startButtonText}>Empezar lección</Text>
-        </TouchableOpacity>
+        <Button variant="secondary" className="w-full mb-10">
+          <Button.Label>Empezar lección</Button.Label>
+        </Button>
       </ScrollView>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F7FA',
-    paddingHorizontal: 16,
-    paddingTop: 40,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  backButton: {
-    padding: 4,
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#2C3E50',
-  },
-  levelCard: {
-    backgroundColor: '#4A90D9',
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  levelTitle: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.8)',
-    marginBottom: 4,
-  },
-  levelText: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: 'white',
-    marginBottom: 12,
-  },
-  progressBar: {
-    height: 8,
-    backgroundColor: 'rgba(255,255,255,0.3)',
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: 'white',
-    borderRadius: 4,
-  },
-  progressText: {
-    color: 'white',
-    fontSize: 13,
-    marginTop: 6,
-  },
-  card: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  cardRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2C3E50',
-    flex: 1,
-  },
-  cardValue: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#4A90D9',
-  },
-  lessonTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#2C3E50',
-    marginTop: 4,
-    marginBottom: 8,
-  },
-  lessonProgress: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-  },
-  lessonText: {
-    fontSize: 14,
-    color: '#7F8C8D',
-  },
-  lessonCount: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2C3E50',
-  },
-  rachaText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#E67E22',
-  },
-  startButton: {
-    backgroundColor: '#27AE60',
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 8,
-    marginBottom: 20,
-  },
-  startButtonText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-});

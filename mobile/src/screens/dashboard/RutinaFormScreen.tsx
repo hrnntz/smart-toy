@@ -1,20 +1,17 @@
 import React, { useState } from 'react';
 import {
   View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  ActivityIndicator,
   ScrollView,
   Switch,
   Platform,
+  Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { rutinaService } from '../../services/api';
 import CustomAlert from '../../components/common/CustomAlert';
-import { sendNotification } from '../../services/notificationService';
+import { Card, Button, Label, TextField, Input, Spinner, useThemeColor } from 'heroui-native';
+import { IconButton } from '../../components/ui/IconButton';
 
 interface RutinaFormScreenProps {
   navigation: any;
@@ -45,6 +42,14 @@ export default function RutinaFormScreen({ navigation, route }: RutinaFormScreen
   const [alertVisible, setAlertVisible] = useState(false);
   const [alertTitle, setAlertTitle] = useState('');
   const [alertMessage, setAlertMessage] = useState('');
+
+  const [primary, muted, separator, background, surface] = useThemeColor([
+    'accent',
+    'muted',
+    'separator',
+    'background',
+    'surface',
+  ]);
 
   const showAlert = (title: string, message: string) => {
     setAlertTitle(title);
@@ -119,11 +124,24 @@ export default function RutinaFormScreen({ navigation, route }: RutinaFormScreen
         const savedRutina = response.data.data;
         showAlert('Éxito', isEditing ? 'Rutina actualizada' : 'Rutina creada');
         
-        // ✅ Enviar notificación
-        await sendNotification(
-          isEditing ? 'Rutina actualizada' : 'Rutina creada',
-          `"${savedRutina.nombre}" a las ${formatHoraDisplay(savedRutina.hora)}${savedRutina.repetir ? ' (diaria)' : ''}`
-        );
+        try {
+          const { requestPermissions, scheduleNotification } = require('../../services/notificationService');
+          const hasPerm = await requestPermissions();
+          if (hasPerm && savedRutina.hora) {
+            const [h, m] = savedRutina.hora.split(':').map(Number);
+            await scheduleNotification(
+              `⏰ Recordatorio Panda: ${savedRutina.nombre}`,
+              savedRutina.mensaje || `Es hora de cumplir con la rutina: ${savedRutina.nombre}`,
+              {
+                type: 'daily',
+                hour: h,
+                minute: m,
+              } as any
+            );
+          }
+        } catch (err) {
+          console.warn('Error al programar alarma de rutina:', err);
+        }
 
         setTimeout(() => navigation.goBack(), 1500);
       } else {
@@ -138,88 +156,92 @@ export default function RutinaFormScreen({ navigation, route }: RutinaFormScreen
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={28} color="#2C3E50" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>
+    <ScrollView className="flex-1 bg-background px-4 pt-12">
+      <View className="flex-row justify-between items-center mb-5">
+        <IconButton icon="arrow-back" onPress={() => navigation.goBack()} />
+        <Label className="text-2xl font-extrabold text-foreground">
           {isEditing ? 'Editar Rutina' : 'Nueva Rutina'}
-        </Text>
-        <View style={{ width: 28 }} />
+        </Label>
+        <View className="w-10" />
       </View>
 
-      <View style={styles.form}>
-        <Text style={styles.label}>Nombre *</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Ej: Despertar, Dormir, etc."
-          value={nombre}
-          onChangeText={setNombre}
-        />
+      <Card variant="default" className="p-5 mb-5 border-0">
+        <Card.Body className="p-0">
+          <Label className="text-sm font-semibold text-foreground mb-1.5">Nombre *</Label>
+          <TextField className="w-full mb-4">
+            <Input
+              placeholder="Ej: Despertar, Dormir, etc."
+              value={nombre}
+              onChangeText={setNombre}
+            />
+          </TextField>
 
-        <Text style={styles.label}>Hora *</Text>
-        {Platform.OS === 'web' ? (
-          <View style={styles.timePickerWrapper}>
-            <Ionicons name="time-outline" size={24} color="#4A90D9" style={styles.timeIcon} />
-            <input
-              type="time"
-              value={hora}
-              onChange={handleWebTimeChange}
-              style={{
-                flex: 1,
-                padding: 12,
-                fontSize: 16,
-                border: 'none',
-                outline: 'none',
-                backgroundColor: 'transparent',
-                color: '#2C3E50',
-                fontFamily: 'inherit',
-                minWidth: 0,
-                width: '100%',
-              }}
+          <Label className="text-sm font-semibold text-foreground mb-1.5">Hora *</Label>
+          {Platform.OS === 'web' ? (
+            <View className="flex-row items-center border border-separator rounded-xl px-3.5 bg-background mb-4">
+              <Ionicons name="time-outline" size={24} color={primary} className="mr-2" />
+              <input
+                type="time"
+                value={hora}
+                onChange={handleWebTimeChange}
+                style={{
+                  flex: 1,
+                  padding: 12,
+                  fontSize: 16,
+                  border: 'none',
+                  outline: 'none',
+                  backgroundColor: 'transparent',
+                  color: 'inherit',
+                  fontFamily: 'inherit',
+                  minWidth: 0,
+                  width: '100%',
+                }}
+              />
+            </View>
+          ) : (
+            <Pressable
+              className="flex-row items-center border border-separator rounded-xl p-3.5 bg-background mb-4"
+              onPress={() => setTimePickerVisible(true)}
+            >
+              <Ionicons name="time-outline" size={24} color={primary} />
+              <Label className={`flex-1 ml-3 text-[15px] ${hora ? 'text-foreground' : 'text-muted'}`}>
+                {hora ? formatHoraDisplay(hora) : 'Seleccionar hora'}
+              </Label>
+              <Ionicons name="chevron-down" size={20} color={muted} />
+            </Pressable>
+          )}
+
+          <View className="flex-row justify-between items-center mt-2 mb-4">
+            <Label className="text-sm font-semibold text-foreground">Repetir diariamente</Label>
+            <Switch
+              value={repetir}
+              onValueChange={setRepetir}
+              trackColor={{ false: surface, true: primary }}
             />
           </View>
-        ) : (
-          <TouchableOpacity
-            style={styles.timePicker}
-            onPress={() => setTimePickerVisible(true)}
+
+          <Label className="text-sm font-semibold text-foreground mb-1.5">Mensaje que dirá Panda</Label>
+          <TextField className="w-full mb-6">
+            <Input
+              placeholder="Ej: Es hora de dormir..."
+              value={mensaje}
+              onChangeText={setMensaje}
+              multiline
+              numberOfLines={3}
+              className="min-h-[80px]"
+            />
+          </TextField>
+
+          <Button
+            variant="primary"
+            onPress={handleSave}
+            isDisabled={loading}
+            className="w-full"
           >
-            <Ionicons name="time-outline" size={24} color="#4A90D9" />
-            <Text style={hora ? styles.timeText : styles.timePlaceholder}>
-              {hora ? formatHoraDisplay(hora) : 'Seleccionar hora'}
-            </Text>
-            <Ionicons name="chevron-down" size={20} color="#999" style={styles.timeArrow} />
-          </TouchableOpacity>
-        )}
-
-        <View style={styles.switchContainer}>
-          <Text style={styles.label}>Repetir diariamente</Text>
-          <Switch
-            value={repetir}
-            onValueChange={setRepetir}
-            trackColor={{ false: '#ddd', true: '#4A90D9' }}
-          />
-        </View>
-
-        <Text style={styles.label}>Mensaje que dirá Panda</Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          placeholder="Ej: Es hora de dormir..."
-          value={mensaje}
-          onChangeText={setMensaje}
-          multiline
-          numberOfLines={3}
-        />
-
-        <TouchableOpacity
-          style={[styles.saveButton, loading && styles.saveButtonDisabled]}
-          onPress={handleSave}
-          disabled={loading}
-        >
-          {loading ? <ActivityIndicator color="white" /> : <Text style={styles.saveButtonText}>Guardar</Text>}
-        </TouchableOpacity>
-      </View>
+            {loading ? <Spinner size="sm" color="default" /> : <Button.Label>Guardar</Button.Label>}
+          </Button>
+        </Card.Body>
+      </Card>
 
       <DateTimePickerModal
         isVisible={isTimePickerVisible}
@@ -240,111 +262,3 @@ export default function RutinaFormScreen({ navigation, route }: RutinaFormScreen
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F7FA',
-    paddingHorizontal: 16,
-    paddingTop: 40,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  backButton: {
-    padding: 4,
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#2C3E50',
-  },
-  form: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 20,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2C3E50',
-    marginBottom: 6,
-    marginTop: 12,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    backgroundColor: '#F9F9F9',
-  },
-  textArea: {
-    height: 80,
-    textAlignVertical: 'top',
-  },
-  timePickerWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    backgroundColor: '#F9F9F9',
-  },
-  timeIcon: {
-    marginRight: 8,
-  },
-  timePicker: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 8,
-    padding: 12,
-    backgroundColor: '#F9F9F9',
-    gap: 12,
-  },
-  timeText: {
-    fontSize: 16,
-    color: '#2C3E50',
-    flex: 1,
-  },
-  timePlaceholder: {
-    fontSize: 16,
-    color: '#999',
-    flex: 1,
-  },
-  timeArrow: {
-    marginLeft: 'auto',
-  },
-  switchContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  saveButton: {
-    backgroundColor: '#4A90D9',
-    padding: 16,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  saveButtonDisabled: {
-    opacity: 0.6,
-  },
-  saveButtonText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-});

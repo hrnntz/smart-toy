@@ -25,7 +25,8 @@ const connectionOptions: DataSourceOptions = process.env.DATABASE_URL
       url: process.env.DATABASE_URL,
       ssl: useSSL ? { rejectUnauthorized: false } : false,
       entities: [User, Child, Toy, Rutina, Message, Story, DeviceConfig],
-      synchronize: true,
+      migrations: [__dirname + "/../migrations/*.ts"],
+      synchronize: process.env.DB_SYNCHRONIZE !== undefined ? process.env.DB_SYNCHRONIZE === "true" : !isProduction,
       logging: false,
     }
   : {
@@ -37,7 +38,8 @@ const connectionOptions: DataSourceOptions = process.env.DATABASE_URL
       database: process.env.DB_NAME || "smart_toy",
       ssl: useSSL ? { rejectUnauthorized: false } : false,
       entities: [User, Child, Toy, Rutina, Message, Story, DeviceConfig],
-      synchronize: true,
+      migrations: [__dirname + "/../migrations/*.ts"],
+      synchronize: process.env.DB_SYNCHRONIZE !== undefined ? process.env.DB_SYNCHRONIZE === "true" : !isProduction,
       logging: false,
     };
 

@@ -1,39 +1,83 @@
-// src/screens/dashboard/ChatScreen.tsx
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
   ScrollView,
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   Image,
+  Alert,
+  Modal,
+  Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { Audio } from 'expo-av';
 import { toyService } from '../../services/api';
+import { playAudio, stopAudio } from '../../services/audioService';
+import { Card, Button, Label, TextField, Input, Spinner, useThemeColor } from 'heroui-native';
+import { IconButton } from '../../components/ui/IconButton';
 
 interface Message {
   id: string;
   text: string;
   isUser: boolean;
   timestamp: Date;
+  audioUrl?: string;
 }
+
+interface CharacterVoice {
+  id: string;
+  name: string;
+  icon: string;
+  desc: string;
+}
+
+const VOICE_OPTIONS: CharacterVoice[] = [
+  { id: 'EXAVITQu4vr4xnSDxMaL', name: 'Bella (Panda Dulce)', icon: 'paw', desc: 'Voz tierna e infantil' },
+  { id: 'jBpfOiLJlfdOoWvoflAa', name: 'Gigi (Cuento Mágico)', icon: 'sparkles', desc: 'Voz animada de hada' },
+  { id: 'zrHiDhphv95cyQqftM9H', name: 'Mimi (Oso Pequeño)', icon: 'heart', desc: 'Voz muy tierna tipo peluche' },
+  { id: '21m00Tcm4TlvDq8ikWAM', name: 'Rachel (Amiga Panda)', icon: 'moon', desc: 'Voz calmada para dormir' },
+  { id: 'jsCqWAovK2LkecYy1ClR', name: 'Freya (Princesa)', icon: 'ribbon', desc: 'Voz alegre y expresiva' },
+  { id: 'z9fAnlkznG4ndvfOBYJU', name: 'Glinda (Fantasía)', icon: 'planet', desc: 'Voz mágica de cuento' },
+  { id: 'zcAAsDuNqEBlko7h1jiB', name: 'Giovanni (Explorador)', icon: 'compass', desc: 'Voz animada masculina' },
+  { id: 'AZnzlk1XvdvUeBnXmlld', name: 'Domi (Aventurera)', icon: 'flash', desc: 'Voz enérgica y risueña' },
+  { id: 'D38z5RcWu1voky8WS1ja', name: 'Finn (Caricatura)', icon: 'happy', desc: 'Voz graciosa de caricatura' },
+  { id: 'IKne3meq5aSn9XLyUdCD', name: 'Charlie (Divertido)', icon: 'school', desc: 'Voz juvenil amigable' },
+];
 
 export default function ChatScreen({ navigation, route }: any) {
   const { toyId, toyName, avatarUrl } = route.params || {};
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(false);
+  const [voiceMode, setVoiceMode] = useState(true);
+  const [selectedVoice, setSelectedVoice] = useState<string>('EXAVITQu4vr4xnSDxMaL');
+  const [showVoiceModal, setShowVoiceModal] = useState(false);
+
+  const [recording, setRecording] = useState<Audio.Recording | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const isProcessingRef = useRef(false);
   const scrollViewRef = useRef<ScrollView>(null);
 
-  // Cargar mensajes guardados al abrir la pantalla
+  const [primary, success, danger, muted, background, surface, card] = useThemeColor([
+    'accent',
+    'success',
+    'danger',
+    'muted',
+    'background',
+    'surface',
+    'surface'
+  ]);
+
   useEffect(() => {
     if (toyId) {
       loadMessages();
     }
+    return () => {
+      stopAudio();
+      if (recording) {
+        recording.stopAndUnloadAsync();
+      }
+    };
   }, [toyId]);
 
   const loadMessages = async () => {
@@ -47,12 +91,11 @@ export default function ChatScreen({ navigation, route }: any) {
           timestamp: new Date(m.createdAt),
         }));
         setMessages(msgs);
-        // Si no hay mensajes, agregar bienvenida
         if (msgs.length === 0 && toyName) {
           setMessages([
             {
               id: 'welcome',
-              text: `¡Hola! Soy ${toyName}, tu amigo inteligente. ¿En qué puedo ayudarte hoy? 🧸`,
+              text: `¡Hola! Soy ${toyName}, tu amigo inteligente. Presiona el micrófono para hablarme o escríbeme 🧸`,
               isUser: false,
               timestamp: new Date(),
             },
@@ -64,161 +107,270 @@ export default function ChatScreen({ navigation, route }: any) {
     }
   };
 
-  const sendMessage = async () => {
-    if (!inputText.trim() || !toyId) return;
+  const startRecording = async () => {
+    if (isProcessingRef.current || loading || isRecording) return;
+    try {
+      await stopAudio();
+      const permission = await Audio.requestPermissionsAsync();
+      if (permission.status !== 'granted') {
+        Alert.alert('Permiso Denegado', 'Se requiere acceso al micrófono para hablar con Panda.');
+        return;
+      }
+      await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
+      const { recording: newRecording } = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
+      setRecording(newRecording);
+      setIsRecording(true);
+    } catch (err) {
+      console.error('Error al iniciar grabación:', err);
+      setIsRecording(false);
+    }
+  };
 
-    const userMsg: Message = {
-      id: Date.now().toString(),
-      text: inputText.trim(),
-      isUser: true,
-      timestamp: new Date(),
-    };
-    setMessages(prev => [...prev, userMsg]);
-    setInputText('');
+  const stopRecording = async () => {
+    if (!recording || isProcessingRef.current) return;
+    isProcessingRef.current = true;
+    setIsRecording(false);
     setLoading(true);
 
     try {
-      // 1. Guardar mensaje del usuario
-      await toyService.saveMessage(toyId, userMsg.text, true);
+      await recording.stopAndUnloadAsync();
+      const uri = recording.getURI();
+      setRecording(null);
+      await Audio.setAudioModeAsync({ allowsRecordingIOS: false, playsInSilentModeIOS: true });
 
-      // 2. Obtener respuesta de la IA
-      const response = await toyService.chatWithToy(toyId, userMsg.text);
-      const replyText = response.data?.data?.reply || response.data?.reply || 'No pude entender eso, ¿puedes repetirlo?';
+      if (!uri || !toyId) {
+        isProcessingRef.current = false;
+        setLoading(false);
+        return;
+      }
 
-      // 3. Guardar respuesta del bot
-      await toyService.saveMessage(toyId, replyText, false);
+      const res = await toyService.voiceChatWithAudio(toyId, uri, selectedVoice);
 
-      // 4. Agregar al estado
-      const botMsg: Message = {
-        id: (Date.now() + 1).toString(),
-        text: replyText,
-        isUser: false,
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, botMsg]);
+      if (res.data.success && res.data.data) {
+        const userText = res.data.data.userText || '🎙️ Mensaje de voz';
+        const replyText = res.data.data.replyText || '¡Hola!';
+        const audioUrl = res.data.data.audioUrl;
+
+        setMessages((prev) => [
+          ...prev,
+          { id: Date.now().toString(), text: userText, isUser: true, timestamp: new Date() },
+          { id: (Date.now() + 1).toString(), text: replyText, isUser: false, timestamp: new Date(), audioUrl },
+        ]);
+
+        if (audioUrl) await playAudio(audioUrl);
+      }
     } catch (error) {
-      console.error('Error en chat:', error);
-      setMessages(prev => [
-        ...prev,
-        {
-          id: (Date.now() + 2).toString(),
-          text: '❌ Hubo un error al procesar tu mensaje. Intenta de nuevo.',
-          isUser: false,
-          timestamp: new Date(),
-        },
-      ]);
+      console.error('Error procesando voz:', error);
+      Alert.alert('Error', 'No se pudo procesar la voz.');
     } finally {
+      isProcessingRef.current = false;
       setLoading(false);
     }
   };
 
+  const sendMessage = async (textToSend?: string) => {
+    const text = textToSend || inputText.trim();
+    if (!text || !toyId || isProcessingRef.current) return;
+
+    isProcessingRef.current = true;
+    const userMsg: Message = { id: Date.now().toString(), text, isUser: true, timestamp: new Date() };
+    setMessages((prev) => [...prev, userMsg]);
+    if (!textToSend) setInputText('');
+    setLoading(true);
+
+    try {
+      let replyText = '';
+      let audioUrl = '';
+
+      if (voiceMode) {
+        const response = await toyService.voiceChatWithToy(toyId, text, selectedVoice);
+        if (response.data.success) {
+          replyText = response.data.data.replyText;
+          audioUrl = response.data.data.audioUrl;
+        }
+      } else {
+        await toyService.saveMessage(toyId, text, true);
+        const response = await toyService.chatWithToy(toyId, text);
+        replyText = response.data?.data?.reply || 'No pude entender eso, ¿puedes repetirlo?';
+        await toyService.saveMessage(toyId, replyText, false);
+      }
+
+      const botMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        text: replyText || '¡Hola! Qué gusto saludarte.',
+        isUser: false,
+        timestamp: new Date(),
+        audioUrl,
+      };
+
+      setMessages((prev) => [...prev, botMsg]);
+
+      if (audioUrl) await playAudio(audioUrl);
+    } catch (error) {
+      console.error('Error en chat:', error);
+    } finally {
+      isProcessingRef.current = false;
+      setLoading(false);
+    }
+  };
+
+  const currentVoiceObj = VOICE_OPTIONS.find((v) => v.id === selectedVoice) || VOICE_OPTIONS[0];
+
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-    >
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={28} color="#2C3E50" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Chat con {toyName || 'Juguete'}</Text>
-        <View style={{ width: 28 }} />
-      </View>
-
-      <ScrollView
-        ref={scrollViewRef}
-        style={styles.messagesContainer}
-        contentContainerStyle={styles.messagesContent}
-        onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
-      >
-        {messages.map((msg) => (
-          <View key={msg.id} style={[styles.messageRow, msg.isUser ? styles.userRow : styles.botRow]}>
-            {!msg.isUser && avatarUrl && (
-              <Image source={{ uri: avatarUrl }} style={styles.avatar} />
-            )}
-            <View style={[styles.messageBubble, msg.isUser ? styles.userBubble : styles.botBubble]}>
-              <Text style={msg.isUser ? styles.userText : styles.botText}>{msg.text}</Text>
-              <Text style={styles.timestamp}>
-                {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </Text>
-            </View>
-          </View>
-        ))}
-        {loading && (
-          <View style={[styles.messageRow, styles.botRow]}>
-            <View style={[styles.messageBubble, styles.botBubble]}>
-              <ActivityIndicator size="small" color="#4A90D9" />
-            </View>
-          </View>
-        )}
-      </ScrollView>
-
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="Escribe un mensaje..."
-          value={inputText}
-          onChangeText={setInputText}
-          multiline
-          maxLength={500}
+    <View className="flex-1 bg-background">
+      {/* Header */}
+      <View className="flex-row items-center px-4 pt-[50px] pb-3.5 bg-card border-b border-separator shadow-sm z-10">
+        <Pressable onPress={() => navigation.goBack()} className="p-1 mr-2">
+          <Ionicons name="arrow-back" size={26} color={primary} />
+        </Pressable>
+        <Image
+          source={{ uri: avatarUrl || 'https://image.pollinations.ai/prompt/cute%20panda%20toy?width=100&height=100' }}
+          className="w-10 h-10 rounded-full mr-2.5 bg-surface"
         />
-        <TouchableOpacity
-          style={[styles.sendButton, !inputText.trim() && styles.sendButtonDisabled]}
-          onPress={sendMessage}
-          disabled={!inputText.trim() || loading}
+        <View className="flex-1">
+          <Label className="text-base font-bold text-foreground">{toyName || 'Panda Inteligente'}</Label>
+          <Label className="text-xs font-semibold text-success mt-0.5">🟢 Voz: {currentVoiceObj.name.split(' ')[0]}</Label>
+        </View>
+
+        <Pressable className="p-1.5 mr-1" onPress={() => setShowVoiceModal(true)}>
+          <Ionicons name="mic-circle" size={28} color="#8E44AD" />
+        </Pressable>
+
+        <Pressable
+          className={`p-2 rounded-full ${voiceMode ? 'bg-primary' : 'bg-surface'}`}
+          onPress={() => setVoiceMode(!voiceMode)}
         >
-          <Ionicons name="send" size={24} color="white" />
-        </TouchableOpacity>
+          <Ionicons name="volume-medium" size={20} color={voiceMode ? 'white' : muted} />
+        </Pressable>
       </View>
-    </KeyboardAvoidingView>
+
+      <KeyboardAvoidingView
+        className="flex-1"
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      >
+        <ScrollView
+          ref={scrollViewRef}
+          className="flex-1 px-4"
+          contentContainerStyle={{ paddingVertical: 16 }}
+          onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
+        >
+          {messages.map((msg) => (
+            <View key={msg.id} className={`flex-row items-end mb-3 ${msg.isUser ? 'justify-end' : 'justify-start'}`}>
+              {!msg.isUser && (
+                <Image
+                  source={{ uri: avatarUrl || 'https://image.pollinations.ai/prompt/cute%20panda%20toy?width=100&height=100' }}
+                  className="w-8 h-8 rounded-full mr-2 bg-surface"
+                />
+              )}
+              <View
+                className={`max-w-[78%] p-3.5 rounded-2xl ${msg.isUser ? 'bg-primary rounded-br-sm' : 'bg-card rounded-bl-sm shadow-sm'}`}
+              >
+                <Label className={`text-[15px] leading-5 ${msg.isUser ? 'text-white' : 'text-foreground'}`}>
+                  {msg.text}
+                </Label>
+                {msg.audioUrl && (
+                  <Pressable
+                    className="flex-row items-center bg-[#E8F8F5] px-2.5 py-1.5 rounded-xl mt-2 gap-1.5"
+                    onPress={() => msg.audioUrl && playAudio(msg.audioUrl)}
+                  >
+                    <Ionicons name="play-circle" size={20} color={success} />
+                    <Label className="text-xs font-bold text-success">Escuchar Voz</Label>
+                  </Pressable>
+                )}
+                <Label className={`text-[10px] mt-1.5 self-end ${msg.isUser ? 'text-white/70' : 'text-muted'}`}>
+                  {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </Label>
+              </View>
+            </View>
+          ))}
+
+          {isRecording && (
+            <View className="flex-row items-center justify-center bg-danger/10 p-3 rounded-2xl mb-3 gap-2">
+              <Ionicons name="mic-sharp" size={24} color={danger} />
+              <Label className="font-bold text-danger text-sm">🎙️ Grabando... suelta para enviar</Label>
+            </View>
+          )}
+
+          {loading && (
+            <View className="flex-row items-end mb-3 justify-start">
+              <View className="max-w-[78%] p-3.5 bg-card rounded-2xl rounded-bl-sm shadow-sm flex-row items-center gap-2">
+                <Spinner size="sm" color="primary" />
+                <Label className="text-[13px] text-muted">Procesando respuesta...</Label>
+              </View>
+            </View>
+          )}
+        </ScrollView>
+
+        {/* Barra de Entrada */}
+        <View className="flex-row p-3 bg-card border-t border-separator items-center gap-2.5">
+          <Pressable
+            className={`w-11 h-11 rounded-full justify-center items-center ${loading ? 'bg-muted' : isRecording ? 'bg-danger' : 'bg-success'}`}
+            onPressIn={startRecording}
+            onPressOut={stopRecording}
+            disabled={loading}
+          >
+            <Ionicons name={isRecording ? "stop-circle" : "mic"} size={24} color="white" />
+          </Pressable>
+
+          <TextField className="flex-1 bg-surface rounded-full px-4 max-h-[100px] border-0">
+            <Input
+              placeholder="Habla o escribe aquí..."
+              value={inputText}
+              onChangeText={setInputText}
+              multiline
+              maxLength={500}
+              className="py-2 text-[15px]"
+            />
+          </TextField>
+
+          <Pressable
+            className={`w-11 h-11 rounded-full justify-center items-center ${(!inputText.trim() || loading) ? 'bg-muted' : 'bg-primary'}`}
+            onPress={() => sendMessage()}
+            disabled={!inputText.trim() || loading}
+          >
+            <Ionicons name="send" size={20} color="white" />
+          </Pressable>
+        </View>
+      </KeyboardAvoidingView>
+
+      <Modal visible={showVoiceModal} animationType="slide" transparent>
+        <View className="flex-1 bg-black/50 justify-end">
+          <View className="bg-card rounded-t-[24px] p-5 max-h-[80%]">
+            <View className="flex-row justify-between items-center mb-4">
+              <View>
+                <Label className="text-lg font-bold text-foreground">Elige la Voz de Panda</Label>
+                <Label className="text-[13px] text-muted mt-0.5">10 voces oficiales estilo caricatura</Label>
+              </View>
+              <Pressable onPress={() => setShowVoiceModal(false)} className="p-1">
+                <Ionicons name="close" size={26} color={primary} />
+              </Pressable>
+            </View>
+
+            <ScrollView className="mb-2">
+              {VOICE_OPTIONS.map((v) => (
+                <Pressable
+                  key={v.id}
+                  className={`flex-row items-center p-3.5 rounded-2xl mb-2.5 ${selectedVoice === v.id ? 'bg-[#F3E8FF] border border-[#8E44AD]' : 'bg-surface'}`}
+                  onPress={() => {
+                    setSelectedVoice(v.id);
+                    setShowVoiceModal(false);
+                  }}
+                >
+                  <View className={`w-10 h-10 rounded-full justify-center items-center mr-3 ${selectedVoice === v.id ? 'bg-[#8E44AD]' : 'bg-[#F3E8FF]'}`}>
+                    <Ionicons name={v.icon as any} size={22} color={selectedVoice === v.id ? 'white' : '#8E44AD'} />
+                  </View>
+                  <View className="flex-1">
+                    <Label className={`text-[15px] font-bold ${selectedVoice === v.id ? 'text-[#8E44AD]' : 'text-foreground'}`}>{v.name}</Label>
+                    <Label className="text-xs text-muted mt-0.5">{v.desc}</Label>
+                  </View>
+                  {selectedVoice === v.id && <Ionicons name="checkmark-circle" size={24} color="#8E44AD" />}
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F5F7FA' },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 50,
-    paddingBottom: 16,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-  },
-  backButton: { padding: 4 },
-  headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#2C3E50', flex: 1, textAlign: 'center' },
-  messagesContainer: { flex: 1, paddingHorizontal: 16 },
-  messagesContent: { paddingVertical: 16 },
-  messageRow: { flexDirection: 'row', alignItems: 'flex-end', marginBottom: 12 },
-  userRow: { justifyContent: 'flex-end' },
-  botRow: { justifyContent: 'flex-start' },
-  avatar: { width: 36, height: 36, borderRadius: 18, marginRight: 8, backgroundColor: '#F0F0F0' },
-  messageBubble: { maxWidth: '75%', padding: 12, borderRadius: 16 },
-  userBubble: { backgroundColor: '#4A90D9' },
-  botBubble: { backgroundColor: 'white', borderWidth: 1, borderColor: '#E0E0E0' },
-  userText: { color: 'white', fontSize: 16 },
-  botText: { color: '#2C3E50', fontSize: 16 },
-  timestamp: { fontSize: 10, color: '#999', marginTop: 4, alignSelf: 'flex-end' },
-  inputContainer: {
-    flexDirection: 'row',
-    padding: 12,
-    backgroundColor: 'white',
-    borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
-    alignItems: 'center',
-    gap: 10,
-  },
-  input: {
-    flex: 1,
-    backgroundColor: '#F5F7FA',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    fontSize: 16,
-    maxHeight: 100,
-  },
-  sendButton: { backgroundColor: '#4A90D9', width: 48, height: 48, borderRadius: 24, justifyContent: 'center', alignItems: 'center' },
-  sendButtonDisabled: { backgroundColor: '#CCC' },
-});

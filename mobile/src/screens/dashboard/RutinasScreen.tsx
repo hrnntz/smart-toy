@@ -1,19 +1,17 @@
 import React, { useState, useCallback } from 'react';
 import {
   View,
-  Text,
-  StyleSheet,
   ScrollView,
-  TouchableOpacity,
   Alert,
   RefreshControl,
-  ActivityIndicator,
+  Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { rutinaService } from '../../services/api';
-import { storage } from '../../services/storage';
 import { sendNotification } from '../../services/notificationService';
+import { Card, Button, Label, Spinner, useThemeColor } from 'heroui-native';
+import { IconButton } from '../../components/ui/IconButton';
 
 interface Rutina {
   id: number;
@@ -29,16 +27,20 @@ export default function RutinasScreen({ navigation }: any) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  const [primary, success, danger, muted] = useThemeColor([
+    'accent',
+    'success',
+    'danger',
+    'muted',
+  ]);
+
   const loadRutinas = async () => {
     try {
-      console.log('📦 Cargando rutinas...');
       const response = await rutinaService.getAll();
-      console.log('✅ Respuesta:', response.data);
       if (response.data.success) {
         setRutinas(response.data.data || []);
       }
     } catch (error: any) {
-      console.error('❌ Error loading rutinas:', error);
       Alert.alert('Error', 'No se pudieron cargar las rutinas');
     } finally {
       setLoading(false);
@@ -58,7 +60,6 @@ export default function RutinasScreen({ navigation }: any) {
   }, []);
 
   const deleteRutina = (id: number, nombre: string) => {
-    console.log('🔴 Eliminar rutina:', nombre, 'ID:', id);
     Alert.alert(
       'Eliminar rutina',
       `¿Estás seguro que quieres eliminar "${nombre}"?`,
@@ -69,14 +70,10 @@ export default function RutinasScreen({ navigation }: any) {
           style: 'destructive',
           onPress: async () => {
             try {
-              console.log('🗑️ Eliminando ID:', id);
               const response = await rutinaService.delete(id);
-              console.log('✅ Respuesta:', response.data);
-              
               if (response.data.success) {
                 Alert.alert('Éxito', 'Rutina eliminada correctamente');
                 await loadRutinas();
-                // Notificar eliminación
                 await sendNotification(
                   'Rutina eliminada',
                   `Se ha eliminado la rutina "${nombre}"`
@@ -85,7 +82,6 @@ export default function RutinasScreen({ navigation }: any) {
                 Alert.alert('Error', response.data.message || 'No se pudo eliminar');
               }
             } catch (error: any) {
-              console.error('❌ Error:', error);
               Alert.alert('Error', 'No se pudo eliminar la rutina');
             }
           },
@@ -105,209 +101,83 @@ export default function RutinasScreen({ navigation }: any) {
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#4A90D9" />
+      <View className="flex-1 justify-center items-center bg-background">
+        <Spinner size="lg" color="primary" />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={28} color="#2C3E50" />
-        </TouchableOpacity>
-        <Text style={styles.title}>Rutinas</Text>
-        <TouchableOpacity
-          style={styles.addButton}
+    <View className="flex-1 bg-background px-4 pt-12">
+      <View className="flex-row justify-between items-center mb-4">
+        <IconButton icon="arrow-back" onPress={() => navigation.goBack()} />
+        <Label className="text-2xl font-extrabold text-foreground">Rutinas del Niño</Label>
+        <IconButton
+          icon="add"
+          variant="solid"
+          color={primary}
           onPress={() => navigation.navigate('RutinaForm')}
-        >
-          <Ionicons name="add" size={28} color="white" />
-        </TouchableOpacity>
+        />
       </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={primary} />
         }
       >
-        <Text style={styles.subtitle}>Diarias</Text>
+        <Label className="text-sm font-semibold text-muted mb-4">Diarias & Programadas</Label>
 
         {rutinas.length === 0 ? (
-          <View style={styles.empty}>
-            <Ionicons name="calendar-outline" size={64} color="#ccc" />
-            <Text style={styles.emptyText}>No tienes rutinas creadas</Text>
-            <TouchableOpacity
-              style={styles.emptyButton}
+          <View className="items-center mt-16">
+            <Ionicons name="calendar-outline" size={64} color={muted} />
+            <Label className="text-base font-bold text-foreground mt-4 mb-4">No tienes rutinas creadas</Label>
+            <Button
+              variant="primary"
               onPress={() => navigation.navigate('RutinaForm')}
             >
-              <Text style={styles.emptyButtonText}>Agregar rutina</Text>
-            </TouchableOpacity>
+              <Button.Label>Agregar rutina</Button.Label>
+            </Button>
           </View>
         ) : (
           rutinas.map((rutina) => (
-            <View key={rutina.id} style={styles.card}>
-              <View style={styles.cardContent}>
-                <View style={styles.cardIcon}>
-                  <Ionicons name="time-outline" size={24} color="#4A90D9" />
+            <Card key={rutina.id} variant="default" className="mb-3">
+              <Card.Body className="flex-row items-center justify-between py-4">
+                <View className="flex-row items-center flex-1">
+                  <View className="w-11 h-11 rounded-full bg-primary/15 justify-center items-center mr-3">
+                    <Ionicons name="time-outline" size={24} color={primary} />
+                  </View>
+                  <View className="flex-1">
+                    <Label className="text-base font-bold text-foreground">{rutina.nombre}</Label>
+                    <Label className="text-sm text-muted mt-0.5">
+                      🕐 {formatHora(rutina.hora)}
+                      {rutina.repetir && ' 🔁 Diario'}
+                    </Label>
+                    {rutina.mensaje && (
+                      <Label className="text-sm text-success font-medium mt-0.5">💬 {rutina.mensaje}</Label>
+                    )}
+                  </View>
                 </View>
-                <View style={styles.cardInfo}>
-                  <Text style={styles.cardName}>{rutina.nombre}</Text>
-                  <Text style={styles.cardTime}>
-                    🕐 {formatHora(rutina.hora)}
-                    {rutina.repetir && ' 🔁 Diario'}
-                  </Text>
-                  {rutina.mensaje && (
-                    <Text style={styles.cardMessage}>💬 {rutina.mensaje}</Text>
-                  )}
+                <View className="flex-row gap-2">
+                  <Pressable
+                    onPress={() => navigation.navigate('RutinaForm', { rutina })}
+                    className="p-1.5"
+                  >
+                    <Ionicons name="pencil" size={20} color={primary} />
+                  </Pressable>
+                  <Pressable
+                    onPress={() => deleteRutina(rutina.id, rutina.nombre)}
+                    className="p-1.5"
+                  >
+                    <Ionicons name="trash" size={20} color={danger} />
+                  </Pressable>
                 </View>
-              </View>
-              <View style={styles.cardActions}>
-                <TouchableOpacity
-                  onPress={() => navigation.navigate('RutinaForm', { rutina })}
-                  style={styles.actionButton}
-                >
-                  <Ionicons name="pencil" size={20} color="#3498DB" />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => {
-                    console.log('🟢 Botón eliminar presionado para:', rutina.nombre);
-                    deleteRutina(rutina.id, rutina.nombre);
-                  }}
-                  style={styles.actionButton}
-                >
-                  <Ionicons name="trash" size={20} color="#E74C3C" />
-                </TouchableOpacity>
-              </View>
-            </View>
+              </Card.Body>
+            </Card>
           ))
         )}
-        <View style={{ height: 20 }} />
+        <View className="h-5" />
       </ScrollView>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F5F7FA',
-    paddingHorizontal: 16,
-    paddingTop: 40,
-  },
-  center: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F5F7FA',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  backButton: {
-    padding: 4,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#2C3E50',
-    flex: 1,
-    textAlign: 'center',
-  },
-  addButton: {
-    backgroundColor: '#4A90D9',
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-  },
-  subtitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#7F8C8D',
-    marginBottom: 12,
-    marginTop: 8,
-  },
-  empty: {
-    alignItems: 'center',
-    marginTop: 60,
-  },
-  emptyText: {
-    fontSize: 16,
-    color: '#999',
-    marginTop: 16,
-  },
-  emptyButton: {
-    marginTop: 20,
-    backgroundColor: '#4A90D9',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 10,
-  },
-  emptyButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  card: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  cardContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  cardIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#EBF5FB',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  cardInfo: {
-    flex: 1,
-  },
-  cardName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2C3E50',
-  },
-  cardTime: {
-    fontSize: 13,
-    color: '#7F8C8D',
-    marginTop: 2,
-  },
-  cardMessage: {
-    fontSize: 13,
-    color: '#27AE60',
-    marginTop: 2,
-  },
-  cardActions: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  actionButton: {
-    padding: 8,
-  },
-});

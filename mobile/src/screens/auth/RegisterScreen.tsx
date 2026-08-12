@@ -1,31 +1,43 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  ActivityIndicator,
-} from 'react-native';
+import { View, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import {
+  Button,
+  Input,
+  Label,
+  TextField,
+  useThemeColor,
+} from 'heroui-native';
 import api from '../../services/api';
 import CustomAlert from '../../components/common/CustomAlert';
 
-export default function RegisterScreen({ navigation }: any) {
+interface RegisterScreenProps {
+  onAuthSuccess?: () => void;
+  navigation?: any;
+}
+
+export default function RegisterScreen({ onAuthSuccess, navigation }: RegisterScreenProps) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Estado para el Alert personalizado
   const [alertVisible, setAlertVisible] = useState(false);
   const [alertTitle, setAlertTitle] = useState('');
   const [alertMessage, setAlertMessage] = useState('');
+  const [alertType, setAlertType] = useState<'info' | 'error' | 'success'>('error');
 
-  const showAlert = (title: string, message: string) => {
+  const muted = useThemeColor('muted');
+
+  const showAlert = (
+    title: string,
+    message: string,
+    type: 'info' | 'error' | 'success' = 'error'
+  ) => {
     setAlertTitle(title);
     setAlertMessage(message);
+    setAlertType(type);
     setAlertVisible(true);
   };
 
@@ -46,36 +58,23 @@ export default function RegisterScreen({ navigation }: any) {
       const response = await api.post('/auth/register', { name, email, password });
 
       if (response.data.success) {
-        showAlert('Éxito', 'Usuario registrado correctamente');
+        showAlert('Éxito', 'Usuario registrado correctamente', 'success');
         setTimeout(() => {
-          navigation.navigate('Login');
+          if (navigation) {
+            navigation.navigate('Login');
+          } else {
+            showAlert('Aviso', 'Por favor inicia sesión con tu nueva cuenta', 'info');
+          }
         }, 1500);
       } else {
         showAlert('Error', response.data.message || 'Error al registrar');
       }
     } catch (error: any) {
-      console.log('❌ Error capturado:', error);
-      
       let message = 'Error al conectar con el servidor';
-      
-      if (error && error.response) {
-        const status = error.response.status;
-        
-        if (status === 409) {
-          message = '❌ Este email ya está registrado. Por favor, usa otro email.';
-        } else if (status === 400) {
-          message = error.response.data?.message || '❌ Datos inválidos. Revisa los campos.';
-        } else if (status === 500) {
-          message = '❌ Error interno del servidor. Intenta más tarde.';
-        } else {
-          message = error.response.data?.message || 'Error al registrar usuario.';
-        }
-      } else if (error && error.request) {
-        message = '❌ No se pudo conectar con el servidor. ¿Está el backend corriendo?';
-      } else {
-        message = error?.message || 'Error desconocido';
-      }
-      
+      if (error?.response?.status === 409)
+        message = 'Este email ya está registrado. Por favor, usa otro email.';
+      else if (error?.response?.status === 400)
+        message = 'Datos inválidos. Revisa los campos.';
       showAlert('Error al registrar', message);
     } finally {
       setLoading(false);
@@ -83,120 +82,91 @@ export default function RegisterScreen({ navigation }: any) {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Crear Cuenta</Text>
+    <View className="pb-5">
+      {/* Título */}
+      <Label className="text-2xl font-bold text-center text-foreground mb-5">
+        Crear Cuenta
+      </Label>
 
-      <TextInput
-        style={styles.input}
-        placeholder="Nombre"
-        value={name}
-        onChangeText={setName}
-      />
-
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-        autoCapitalize="none"
-        keyboardType="email-address"
-      />
-
-      <View style={styles.passwordContainer}>
-        <TextInput
-          style={styles.passwordInput}
-          placeholder="Contraseña"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry={!showPassword}
-        />
-        <TouchableOpacity
-          style={styles.eyeButton}
-          onPress={() => setShowPassword(!showPassword)}
-        >
-          <Ionicons
-            name={showPassword ? 'eye-off' : 'eye'}
-            size={24}
-            color="#7F8C8D"
+      <View className="w-full gap-1">
+        {/* Campo Nombre */}
+        <TextField className="w-full">
+          <Input
+            placeholder="Nombre"
+            value={name}
+            onChangeText={setName}
+            autoCapitalize="words"
           />
-        </TouchableOpacity>
+        </TextField>
+
+        {/* Campo Email */}
+        <TextField className="w-full">
+          <Input
+            placeholder="Email"
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
+          />
+        </TextField>
+
+        {/* Campo Contraseña */}
+        <TextField className="w-full">
+          <View className="w-full flex-row items-center">
+            <Input
+              placeholder="Contraseña (mín. 6 caracteres)"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+              className="flex-1 pr-12"
+            />
+            <Pressable
+              className="absolute right-4 z-10"
+              onPress={() => setShowPassword(!showPassword)}
+              hitSlop={8}
+            >
+              <Ionicons
+                name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                size={20}
+                color={muted}
+              />
+            </Pressable>
+          </View>
+        </TextField>
+
+        {/* Botón principal */}
+        <Button
+          variant="primary"
+          isDisabled={loading}
+          onPress={handleRegister}
+          className="w-full mt-4"
+        >
+          {loading ? (
+            <Button.Label>Creando cuenta...</Button.Label>
+          ) : (
+            <Button.Label>Registrarse</Button.Label>
+          )}
+        </Button>
+
+        {/* Link a login */}
+        {!onAuthSuccess && (
+          <Button
+            variant="ghost"
+            onPress={() => navigation?.navigate('Login')}
+            className="w-full"
+          >
+            <Button.Label>¿Ya tienes cuenta? Inicia sesión</Button.Label>
+          </Button>
+        )}
       </View>
-
-      <TouchableOpacity style={styles.button} onPress={handleRegister} disabled={loading}>
-        {loading ? <ActivityIndicator color="white" /> : <Text style={styles.buttonText}>Registrarse</Text>}
-      </TouchableOpacity>
-
-      <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-        <Text style={styles.link}>¿Ya tienes cuenta? Inicia sesión</Text>
-      </TouchableOpacity>
 
       <CustomAlert
         visible={alertVisible}
         title={alertTitle}
         message={alertMessage}
+        type={alertType}
         onClose={() => setAlertVisible(false)}
       />
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    padding: 20,
-    backgroundColor: '#f5f5f5',
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 30,
-    color: '#2c3e50',
-  },
-  input: {
-    backgroundColor: 'white',
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 15,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    fontSize: 16,
-  },
-  passwordContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'white',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    marginBottom: 15,
-  },
-  passwordInput: {
-    flex: 1,
-    padding: 15,
-    fontSize: 16,
-  },
-  eyeButton: {
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-  },
-  button: {
-    backgroundColor: '#2ecc71',
-    padding: 15,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  buttonText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  link: {
-    color: '#3498db',
-    textAlign: 'center',
-    marginTop: 20,
-    fontSize: 16,
-  },
-});
