@@ -1,4 +1,4 @@
-﻿# .github/workflows/security.yml
+# .github/workflows/security.yml
 # Strix AI Security Scan -- corre en cada Pull Request hacia main
 # Complementa el CI existente (ci.yml) con un gate de seguridad automatizado.
 #
@@ -9,11 +9,17 @@
 name: Security Scan (Strix)
 
 on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/security.yml'
   pull_request:
     branches: [ main ]
     paths:
       - 'backend/**'
       - '.github/workflows/security.yml'
+  workflow_dispatch: # Permite ejecutar el scan manualmente desde el panel de GitHub Actions
 
 concurrency:
   group: security-${{ github.ref }}
@@ -45,8 +51,24 @@ jobs:
           STRIX_LLM: ${{ secrets.STRIX_LLM }}
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
         run: |
-          DIFF_BASE="origin/${{ github.base_ref }}"
-          echo "Iniciando scan de seguridad diff-scoped..."
+          # Determinar la base de diff según el tipo de evento
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            DIFF_BASE="origin/${{ github.base_ref }}"
+          elif [ "${{ github.event_name }}" = "push" ]; then
+            DIFF_BASE="${{ github.event.before }}"
+            # Si el commit previo está vacío (e.g. nueva rama), usar HEAD~1
+            if [ "$DIFF_BASE" = "0000000000000000000000000000000000000000" ] || [ -z "$DIFF_BASE" ]; then
+              DIFF_BASE="HEAD~1"
+            fi
+          else
+            # Para ejecuciones manuales (workflow_dispatch), comparamos contra HEAD~1
+            DIFF_BASE="HEAD~1"
+          fi
+
+          echo "🔍 Iniciando scan de seguridad diff-scoped..."
+          echo "🌿 Tipo de evento: ${{ github.event_name }}"
+          echo "🌿 Base de comparación (diff-base): $DIFF_BASE"
+
           strix -n \
             -t ./backend \
             --scan-mode quick \
