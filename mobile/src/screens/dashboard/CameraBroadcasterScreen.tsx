@@ -9,15 +9,20 @@ import { Ionicons } from '@expo/vector-icons';
 import { API_URL } from '../../config/env';
 import io, { Socket } from 'socket.io-client';
 import { Label, Button, useThemeColor } from 'heroui-native';
+import { useUser } from '../../hooks/useUser';
+import { storage } from '../../services/storage';
 
 export default function CameraBroadcasterScreen({ navigation }: any) {
   const [permission, requestPermission] = useCameraPermissions();
   const [facing, setFacing] = useState<'front' | 'back'>('back');
   const [isBroadcasting, setIsBroadcasting] = useState(false);
-  const [roomId] = useState('PANDA_01');
+  const { user } = useUser();
   const cameraRef = useRef<any>(null);
   const socketRef = useRef<Socket | null>(null);
   const intervalRef = useRef<any>(null);
+
+  // Generar roomId dinámico a partir del ID del usuario autenticado
+  const roomId = user ? `${user.id}_PANDA_01` : 'PANDA_01';
 
   const [primary, background, foreground, muted, danger, success] = useThemeColor([
     'accent',
@@ -29,22 +34,44 @@ export default function CameraBroadcasterScreen({ navigation }: any) {
   ]);
 
   useEffect(() => {
-    // Conectar a la Nube Socket.io
-    const socketServerUrl = API_URL.replace(/\/api\/?$/, '');
-    const socket = io(socketServerUrl, { transports: ['websocket'] });
+    if (!user) return;
 
-    socket.on('connect', () => {
-      console.log('📹 Transmisor de cámara conectado a Socket.io:', socket.id);
-      socket.emit('camera:join_stream', roomId);
-    });
+    let socket: Socket;
 
-    socketRef.current = socket;
+    const connectSocket = async () => {
+      try {
+        const token = await storage.getItem('token');
+        const socketServerUrl = API_URL.replace(/\/api\/?$/, '');
+        socket = io(socketServerUrl, {
+          transports: ['websocket'],
+          auth: { token }, // VULN-003 fix: Enviar token en handshake
+        });
+
+        socket.on('connect', () => {
+          console.log('📹 Transmisor de cámara conectado a Socket.io:', socket.id);
+          socket.emit('camera:join_stream', roomId);
+        });
+
+        socket.on('connect_error', (err) => {
+          console.error('Socket connection error:', err);
+          Alert.alert('Error de Conexión', 'No se pudo autenticar la conexión de la cámara.');
+        });
+
+        socketRef.current = socket;
+      } catch (err) {
+        console.error('Error al iniciar socket:', err);
+      }
+    };
+
+    connectSocket();
 
     return () => {
       stopStreaming();
-      socket.disconnect();
+      if (socket) {
+        socket.disconnect();
+      }
     };
-  }, []);
+  }, [user, roomId]);
 
   const startStreaming = () => {
     setIsBroadcasting(true);
