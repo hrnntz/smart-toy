@@ -3,6 +3,7 @@
 ![Status](https://img.shields.io/badge/Status-En_Desarrollo-orange)
 ![Mobile](https://img.shields.io/badge/Mobile-React_Native_Expo-blue)
 ![Backend](https://img.shields.io/badge/Backend-Node.js_Express-green)
+![Security](https://img.shields.io/badge/Security-Strix_AI_Scan-red)
 ![AI](https://img.shields.io/badge/AI-Groq_ElevenLabs-purple)
 
 PandaAI es una plataforma móvil y backend inteligente diseñada para el acompañamiento interactivo de niños mediante juguetes conectados. Ofrece gestión de rutinas, interacción por voz impulsada por IA, supervisión remota por cámara en tiempo real, minijuegos educativos con dificultad adaptativa, e historias generadas dinámicamente.
@@ -42,13 +43,16 @@ PandaAI es una plataforma móvil y backend inteligente diseñada para el acompa�
 
 ### 📱 Mobile (App Padres)
 *   **Framework:** React Native + Expo (SDK 54).
+*   **Compilación:** Aplicación independiente compilada nativamente como APK usando Gradle (no depende de Expo Go para ejecutarse en producción).
+*   **UI Framework:** **HeroUI Native** (`heroui-native`) con TailwindCSS y Uniwind.
 *   **Navegación:** React Navigation 7.
 *   **Multimedia:** `expo-camera`, `expo-av`, Socket.io-client.
 *   **Almacenamiento:** Axios, AsyncStorage, Expo Secure Store.
 
-### 🚀 Infraestructura y DevOps
+### 🚀 Infraestructura, DevOps y Seguridad
 *   **Contenedores:** Docker (Dockerfile multi-stage) y Docker Compose para despliegue unificado (PostgreSQL + Backend).
 *   **CI/CD:** GitHub Actions para validación estática de tipos (TypeScript) en cada PR.
+*   **🛡️ Auditoría de Seguridad:** Flujo de validación automático (GitHub Actions) con **Strix AI Pentest** que analiza código base, escanea vulnerabilidades (OWASP Top 10, IDOR, JWT issues) y provee protección diff-scoped en cada Pull Request.
 
 ---
 
@@ -61,12 +65,14 @@ smart-toy/
 │   ├── Dockerfile            # Construcción optimizada del servidor
 │   └── package.json
 ├── mobile/                   # App Expo para Padres
-│   ├── src/                  # Componentes, Pantallas, Navegación
-│   ├── android/              # Build nativo de Android
+│   ├── src/                  # Componentes (HeroUI), Pantallas, Navegación
+│   ├── android/              # Configuración y build nativo de Android (Gradle)
 │   └── package.json
 ├── design/                   # Prototipos y assets (Figma)
 ├── docker-compose.yml        # Orquestación de contenedores
-└── .github/workflows/ci.yml  # Pipelines de integración continua
+└── .github/workflows/        # Pipelines de CI/CD
+    ├── ci.yml                # Validaciones de tipos y build
+    └── security.yml          # Strix AI Security Scan
 ```
 
 ---
@@ -89,12 +95,18 @@ npm install
 npm run dev
 ```
 
-### 2. Iniciar la App Mobile (Expo)
+### 2. Iniciar la App Mobile (Expo / Build Nativo)
 ```bash
 cd mobile
 npm install
 # Configura mobile/.env con EXPO_PUBLIC_API_URL=http://<TU_IP_LOCAL>:3000/api
+
+# Iniciar servidor de desarrollo:
 npx expo start -c
+
+# Para compilar el APK para Android vía Gradle:
+cd android
+./gradlew assembleRelease
 ```
 
 ---
@@ -109,7 +121,8 @@ npx expo start -c
 - [x] Minijuegos Educativos y Feedback IA
 - [x] Generador de Música e Historias
 - [x] Entorno Docker y CI/CD GitHub Actions
-- [x] Compilación inicial de APK (Android)
+- [x] Escaneo de Seguridad Automático (Strix AI)
+- [x] Compilación nativa de APK (Android vía Gradle)
 
 *Para más detalles sobre futuras integraciones, consulta los reportes internos (PENDIENTES.md).*
 
