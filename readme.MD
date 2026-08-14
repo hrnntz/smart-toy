@@ -1,172 +1,119 @@
-# 🐼 Smart Toy / PandaAI — Plataforma para Padres
+# 🐼 Smart Toy (PandaAI) — Plataforma Interactiva para Padres y Niños
 
-Plataforma móvil y backend inteligente de acompañamiento para niños mediante juguetes conectados (**PandaAI**): gestión de rutinas, interacción por voz con IA (Groq + ElevenLabs), supervisión remota por cámara en vivo en la nube (4G/5G/Wi-Fi), minijuegos educativos con dificultad adaptativa e historias con IA.
+![Status](https://img.shields.io/badge/Status-En_Desarrollo-orange)
+![Mobile](https://img.shields.io/badge/Mobile-React_Native_Expo-blue)
+![Backend](https://img.shields.io/badge/Backend-Node.js_Express-green)
+![AI](https://img.shields.io/badge/AI-Groq_ElevenLabs-purple)
 
----
-
-## 📱 Funcionalidades Principales
-
-- 👨‍👩‍👧‍👦 **Plataforma para Padres:** Panel de control para gestionar juguetes, monitorear actividad, configurar perfiles de niños y controlar la experiencia del juguete.
-- 🎙️ **"Hablar con Panda" (Voz en Tiempo Real):**
-  - **Reconocimiento de Voz (STT):** Transcripción de voz mediante **Groq Whisper** (`whisper-large-v3`).
-  - **Memoria de Conversación:** Groq LLM (`llama-3.1-8b-instant`) recuerda los últimos 15 mensajes del historial guardados en PostgreSQL.
-  - **Voz de Panda con IA (TTS):** Síntesis de voz ultrarrealista de personaje infantil usando **ElevenLabs API**.
-- 📹 **Supervisión por Cámara en Vivo en la Nube:**
-  - **Modo Visor (App del Padre):** Monitoreo remoto en tiempo real accesible desde cualquier lugar con 4G/5G o Wi-Fi, visión nocturna, audio y captura de foto.
-  - **Modo Transmisor (Teléfono Cámara / Juguete):** Emisión continua de video con `expo-camera` y WebSockets (Socket.io Cloud Relay).
-- 🎮 **Minijuegos Educativos con IA Groq:**
-  - **10 Preguntas por Sesión:** Retos dinámicos adaptados al nivel y juego (Lógica, Matemáticas, Lectura, Memoria).
-  - **Selector de Dificultad:** Niveles **Fácil**, **Medio** y **Difícil**.
-  - **Explicaciones Educativas en Fallos:** Si el niño se equivoca, la app destaca la respuesta correcta y despliega una tarjeta explicativa amigable redactada por la IA.
-- 🎵 **Música & Nanas Generadas con IA:**
-  - Generador de música ambiental para dormir mediante prompts (*"Canción de cuna suave con piano y lluvia"*).
-  - Reproductor interactivo estilo Spotify/Apple Music con controles de play, pausa, reanudación y favoritos.
-- 📖 **Cuentos e Historias con IA:** Generación de cuentos ilustrados por IA con imágenes temáticas.
-- ⏰ **Gestión de Rutinas:** Recordatorios configurables para dormir, cepillarse los dientes o estudiar.
+PandaAI es una plataforma móvil y backend inteligente diseñada para el acompañamiento interactivo de niños mediante juguetes conectados. Ofrece gestión de rutinas, interacción por voz impulsada por IA, supervisión remota por cámara en tiempo real, minijuegos educativos con dificultad adaptativa, e historias generadas dinámicamente.
 
 ---
 
-## 🛠️ Stack Técnico
+## ✨ Funcionalidades Principales
 
-### Backend
-- **Core:** Node.js + TypeScript + Express.
-- **Base de Datos:** TypeORM + PostgreSQL (soporte para migraciones CLI y `synchronize` dinámico).
-- **IA Conversacional & Voice:** Groq SDK (`llama-3.1-8b-instant`, `whisper-large-v3`) + ElevenLabs API (TTS).
-- **WebSockets:** Socket.io (streaming de cámara en la nube y eventos en tiempo real).
-- **Validación & Seguridad:** Middleware de validación con **Zod**, JWT y Helmet.
+*   **📱 Panel Parental Integral:** Aplicación para gestionar múltiples juguetes, monitorear la actividad, configurar perfiles infantiles y adaptar la experiencia del juguete.
+*   **🎙️ Interacción de Voz en Tiempo Real ("Hablar con Panda"):**
+    *   **STT (Speech-to-Text):** Transcripción rápida y precisa con **Groq Whisper** (`whisper-large-v3`).
+    *   **Cerebro IA:** Motor conversacional con memoria contextual apoyado en **Groq LLM** (`llama-3.1-8b-instant`), manteniendo un historial fluido.
+    *   **TTS (Text-to-Speech):** Síntesis de voz natural y expresiva utilizando **ElevenLabs API** para dar vida al personaje.
+*   **📹 Supervisión Remota de Video en Vivo:**
+    *   Acceso desde la nube (4G/5G/Wi-Fi) a través de un sistema de retransmisión con WebSockets (Socket.io).
+    *   Modo emisor desde el juguete/dispositivo y modo visor seguro para los padres.
+*   **🎮 Juegos Educativos Adaptativos:**
+    *   Sesiones de 10 preguntas dinámicas (Lógica, Matemáticas, Lectura, Memoria).
+    *   Niveles ajustables (Fácil, Medio, Difícil).
+    *   Feedback inteligente: explicaciones amigables redactadas por la IA cuando el niño comete un error.
+*   **🎵 Música y Nanas Generativas:**
+    *   Creación de música ambiental mediante prompts (ej. "Música suave de lluvia").
+    *   Reproductor interactivo con interfaz estilo Spotify.
+*   **📖 Historias y Cuentos IA:** Cuentos ilustrados generados de manera única por IA.
+*   **⏰ Rutinas y Recordatorios:** Alarmas personalizables para crear hábitos (dormir, estudiar, lavarse los dientes).
 
-### Mobile
-- **Core:** React Native + Expo (SDK 54).
-- **Cámara & Multimedia:** `expo-camera`, `expo-av` para audio, `socket.io-client`.
-- **Navegación:** React Navigation 7.
-- **Almacenamiento:** Axios, `@react-native-async-storage/async-storage`, Expo Secure Store.
+---
 
-### Infraestructura & DevOps
-- **Dockerization:** `Dockerfile` multi-stage optimizado para backend Node.js.
-- **Docker Compose:** [`docker-compose.yml`](./docker-compose.yml) para orquestar PostgreSQL 16 + Backend con un solo comando.
-- **Pipeline CI/CD:** GitHub Actions workflow ([`.github/workflows/ci.yml`](./.github/workflows/ci.yml)) con comprobación automática de tipos TypeScript en cada PR/Push.
-- **Compilación Mobile:** Proceso local de Release APK con Gradle (`gradlew assembleRelease`).
+## 🛠️ Stack Tecnológico
+
+### ⚙️ Backend
+*   **Core:** Node.js, TypeScript, Express.
+*   **Base de Datos:** PostgreSQL con **TypeORM** (soporte para migraciones y sincronización).
+*   **IA & Voz:** Groq SDK y ElevenLabs API.
+*   **Tiempo Real:** Socket.io para streaming de cámara y estado en vivo.
+*   **Seguridad y Validación:** Zod, JWT, Helmet.
+
+### 📱 Mobile (App Padres)
+*   **Framework:** React Native + Expo (SDK 54).
+*   **Navegación:** React Navigation 7.
+*   **Multimedia:** `expo-camera`, `expo-av`, Socket.io-client.
+*   **Almacenamiento:** Axios, AsyncStorage, Expo Secure Store.
+
+### 🚀 Infraestructura y DevOps
+*   **Contenedores:** Docker (Dockerfile multi-stage) y Docker Compose para despliegue unificado (PostgreSQL + Backend).
+*   **CI/CD:** GitHub Actions para validación estática de tipos (TypeScript) en cada PR.
 
 ---
 
 ## 📂 Estructura del Proyecto
 
-```
+```text
 smart-toy/
-├── backend/                  # API REST & WebSockets (Node + TypeScript + TypeORM)
-│   ├── src/
-│   │   ├── controllers/      # Controladores (Auth, Toy, Game, Music, Config, etc.)
-│   │   ├── middleware/       # Auth JWT y Validación con Zod
-│   │   ├── models/           # Entidades TypeORM (User, Child, Toy, Message, etc.)
-│   │   ├── routes/           # Rutas API Express
-│   │   ├── services/         # aiService (Groq), elevenlabsService, socket
-│   │   └── socket.ts         # Servidor de WebSockets (Cámara & Status)
-│   └── Dockerfile            # Dockerfile multi-stage para backend
-├── mobile/                   # App React Native para Padres (Expo SDK 54)
-│   ├── android/              # Configuración nativa de Android y Gradle wrapper
-│   └── src/
-│       ├── navigation/       # RootNavigator y TabNavigator
-│       ├── screens/          # Todas las pantallas rediseñadas para padres
-│       │   ├── dashboard/    # Home, Supervision, CameraBroadcaster, Juegos, Chat, Musica, etc.
-│       │   └── auth/         # Login, Register, AuthLoading
-│       └── services/         # API Service, audioService, notificationService
-├── .github/workflows/ci.yml  # Pipeline de CI/CD GitHub Actions
-├── docker-compose.yml        # Orquestador Docker (PostgreSQL + Backend)
-├── PENDIENTES.md             # Estado de avances y roadmap del proyecto
-└── Tree.md                   # Estructura completa de archivos
+├── backend/                  # API REST & WebSockets
+│   ├── src/                  # Controladores, Servicios, Modelos TypeORM
+│   ├── Dockerfile            # Construcción optimizada del servidor
+│   └── package.json
+├── mobile/                   # App Expo para Padres
+│   ├── src/                  # Componentes, Pantallas, Navegación
+│   ├── android/              # Build nativo de Android
+│   └── package.json
+├── design/                   # Prototipos y assets (Figma)
+├── docker-compose.yml        # Orquestación de contenedores
+└── .github/workflows/ci.yml  # Pipelines de integración continua
 ```
 
 ---
 
-## 🚀 Desarrollo Local
+## 💻 Desarrollo Local y Ejecución
 
-### 1. Backend
-
-```bash
-cd backend
-npm install
-```
-
-Crea `backend/.env`:
-```env
-PORT=3000
-NODE_ENV=development
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=smart_toy
-DB_USER=postgres
-DB_PASSWORD=postgrespassword
-JWT_SECRET=super_secret_jwt_key
-GROQ_API_KEY=tu_groq_api_key
-ELEVENLABS_API_KEY=tu_elevenlabs_api_key
-ELEVENLABS_VOICE_ID=21m00Tcm4TlvDq8ikWAM
-```
-
-Iniciar servidor local:
-```bash
-npm run dev
-```
-
-### 2. Levantamiento con Docker Compose (Recomendado)
+### 1. Iniciar el Backend (con Docker - Recomendado)
+La forma más rápida de levantar la base de datos y la API es utilizando Docker Compose:
 
 ```bash
 docker compose up -d --build
 ```
-Levanta PostgreSQL 16 y el Backend en contenedores aislados.
+> Esto iniciará un contenedor de PostgreSQL (puerto 5432) y la API de Node.js (puerto 3000).
 
-### 3. Mobile (React Native / Expo)
+*Alternativa Manual (Sin Docker):*
+```bash
+cd backend
+npm install
+# Crea un archivo .env basado en las variables requeridas (DB_*, GROQ_API_KEY, ELEVENLABS_API_KEY, etc.)
+npm run dev
+```
 
+### 2. Iniciar la App Mobile (Expo)
 ```bash
 cd mobile
 npm install
-```
-
-Crea `mobile/.env`:
-```env
-EXPO_PUBLIC_API_URL=http://tu_ip_local:3000/api
-```
-
-Iniciar Expo:
-```bash
+# Configura mobile/.env con EXPO_PUBLIC_API_URL=http://<TU_IP_LOCAL>:3000/api
 npx expo start -c
 ```
 
 ---
 
-## 📦 Estado Actual del Proyecto
+## 📦 Estado de Desarrollo
 
-| Funcionalidad | Estado |
-|---|---|
-| Autenticación de Padres (JWT + Zod) | ✅ Completado |
-| Gestión de Niños y Juguetes | ✅ Completado |
-| Chat con IA + Memoria de Contexto (Groq LLM) | ✅ Completado |
-| "Hablar con Panda" (STT Groq Whisper + ElevenLabs TTS) | ✅ Completado |
-| Supervisión por Cámara en Vivo en la Nube (4G/5G/Wi-Fi) | ✅ Completado |
-| Modo Transmisor de Cámara (`expo-camera` + Socket.io) | ✅ Completado |
-| Minijuegos IA (10 Preguntas + Dificultad + Explicación en Error) | ✅ Completado |
-| Música & Nanas IA por Prompt + Player Spotify Style | ✅ Completado |
-| Historias Infantiles Ilustradas con IA | ✅ Completado |
-| Rutinas y Recordatorios Diarios | ✅ Completado |
-| Rediseño Global de UI (Todas las Pantallas de Padres) | ✅ Completado |
-| Dockerization + Docker Compose | ✅ Completado |
-| GitHub Actions CI/CD Pipeline | ✅ Completado |
-| Compilación de APK Release de Android | ✅ APK Generado (~74.5 MB) |
+- [x] Autenticación de Padres (JWT + Zod)
+- [x] Gestión de Niños y Juguetes
+- [x] Chat Inteligente con Memoria (Groq)
+- [x] Interfaz de Voz en Tiempo Real (STT + TTS)
+- [x] Supervisión por Cámara en Vivo (Socket.io)
+- [x] Minijuegos Educativos y Feedback IA
+- [x] Generador de Música e Historias
+- [x] Entorno Docker y CI/CD GitHub Actions
+- [x] Compilación inicial de APK (Android)
 
-Ver [`PENDIENTES.md`](./PENDIENTES.md) para el roadmap detallado.
-
-## 🔒 Notas
-
-Este es un proyecto en construcción, sin publicar en tiendas de apps. La API pública en Render está en su tier gratuito, por lo que puede tardar unos segundos en responder tras periodos de inactividad (cold start).
+*Para más detalles sobre futuras integraciones, consulta los reportes internos (PENDIENTES.md).*
 
 ---
 
-## 📱 Binario APK Compilado
-
-El instalador ejecutable para dispositivos Android se encuentra disponible en la siguiente ruta del repositorio:
-`mobile/android/app/build/outputs/apk/release/app-release.apk`
-
----
-
-## 🔒 Notas del Proyecto
-
-Desarrollado como proyecto avanzado para el acompañamiento interactivo y supervisión parental de juguetes inteligentes — Universidad de Córdoba.
+## 🎓 Notas Académicas
+Desarrollado como proyecto avanzado para la exploración de acompañamiento interactivo y supervisión parental de juguetes inteligentes — **Universidad de Córdoba**. El servicio actual en la nube utiliza tiers gratuitos (Render) y puede presentar "cold starts" iniciales.
