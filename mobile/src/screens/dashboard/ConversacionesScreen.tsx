@@ -2,13 +2,12 @@ import React, { useState, useCallback } from 'react';
 import {
   View,
   ScrollView,
-  Image,
   Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { toyService } from '../../services/api';
-import { Card, Label, Spinner, useThemeColor } from 'heroui-native';
+import { Avatar, Button, Card, Label, Spinner, useThemeColor } from 'heroui-native';
 import { IconButton } from '../../components/ui/IconButton';
 
 interface Toy {
@@ -23,11 +22,12 @@ export default function ConversacionesScreen({ navigation }: any) {
   const [toys, setToys] = useState<Toy[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [primary, muted, success, danger] = useThemeColor([
+  const [accent, muted, success, danger, surfaceSecondary] = useThemeColor([
     'accent',
     'muted',
     'success',
     'danger',
+    'surface-secondary',
   ]);
 
   useFocusEffect(
@@ -64,47 +64,99 @@ export default function ConversacionesScreen({ navigation }: any) {
   }
 
   return (
-    <View className="flex-1 bg-background px-4 pt-12">
-      <View className="flex-row items-center mb-5">
-        <IconButton icon="arrow-back" onPress={() => navigation.goBack()} />
-        <View className="flex-1 ml-2">
+    <View className="flex-1 bg-background">
+      {/* ── Header ── */}
+      <View className="flex-row items-center gap-2 px-4 pt-14 pb-5">
+        <View className="flex-1">
           <Label className="text-2xl font-extrabold text-foreground">Conversaciones</Label>
-          <Label className="text-[13px] text-muted mt-0.5">Supervisión de chats del juguete</Label>
+          <Label className="text-sm text-muted mt-0.5">Selecciona con quién hablar</Label>
         </View>
+        <Pressable
+          className="w-10 h-10 rounded-full bg-accent/12 items-center justify-center"
+          onPress={() => navigation.navigate('ToyList')}
+        >
+          <Ionicons name="add" size={22} color={accent} />
+        </Pressable>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false} className="flex-1 px-4">
         {toys.length === 0 ? (
-          <View className="items-center mt-16">
-            <Ionicons name="chatbubbles-outline" size={64} color={muted} />
-            <Label className="text-base font-bold text-foreground mt-4">No hay juguetes vinculados para chatear</Label>
-            <Label className="text-[13px] text-muted mt-1">Registra un juguete desde "Mis Juguetes"</Label>
+          <View className="items-center mt-20">
+            <View className="w-24 h-24 rounded-full bg-surface-secondary items-center justify-center mb-5">
+              <Ionicons name="chatbubbles-outline" size={48} color={muted} />
+            </View>
+            <Label className="text-lg font-bold text-foreground mb-2">
+              Sin juguetes vinculados
+            </Label>
+            <Label className="text-sm text-muted text-center px-8 mb-6">
+              Registra tu juguete Panda para comenzar a chatear con IA.
+            </Label>
+            <Button
+              variant="primary"
+              feedbackVariant="scale-ripple"
+              onPress={() => navigation.navigate('ToyList')}
+            >
+              <Button.Label>Agregar juguete</Button.Label>
+            </Button>
           </View>
         ) : (
-          toys.map((toy) => (
-            <Card key={toy.id} variant="default" className="mb-3">
-              <Pressable className="flex-row items-center p-4" onPress={() => openChat(toy)}>
-                <Image
-                  source={{ uri: toy.avatarUrl || 'https://image.pollinations.ai/prompt/cute%20panda%20toy?width=100&height=100' }}
-                  className="w-13 h-13 rounded-full mr-3.5"
-                />
-                <View className="flex-1">
-                  <Label className="text-base font-bold text-foreground">{toy.name}</Label>
-                  <Label className="text-xs text-muted mt-0.5">🔑 S/N: {toy.serialNumber}</Label>
-                  <Label
-                    className={`text-xs font-semibold mt-1 ${toy.isConnected ? 'text-success' : 'text-danger'}`}
-                  >
-                    {toy.isConnected ? '🟢 En línea • Listo para hablar' : '🔴 Desconectado'}
-                  </Label>
-                </View>
-                <View className="w-11 h-11 rounded-full bg-primary/15 justify-center items-center">
-                  <Ionicons name="chatbubble-ellipses" size={22} color={primary} />
-                </View>
+          <>
+            {toys.map((toy) => (
+              <Pressable key={toy.id} onPress={() => openChat(toy)}>
+                <Card variant="default" className="mb-3">
+                  <Card.Body>
+                    <View className="flex-row items-center gap-3.5">
+                      {/* Avatar */}
+                      <Avatar size="lg" color={toy.isConnected ? 'success' : 'default'}>
+                        {toy.avatarUrl ? (
+                          <Avatar.Image
+                            source={{ uri: toy.avatarUrl }}
+                          />
+                        ) : null}
+                        <Avatar.Fallback>
+                          <Label className="text-lg font-bold text-foreground">
+                            {toy.name.charAt(0).toUpperCase()}
+                          </Label>
+                        </Avatar.Fallback>
+                      </Avatar>
+
+                      {/* Info */}
+                      <View className="flex-1">
+                        <Label className="text-base font-bold text-foreground">
+                          {toy.name}
+                        </Label>
+                        <Label className="text-xs text-muted mt-0.5">
+                          S/N: {toy.serialNumber}
+                        </Label>
+                        <View className="flex-row items-center gap-1.5 mt-1">
+                          <View
+                            className="w-2 h-2 rounded-full"
+                            style={{ backgroundColor: toy.isConnected ? success : danger }}
+                          />
+                          <Label
+                            className="text-xs font-semibold"
+                            style={{ color: toy.isConnected ? success : danger } as any}
+                          >
+                            {toy.isConnected ? 'En línea · Listo para hablar' : 'Desconectado'}
+                          </Label>
+                        </View>
+                      </View>
+
+                      {/* Chat Action */}
+                      <View
+                        className="w-11 h-11 rounded-full items-center justify-center"
+                        style={{ backgroundColor: accent + '18' }}
+                      >
+                        <Ionicons name="chatbubble-ellipses" size={20} color={accent} />
+                      </View>
+                    </View>
+                  </Card.Body>
+                </Card>
               </Pressable>
-            </Card>
-          ))
+            ))}
+          </>
         )}
-        <View className="h-5" />
+        <View className="h-8" />
       </ScrollView>
     </View>
   );

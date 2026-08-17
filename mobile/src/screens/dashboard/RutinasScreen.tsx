@@ -1,15 +1,8 @@
 import React, { useState, useCallback } from 'react';
-import {
-  View,
-  ScrollView,
-  Alert,
-  RefreshControl,
-  Pressable,
-} from 'react-native';
+import { View, ScrollView, Alert, RefreshControl, Pressable, Switch as RNSwitch, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { rutinaService } from '../../services/api';
-import { sendNotification } from '../../services/notificationService';
 import { Card, Button, Label, Spinner, useThemeColor } from 'heroui-native';
 import { IconButton } from '../../components/ui/IconButton';
 
@@ -19,75 +12,46 @@ interface Rutina {
   hora: string;
   repetir: boolean;
   mensaje: string | null;
-  createdAt: string;
+  isActive: boolean;
 }
 
 export default function RutinasScreen({ navigation }: any) {
   const [rutinas, setRutinas] = useState<Rutina[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-
-  const [primary, success, danger, muted] = useThemeColor([
-    'accent',
-    'success',
-    'danger',
-    'muted',
+  const [accent, muted, success, danger, surface, foreground, background] = useThemeColor([
+    'accent', 'muted', 'success', 'danger', 'surface', 'foreground', 'background'
   ]);
 
   const loadRutinas = async () => {
     try {
-      const response = await rutinaService.getAll();
-      if (response.data.success) {
-        setRutinas(response.data.data || []);
-      }
-    } catch (error: any) {
-      Alert.alert('Error', 'No se pudieron cargar las rutinas');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
+      const res = await rutinaService.getAll();
+      if (res.data.success) setRutinas(res.data.data || []);
+    } catch (error) { console.error(error); }
+    finally { setLoading(false); setRefreshing(false); }
   };
 
-  useFocusEffect(
-    useCallback(() => {
-      loadRutinas();
-    }, [])
-  );
+  useFocusEffect(useCallback(() => { loadRutinas(); }, []));
 
-  const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    loadRutinas();
-  }, []);
+  const toggleRutina = async (id: number, currentActive: boolean) => {
+    try {
+      const res = await rutinaService.update(id, { isActive: !currentActive } as any);
+      if (res.data.success) {
+        setRutinas(rutinas.map(r => r.id === id ? { ...r, isActive: !currentActive } : r));
+      }
+    } catch (error) { Alert.alert('Error', 'No se pudo cambiar el estado'); }
+  };
 
   const deleteRutina = (id: number, nombre: string) => {
-    Alert.alert(
-      'Eliminar rutina',
-      `¿Estás seguro que quieres eliminar "${nombre}"?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const response = await rutinaService.delete(id);
-              if (response.data.success) {
-                Alert.alert('Éxito', 'Rutina eliminada correctamente');
-                await loadRutinas();
-                await sendNotification(
-                  'Rutina eliminada',
-                  `Se ha eliminado la rutina "${nombre}"`
-                );
-              } else {
-                Alert.alert('Error', response.data.message || 'No se pudo eliminar');
-              }
-            } catch (error: any) {
-              Alert.alert('Error', 'No se pudo eliminar la rutina');
-            }
-          },
-        },
-      ]
-    );
+    Alert.alert('Eliminar rutina', `¿Eliminar "${nombre}"?`, [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Eliminar', style: 'destructive', onPress: async () => {
+        try {
+          await rutinaService.delete(id);
+          loadRutinas();
+        } catch (error) { Alert.alert('Error', 'No se pudo eliminar'); }
+      }},
+    ]);
   };
 
   const formatHora = (hora: string) => {
@@ -107,76 +71,107 @@ export default function RutinasScreen({ navigation }: any) {
     );
   }
 
+  const activeCount = rutinas.filter(r => r.isActive).length;
+  const repeatCount = rutinas.filter(r => r.repetir).length;
+
   return (
-    <View className="flex-1 bg-background px-4 pt-12">
-      <View className="flex-row justify-between items-center mb-4">
-        <IconButton icon="arrow-back" onPress={() => navigation.goBack()} />
-        <Label className="text-2xl font-extrabold text-foreground">Rutinas del Niño</Label>
-        <IconButton
-          icon="add"
-          variant="solid"
-          color={primary}
+    <View className="flex-1 bg-[#0D0F16] px-4 pt-12">
+      <View className="flex-row justify-between items-center mb-6">
+        <View className="flex-1">
+          <Label className="text-2xl font-extrabold text-white">Rutinas</Label>
+          <Label className="text-sm text-muted mt-1">Recordatorios diarios de Panda</Label>
+        </View>
+        <Pressable
+          className="w-12 h-12 rounded-full items-center justify-center"
+          style={{ backgroundColor: accent }}
           onPress={() => navigation.navigate('RutinaForm')}
-        />
+        >
+          <Ionicons name="add" size={24} color="white" />
+        </Pressable>
       </View>
+
+      <Card variant="default" className="mb-6 rounded-3xl bg-surface border-0">
+        <Card.Body className="flex-row py-4 px-2">
+          <View className="flex-1 items-center border-r border-white/10">
+            <Label className="text-2xl font-bold" style={{ color: '#6366F1' } as any}>{rutinas.length}</Label>
+            <Label className="text-xs text-muted mt-1">Total</Label>
+          </View>
+          <View className="flex-1 items-center border-r border-white/10">
+            <Label className="text-2xl font-bold" style={{ color: accent } as any}>{activeCount}</Label>
+            <Label className="text-xs text-muted mt-1">Activas</Label>
+          </View>
+          <View className="flex-1 items-center">
+            <Label className="text-2xl font-bold" style={{ color: '#6366F1' } as any}>{repeatCount}</Label>
+            <Label className="text-xs text-muted mt-1">Diarias</Label>
+          </View>
+        </Card.Body>
+      </Card>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={primary} />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadRutinas(); }} tintColor={accent} />}
       >
-        <Label className="text-sm font-semibold text-muted mb-4">Diarias & Programadas</Label>
-
         {rutinas.length === 0 ? (
-          <View className="items-center mt-16">
-            <Ionicons name="calendar-outline" size={64} color={muted} />
-            <Label className="text-base font-bold text-foreground mt-4 mb-4">No tienes rutinas creadas</Label>
-            <Button
-              variant="primary"
-              onPress={() => navigation.navigate('RutinaForm')}
-            >
-              <Button.Label>Agregar rutina</Button.Label>
+          <View className="items-center mt-16 px-6">
+            <Ionicons name="alarm-outline" size={64} color="#6366F1" />
+            <Label className="text-lg font-bold text-white mt-4 text-center">No hay rutinas</Label>
+            <Label className="text-sm text-muted mt-2 text-center mb-6">Configura recordatorios para que Panda ayude a tu hijo durante el día.</Label>
+            <Button variant="primary" feedbackVariant="scale-ripple" onPress={() => navigation.navigate('RutinaForm')}>
+              <Button.Label>Crear primera rutina</Button.Label>
             </Button>
           </View>
         ) : (
           rutinas.map((rutina) => (
-            <Card key={rutina.id} variant="default" className="mb-3">
-              <Card.Body className="flex-row items-center justify-between py-4">
-                <View className="flex-row items-center flex-1">
-                  <View className="w-11 h-11 rounded-full bg-primary/15 justify-center items-center mr-3">
-                    <Ionicons name="time-outline" size={24} color={primary} />
+            <Card key={rutina.id} variant="default" className="mb-3 rounded-[24px] bg-surface border-0">
+              <Card.Body className="p-4">
+                <View className="flex-row items-center">
+                  <View className="w-12 h-12 rounded-2xl justify-center items-center mr-4" style={{ backgroundColor: 'rgba(99, 102, 241, 0.15)' }}>
+                    <Ionicons name="time" size={24} color="#6366F1" />
                   </View>
+                  
                   <View className="flex-1">
-                    <Label className="text-base font-bold text-foreground">{rutina.nombre}</Label>
-                    <Label className="text-sm text-muted mt-0.5">
-                      🕐 {formatHora(rutina.hora)}
-                      {rutina.repetir && ' 🔁 Diario'}
-                    </Label>
-                    {rutina.mensaje && (
-                      <Label className="text-sm text-success font-medium mt-0.5">💬 {rutina.mensaje}</Label>
-                    )}
+                    <Label className="text-base font-bold text-white mb-0.5">{rutina.nombre}</Label>
+                    <View className="flex-row items-center gap-2">
+                      <Label className="text-2xl font-extrabold" style={{ color: accent } as any}>{formatHora(rutina.hora)}</Label>
+                      {rutina.repetir && (
+                        <View className="px-2 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(99, 102, 241, 0.15)' }}>
+                          <Label className="text-[10px] font-bold" style={{ color: '#6366F1' } as any}>Repetir diario</Label>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                  
+                  <View className="items-end justify-between h-full py-1">
+                    <RNSwitch
+                      trackColor={{ false: muted as any, true: '#6366F1' }}
+                      thumbColor="#FFFFFF"
+                      ios_backgroundColor={muted}
+                      onValueChange={() => toggleRutina(rutina.id, rutina.isActive)}
+                      value={rutina.isActive}
+                      style={{ marginBottom: 8 }}
+                    />
+                    <View className="flex-row gap-3">
+                      <Pressable onPress={() => navigation.navigate('RutinaForm', { rutina })}>
+                        <Ionicons name="pencil" size={18} color={accent} />
+                      </Pressable>
+                      <Pressable onPress={() => deleteRutina(rutina.id, rutina.nombre)}>
+                        <Ionicons name="trash" size={18} color={danger} />
+                      </Pressable>
+                    </View>
                   </View>
                 </View>
-                <View className="flex-row gap-2">
-                  <Pressable
-                    onPress={() => navigation.navigate('RutinaForm', { rutina })}
-                    className="p-1.5"
-                  >
-                    <Ionicons name="pencil" size={20} color={primary} />
-                  </Pressable>
-                  <Pressable
-                    onPress={() => deleteRutina(rutina.id, rutina.nombre)}
-                    className="p-1.5"
-                  >
-                    <Ionicons name="trash" size={20} color={danger} />
-                  </Pressable>
-                </View>
+
+                {rutina.mensaje && (
+                  <View className="mt-3 flex-row items-center gap-2 bg-white/5 rounded-xl px-3 py-2">
+                    <Ionicons name="chatbubble-ellipses" size={14} color={muted} />
+                    <Text className="text-xs text-muted flex-1" numberOfLines={1} style={{ color: muted }}>{rutina.mensaje}</Text>
+                  </View>
+                )}
               </Card.Body>
             </Card>
           ))
         )}
-        <View className="h-5" />
+        <View className="h-10" />
       </ScrollView>
     </View>
   );

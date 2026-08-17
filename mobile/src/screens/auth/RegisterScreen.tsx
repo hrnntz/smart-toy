@@ -6,6 +6,7 @@ import {
   Input,
   Label,
   TextField,
+  Spinner,
   useThemeColor,
 } from 'heroui-native';
 import api from '../../services/api';
@@ -28,7 +29,7 @@ export default function RegisterScreen({ onAuthSuccess, navigation }: RegisterSc
   const [alertMessage, setAlertMessage] = useState('');
   const [alertType, setAlertType] = useState<'info' | 'error' | 'success'>('error');
 
-  const muted = useThemeColor('muted');
+  const [accent, muted] = useThemeColor(['accent', 'muted']);
 
   const showAlert = (
     title: string,
@@ -58,7 +59,7 @@ export default function RegisterScreen({ onAuthSuccess, navigation }: RegisterSc
       const response = await api.post('/auth/register', { name, email, password });
 
       if (response.data.success) {
-        showAlert('Éxito', 'Usuario registrado correctamente', 'success');
+        showAlert('¡Listo!', 'Cuenta creada correctamente. Bienvenido a PandaAI 🐼', 'success');
         setTimeout(() => {
           if (navigation) {
             navigation.navigate('Login');
@@ -83,26 +84,30 @@ export default function RegisterScreen({ onAuthSuccess, navigation }: RegisterSc
 
   return (
     <View className="pb-5">
-      {/* Título */}
-      <Label className="text-2xl font-bold text-center text-foreground mb-5">
-        Crear Cuenta
-      </Label>
+      {/* ── Title ── */}
+      <View className="items-center mb-6">
+        <View className="w-16 h-16 rounded-3xl bg-accent/12 items-center justify-center mb-3">
+          <Ionicons name="person-add-outline" size={30} color={accent} />
+        </View>
+        <Label className="text-2xl font-extrabold text-foreground">Crear Cuenta</Label>
+        <Label className="text-sm text-muted mt-0.5">Únete a la familia PandaAI</Label>
+      </View>
 
-      <View className="w-full gap-1">
-        {/* Campo Nombre */}
+      <View className="w-full gap-2.5">
+        {/* Name */}
         <TextField className="w-full">
           <Input
-            placeholder="Nombre"
+            placeholder="Nombre completo"
             value={name}
             onChangeText={setName}
             autoCapitalize="words"
           />
         </TextField>
 
-        {/* Campo Email */}
+        {/* Email */}
         <TextField className="w-full">
           <Input
-            placeholder="Email"
+            placeholder="Correo electrónico"
             value={email}
             onChangeText={setEmail}
             autoCapitalize="none"
@@ -110,7 +115,7 @@ export default function RegisterScreen({ onAuthSuccess, navigation }: RegisterSc
           />
         </TextField>
 
-        {/* Campo Contraseña */}
+        {/* Password */}
         <TextField className="w-full">
           <View className="w-full flex-row items-center">
             <Input
@@ -134,24 +139,30 @@ export default function RegisterScreen({ onAuthSuccess, navigation }: RegisterSc
           </View>
         </TextField>
 
-        {/* Botón principal */}
+        {/* Terms note */}
+        <Label className="text-xs text-muted text-center px-4 mb-1">
+          Al registrarte aceptas nuestros términos de uso y política de privacidad.
+        </Label>
+
+        {/* Register Button */}
         <Button
           variant="primary"
           isDisabled={loading}
           onPress={handleRegister}
-          className="w-full mt-4"
+          feedbackVariant="scale-ripple"
+          className="w-full"
         >
           {loading ? (
-            <Button.Label>Creando cuenta...</Button.Label>
+            <Spinner size="sm" color="default" />
           ) : (
-            <Button.Label>Registrarse</Button.Label>
+            <Button.Label>Crear cuenta 🐼</Button.Label>
           )}
         </Button>
 
-        {/* Link a login */}
+        {/* Login Link */}
         {!onAuthSuccess && (
           <Button
-            variant="ghost"
+            variant="tertiary"
             onPress={() => navigation?.navigate('Login')}
             className="w-full"
           >

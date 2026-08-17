@@ -27,15 +27,17 @@ export default function PerfilScreen({ navigation, route }: any) {
     personality: 'Amigable y divertido',
   });
 
-  const [primary, danger, surface, background] = useThemeColor([
+  const [accent, danger, muted, surfaceSecondary] = useThemeColor([
     'accent',
     'danger',
-    'surface',
-    'background',
+    'muted',
+    'surface-secondary',
   ]);
 
   useEffect(() => {
     if (child) {
+      setLoading(false);
+    } else {
       setLoading(false);
     }
   }, [child]);
@@ -76,125 +78,238 @@ export default function PerfilScreen({ navigation, route }: any) {
   }
 
   return (
-    <ScrollView className="flex-1 bg-background px-4 pt-12" showsVerticalScrollIndicator={false}>
-      <View className="flex-row justify-between items-center mb-5">
+    <ScrollView
+      className="flex-1 bg-background"
+      showsVerticalScrollIndicator={false}
+    >
+      {/* ── Header ── */}
+      <View className="flex-row items-center gap-2 px-4 pt-14 pb-5">
         <IconButton icon="arrow-back" onPress={() => navigation.goBack()} />
-        <Label className="text-2xl font-extrabold text-foreground">Editar Perfil</Label>
+        <Label className="flex-1 text-2xl font-extrabold text-foreground text-center">
+          {isEditing ? 'Editar Perfil' : 'Nuevo Perfil'}
+        </Label>
         <View className="w-10" />
       </View>
 
-      <Card variant="default" className="p-5 mb-5 border-0 shadow-sm">
-        <Card.Body className="p-0">
-          <Label className="text-sm font-semibold text-foreground mb-1.5">Nombre *</Label>
-          <TextField className="w-full mb-4">
-            <Input
-              value={formData.name}
-              onChangeText={(text) => setFormData({ ...formData, name: text })}
-              placeholder="Nombre del niño"
-            />
-          </TextField>
-
-          <Label className="text-sm font-semibold text-foreground mb-1.5">Fecha de nacimiento</Label>
-          <TextField className="w-full mb-4">
-            <Input
-              value={formData.birthDate}
-              onChangeText={(text) => setFormData({ ...formData, birthDate: text })}
-              placeholder="YYYY-MM-DD (ej: 2020-05-15)"
-            />
-          </TextField>
-
-          <Label className="text-sm font-semibold text-foreground mb-1.5">Idioma</Label>
-          <TextField className="w-full mb-4">
-            <Input
-              value={formData.language}
-              onChangeText={(text) => setFormData({ ...formData, language: text })}
-              placeholder="Idioma"
-            />
-          </TextField>
-
-          <Label className="text-sm font-semibold text-foreground mb-1.5">Hora de dormir</Label>
-          <TextField className="w-full mb-4">
-            <Input
-              value={formData.bedtime}
-              onChangeText={(text) => setFormData({ ...formData, bedtime: text })}
-              placeholder="Ej: 08:30 PM"
-            />
-          </TextField>
-
-          <Label className="text-sm font-semibold text-foreground mb-1.5">Nivel de energía</Label>
-          <View className="flex-row flex-wrap gap-2 mb-4">
-            {['Baja', 'Media', 'Alta'].map((level) => (
-              <Pressable
-                key={level}
-                className="px-4 py-2 rounded-full border-2"
-                style={{
-                  backgroundColor: formData.energyLevel === level ? 'rgba(74, 144, 217, 0.1)' : surface,
-                  borderColor: formData.energyLevel === level ? primary : 'transparent'
-                }}
-                onPress={() => setFormData({ ...formData, energyLevel: level })}
+      <View className="px-4">
+        {/* ── Banner ── */}
+        <Card variant="default" className="mb-5">
+          <Card.Body>
+            <View className="items-center py-3">
+              <View
+                className="w-20 h-20 rounded-full items-center justify-center mb-3"
+                style={{ backgroundColor: accent + '18' }}
               >
-                <Label className={`text-sm ${formData.energyLevel === level ? 'text-primary font-bold' : 'text-foreground'}`}>
-                  {level}
+                <Label className="text-4xl">
+                  {formData.name ? formData.name.charAt(0).toUpperCase() : '👶'}
                 </Label>
-              </Pressable>
-            ))}
-          </View>
+              </View>
+              <Label className="text-lg font-bold text-foreground">
+                {formData.name || 'Nuevo perfil'}
+              </Label>
+              <Label className="text-xs text-muted mt-0.5">
+                Perfil de niño · PandaAI
+              </Label>
+            </View>
+          </Card.Body>
+        </Card>
 
-          <Label className="text-sm font-semibold text-foreground mb-1.5">Personalidad de Panda</Label>
-          <View className="flex-row flex-wrap gap-2 mb-6">
-            {['Amigable y divertido', 'Tranquilo', 'Educativo'].map((type) => (
-              <Pressable
-                key={type}
-                className="px-4 py-2 rounded-full border-2"
-                style={{
-                  backgroundColor: formData.personality === type ? 'rgba(74, 144, 217, 0.1)' : surface,
-                  borderColor: formData.personality === type ? primary : 'transparent'
-                }}
-                onPress={() => setFormData({ ...formData, personality: type })}
-              >
-                <Label className={`text-sm ${formData.personality === type ? 'text-primary font-bold' : 'text-foreground'}`}>
-                  {type}
+        {/* ── Sección: Identidad ── */}
+        <Label className="text-xs font-bold text-muted uppercase tracking-wider mb-2 ml-1">
+          Identidad
+        </Label>
+        <Card variant="default" className="mb-4">
+          <Card.Body>
+            <View className="gap-4">
+              <View>
+                <Label className="text-sm font-semibold text-foreground mb-1.5">
+                  Nombre del niño *
                 </Label>
-              </Pressable>
-            ))}
-          </View>
+                <TextField className="w-full">
+                  <Input
+                    value={formData.name}
+                    onChangeText={(text) => setFormData({ ...formData, name: text })}
+                    placeholder="Nombre del niño"
+                    autoCapitalize="words"
+                  />
+                </TextField>
+              </View>
 
-          <Button
-            variant="primary"
-            onPress={handleSave}
-            isDisabled={saving}
-            className="w-full"
-          >
-            {saving ? <Spinner size="sm" color="default" /> : <Button.Label>Guardar perfil</Button.Label>}
-          </Button>
+              <View>
+                <Label className="text-sm font-semibold text-foreground mb-1.5">
+                  Fecha de nacimiento
+                </Label>
+                <TextField className="w-full">
+                  <Input
+                    value={formData.birthDate}
+                    onChangeText={(text) => setFormData({ ...formData, birthDate: text })}
+                    placeholder="YYYY-MM-DD (ej: 2020-05-15)"
+                    keyboardType="numeric"
+                  />
+                </TextField>
+              </View>
 
+              <View>
+                <Label className="text-sm font-semibold text-foreground mb-1.5">
+                  Idioma
+                </Label>
+                <TextField className="w-full">
+                  <Input
+                    value={formData.language}
+                    onChangeText={(text) => setFormData({ ...formData, language: text })}
+                    placeholder="Idioma"
+                  />
+                </TextField>
+              </View>
+
+              <View>
+                <Label className="text-sm font-semibold text-foreground mb-1.5">
+                  Hora de dormir
+                </Label>
+                <TextField className="w-full">
+                  <Input
+                    value={formData.bedtime}
+                    onChangeText={(text) => setFormData({ ...formData, bedtime: text })}
+                    placeholder="Ej: 08:30 PM"
+                  />
+                </TextField>
+              </View>
+            </View>
+          </Card.Body>
+        </Card>
+
+        {/* ── Sección: Nivel de Energía ── */}
+        <Label className="text-xs font-bold text-muted uppercase tracking-wider mb-2 ml-1">
+          Nivel de Energía
+        </Label>
+        <Card variant="default" className="mb-4">
+          <Card.Body>
+            <View className="flex-row gap-2">
+              {['Baja', 'Media', 'Alta'].map((level) => {
+                const isActive = formData.energyLevel === level;
+                const levelColors: Record<string, string> = {
+                  'Baja': '#10B981',
+                  'Media': '#F59E0B',
+                  'Alta': '#EF4444',
+                };
+                const c = levelColors[level];
+                return (
+                  <Pressable
+                    key={level}
+                    className="flex-1 py-3 rounded-2xl items-center"
+                    style={{
+                      backgroundColor: isActive ? c + '18' : surfaceSecondary,
+                      borderWidth: isActive ? 1.5 : 0,
+                      borderColor: isActive ? c : 'transparent',
+                    }}
+                    onPress={() => setFormData({ ...formData, energyLevel: level })}
+                  >
+                    <Label
+                      className="text-sm font-bold"
+                      style={{ color: isActive ? c : muted } as any}
+                    >
+                      {level}
+                    </Label>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </Card.Body>
+        </Card>
+
+        {/* ── Sección: Personalidad ── */}
+        <Label className="text-xs font-bold text-muted uppercase tracking-wider mb-2 ml-1">
+          Personalidad de Panda
+        </Label>
+        <Card variant="default" className="mb-5">
+          <Card.Body>
+            <View className="gap-2">
+              {['Amigable y divertido', 'Tranquilo', 'Educativo'].map((type) => {
+                const isActive = formData.personality === type;
+                return (
+                  <Pressable
+                    key={type}
+                    className="flex-row items-center px-4 py-3 rounded-2xl"
+                    style={{
+                      backgroundColor: isActive ? accent + '12' : surfaceSecondary,
+                      borderWidth: isActive ? 1.5 : 0,
+                      borderColor: isActive ? accent : 'transparent',
+                    }}
+                    onPress={() => setFormData({ ...formData, personality: type })}
+                  >
+                    <View
+                      className="w-6 h-6 rounded-full items-center justify-center mr-3"
+                      style={{
+                        borderWidth: isActive ? 0 : 1.5,
+                        borderColor: muted,
+                        backgroundColor: isActive ? accent : 'transparent',
+                      }}
+                    >
+                      {isActive && (
+                        <Ionicons name="checkmark" size={14} color="white" />
+                      )}
+                    </View>
+                    <Label
+                      className="text-sm font-semibold"
+                      style={{ color: isActive ? accent : undefined } as any}
+                    >
+                      {type}
+                    </Label>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </Card.Body>
+        </Card>
+
+        {/* ── Actions ── */}
+        <Button
+          variant="primary"
+          onPress={handleSave}
+          isDisabled={saving}
+          feedbackVariant="scale-ripple"
+          className="w-full mb-3"
+        >
+          {saving ? (
+            <Spinner size="sm" color="default" />
+          ) : (
+            <Button.Label>Guardar perfil</Button.Label>
+          )}
+        </Button>
+
+        {isEditing && (
           <Button
             variant="tertiary"
             onPress={() => {
-              Alert.alert('Eliminar perfil', `¿Estás seguro de eliminar a ${formData.name}?`, [
-                { text: 'Cancelar', style: 'cancel' },
-                {
-                  text: 'Eliminar',
-                  style: 'destructive',
-                  onPress: async () => {
-                    try {
-                      await childService.delete(formData.id);
-                      Alert.alert('Éxito', 'Perfil eliminado');
-                      navigation.goBack();
-                    } catch (error) {
-                      Alert.alert('Error', 'No se pudo eliminar');
-                    }
+              Alert.alert(
+                'Eliminar perfil',
+                `¿Estás seguro de eliminar a ${formData.name}?`,
+                [
+                  { text: 'Cancelar', style: 'cancel' },
+                  {
+                    text: 'Eliminar',
+                    style: 'destructive',
+                    onPress: async () => {
+                      try {
+                        await childService.delete(formData.id);
+                        Alert.alert('Éxito', 'Perfil eliminado');
+                        navigation.goBack();
+                      } catch (error) {
+                        Alert.alert('Error', 'No se pudo eliminar');
+                      }
+                    },
                   },
-                },
-              ]);
+                ]
+              );
             }}
-            className="w-full mt-3"
+            className="w-full"
           >
-            <Button.Label className="text-danger font-semibold">Eliminar perfil</Button.Label>
+            <Button.Label style={{ color: danger }}>Eliminar perfil</Button.Label>
           </Button>
-        </Card.Body>
-      </Card>
-      <View className="h-10" />
+        )}
+
+        <View className="h-10" />
+      </View>
     </ScrollView>
   );
 }

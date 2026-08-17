@@ -8,7 +8,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { storage } from '../../services/storage';
 import { gameService } from '../../services/api';
-import { Card, Button, Label, Spinner, useThemeColor } from 'heroui-native';
+import { Card, Button, Label, Spinner, Chip, useThemeColor } from 'heroui-native';
 import { IconButton } from '../../components/ui/IconButton';
 
 type Categoria = 'Todos' | 'Lógica' | 'Memoria' | 'Matemáticas' | 'Lectura';
@@ -20,6 +20,7 @@ interface Juego {
   desc: string;
   icon: string;
   categoria: Categoria;
+  color: string;
 }
 
 interface Question {
@@ -30,17 +31,23 @@ interface Question {
 }
 
 const JUEGOS: Juego[] = [
-  { id: 1, name: 'Adivinanzas', desc: 'Ejercita la mente con enigmas divertidos', icon: 'bulb-outline', categoria: 'Lógica' },
-  { id: 2, name: 'Colores & Formas', desc: 'Aprende colores y figuras', icon: 'color-palette-outline', categoria: 'Lógica' },
-  { id: 3, name: 'Sumas & Restas', desc: 'Matemáticas básicas para niños', icon: 'calculator-outline', categoria: 'Matemáticas' },
-  { id: 4, name: 'Memoria Panda', desc: 'Encuentra las parejas de cartas', icon: 'brain-outline', categoria: 'Memoria' },
-  { id: 5, name: 'Ordenar palabras', desc: 'Forma la palabra correcta', icon: 'text-outline', categoria: 'Lectura' },
-  { id: 6, name: 'Secuencias lógicas', desc: 'Encuentra el patrón', icon: 'git-compare-outline', categoria: 'Lógica' },
-  { id: 7, name: 'Multiplicaciones básicas', desc: 'Tablas simples para primaria', icon: 'stats-chart-outline', categoria: 'Matemáticas' },
-  { id: 8, name: 'Lectura comprensiva', desc: 'Comprende historias cortas', icon: 'book-outline', categoria: 'Lectura' },
+  { id: 1, name: 'Adivinanzas', desc: 'Ejercita la mente con enigmas divertidos', icon: 'bulb-outline', categoria: 'Lógica', color: '#7C3AED' },
+  { id: 2, name: 'Colores & Formas', desc: 'Aprende colores y figuras', icon: 'color-palette-outline', categoria: 'Lógica', color: '#7C3AED' },
+  { id: 3, name: 'Sumas & Restas', desc: 'Matemáticas básicas para niños', icon: 'calculator-outline', categoria: 'Matemáticas', color: '#3B82F6' },
+  { id: 4, name: 'Memoria Panda', desc: 'Encuentra las parejas de cartas', icon: 'brain-outline', categoria: 'Memoria', color: '#10B981' },
+  { id: 5, name: 'Ordenar palabras', desc: 'Forma la palabra correcta', icon: 'text-outline', categoria: 'Lectura', color: '#F59E0B' },
+  { id: 6, name: 'Secuencias lógicas', desc: 'Encuentra el patrón', icon: 'git-compare-outline', categoria: 'Lógica', color: '#7C3AED' },
+  { id: 7, name: 'Multiplicaciones básicas', desc: 'Tablas simples para primaria', icon: 'stats-chart-outline', categoria: 'Matemáticas', color: '#3B82F6' },
+  { id: 8, name: 'Lectura comprensiva', desc: 'Comprende historias cortas', icon: 'book-outline', categoria: 'Lectura', color: '#F59E0B' },
 ];
 
 const PROGRESS_KEY = 'juegos_progreso';
+
+const DIFICULTAD_CONFIG: Record<Dificultad, { color: string; emoji: string }> = {
+  'Fácil': { color: '#10B981', emoji: '🌱' },
+  'Medio': { color: '#F59E0B', emoji: '⚡' },
+  'Difícil': { color: '#EF4444', emoji: '🔥' },
+};
 
 export default function JuegosScreen({ navigation }: any) {
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<Categoria>('Todos');
@@ -48,7 +55,6 @@ export default function JuegosScreen({ navigation }: any) {
   const [progreso, setProgreso] = useState<Record<number, boolean>>({});
   const [selectedJuego, setSelectedJuego] = useState<Juego | null>(null);
 
-  // AI Game state
   const [aiQuestions, setAiQuestions] = useState<Question[]>([]);
   const [loadingQuestions, setLoadingQuestions] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -57,14 +63,15 @@ export default function JuegosScreen({ navigation }: any) {
   const [showExplanation, setShowExplanation] = useState(false);
   const [gameFinished, setGameFinished] = useState(false);
 
-  const [primary, success, danger, warning, muted, surface, text] = useThemeColor([
+  const [accent, success, danger, warning, muted, surface, foreground, surfaceSecondary] = useThemeColor([
     'accent',
     'success',
     'danger',
     'warning',
     'muted',
     'surface',
-    'foreground'
+    'foreground',
+    'surface-secondary',
   ]);
 
   const categorias: Categoria[] = ['Todos', 'Lógica', 'Memoria', 'Matemáticas', 'Lectura'];
@@ -159,188 +166,330 @@ export default function JuegosScreen({ navigation }: any) {
     : JUEGOS.filter((j) => j.categoria === categoriaSeleccionada);
 
   const currentQ = aiQuestions[currentQuestionIndex];
+  const progressPercent = aiQuestions.length > 0
+    ? ((currentQuestionIndex + 1) / aiQuestions.length) * 100
+    : 0;
+
+  const totalCompleted = Object.values(progreso).filter(Boolean).length;
 
   return (
-    <View className="flex-1 bg-background px-4 pt-12">
-      {/* Header */}
-      <View className="flex-row items-center justify-between mb-4">
+    <View className="flex-1 bg-background">
+      {/* ── Header ── */}
+      <View className="flex-row items-center justify-between px-4 pt-14 pb-4">
         <IconButton icon="arrow-back" onPress={() => navigation.goBack()} />
-        <Label className="text-xl font-extrabold text-foreground">Minijuegos con IA</Label>
-        <View className="w-10" />
-      </View>
-
-      {/* Selector de Dificultad */}
-      <View className="mb-4">
-        <Label className="text-[13px] font-bold text-muted mb-1.5">Dificultad:</Label>
-        <View className="flex-row gap-2">
-          {dificultades.map((d) => (
-            <Pressable
-              key={d}
-              className="px-4 py-2 rounded-full"
-              style={{ backgroundColor: dificultad === d ? primary : surface }}
-              onPress={() => setDificultad(d)}
-            >
-              <Label className={`text-[13px] font-semibold ${dificultad === d ? 'text-white' : 'text-foreground'}`}>
-                {d}
-              </Label>
-            </Pressable>
-          ))}
+        <Label className="text-xl font-extrabold text-foreground">Minijuegos IA</Label>
+        <View className="bg-success/15 px-3 py-1.5 rounded-full">
+          <Label className="text-xs font-bold text-success">{totalCompleted}/{JUEGOS.length} ✓</Label>
         </View>
       </View>
 
-      {/* Categorías */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-4" contentContainerStyle={{ paddingRight: 16 }}>
-        {categorias.map((cat) => (
-          <Pressable
-            key={cat}
-            className="px-3.5 py-2 rounded-full mr-2"
-            style={{ backgroundColor: categoriaSeleccionada === cat ? primary : surface }}
-            onPress={() => setCategoriaSeleccionada(cat)}
-          >
-            <Label className={`text-[13px] ${categoriaSeleccionada === cat ? 'text-white font-bold' : 'text-muted font-medium'}`}>
-              {cat}
-            </Label>
-          </Pressable>
-        ))}
-      </ScrollView>
+      {/* ── Dificultad Selector ── */}
+      <View className="px-4 mb-3">
+        <Label className="text-xs font-bold text-muted mb-2 uppercase tracking-wider">Dificultad</Label>
+        <View className="flex-row gap-2">
+          {dificultades.map((d) => {
+            const cfg = DIFICULTAD_CONFIG[d];
+            const isActive = dificultad === d;
+            return (
+              <Pressable
+                key={d}
+                className="flex-1 py-2.5 rounded-2xl items-center flex-row justify-center gap-1.5"
+                style={{
+                  backgroundColor: isActive ? cfg.color + '20' : surfaceSecondary,
+                  borderWidth: isActive ? 1.5 : 0,
+                  borderColor: isActive ? cfg.color : 'transparent',
+                }}
+                onPress={() => setDificultad(d)}
+              >
+                <Label
+                  className="text-xs font-bold"
+                  style={{ color: isActive ? cfg.color : muted } as any}
+                >
+                  {cfg.emoji} {d}
+                </Label>
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
 
-      {/* Lista de Juegos */}
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {juegosFiltrados.map((juego) => (
-          <Card key={juego.id} variant="default" className="mb-2">
-            <Pressable className="flex-row items-center p-4" onPress={() => handlePlay(juego)}>
-              <View className="w-11 h-11 rounded-full bg-primary/15 justify-center items-center mr-3">
-                <Ionicons name={juego.icon as any} size={24} color={primary} />
-              </View>
-              <View className="flex-1 mr-2">
-                <Label className="text-base font-bold text-foreground">{juego.name}</Label>
-                <Label className="text-xs text-muted mt-0.5">{juego.desc}</Label>
-              </View>
-              {progreso[juego.id] ? (
-                <Ionicons name="checkmark-circle" size={28} color={success} />
-              ) : (
-                <Ionicons name="play-circle" size={32} color={primary} />
-              )}
+      {/* ── Categorías Horizontales ── */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        className="mb-4"
+        contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}
+      >
+        {categorias.map((cat) => {
+          const isActive = categoriaSeleccionada === cat;
+          return (
+            <Pressable
+              key={cat}
+              className="px-4 py-2 rounded-full"
+              style={{
+                backgroundColor: isActive ? '#7C3AED' : surfaceSecondary,
+              }}
+              onPress={() => setCategoriaSeleccionada(cat)}
+            >
+              <Label
+                className="text-xs font-bold"
+                style={{ color: isActive ? '#FFFFFF' : muted } as any}
+              >
+                {cat}
+              </Label>
             </Pressable>
-          </Card>
-        ))}
-        <View className="h-5" />
+          );
+        })}
       </ScrollView>
 
-      {/* Modal Interactivo de Preguntas con Explicación de IA */}
+      {/* ── Lista de Juegos ── */}
+      <ScrollView showsVerticalScrollIndicator={false} className="flex-1 px-4">
+        {juegosFiltrados.map((juego) => {
+          const isCompleted = progreso[juego.id];
+          return (
+            <Pressable key={juego.id} onPress={() => handlePlay(juego)}>
+              <Card variant="default" className="mb-3">
+                <Card.Body>
+                  <View className="flex-row items-center gap-3.5">
+                    {/* Icon */}
+                    <View
+                      className="w-12 h-12 rounded-2xl justify-center items-center"
+                      style={{ backgroundColor: juego.color + '18' }}
+                    >
+                      <Ionicons name={juego.icon as any} size={24} color={juego.color} />
+                    </View>
+
+                    {/* Info */}
+                    <View className="flex-1">
+                      <Label className="text-base font-bold text-foreground">{juego.name}</Label>
+                      <Label className="text-xs text-muted mt-0.5">{juego.desc}</Label>
+                      <View className="flex-row items-center gap-1.5 mt-1.5">
+                        <View
+                          className="px-2 py-0.5 rounded-full"
+                          style={{ backgroundColor: juego.color + '18' }}
+                        >
+                          <Label className="text-[10px] font-bold" style={{ color: juego.color } as any}>
+                            {juego.categoria}
+                          </Label>
+                        </View>
+                      </View>
+                    </View>
+
+                    {/* Action */}
+                    {isCompleted ? (
+                      <View className="w-10 h-10 rounded-full bg-success/15 items-center justify-center">
+                        <Ionicons name="checkmark" size={20} color={success} />
+                      </View>
+                    ) : (
+                      <View
+                        className="w-10 h-10 rounded-full items-center justify-center"
+                        style={{ backgroundColor: juego.color + '18' }}
+                      >
+                        <Ionicons name="play" size={18} color={juego.color} />
+                      </View>
+                    )}
+                  </View>
+                </Card.Body>
+              </Card>
+            </Pressable>
+          );
+        })}
+        <View className="h-8" />
+      </ScrollView>
+
+      {/* ── Modal de Juego ── */}
       <Modal visible={selectedJuego !== null} animationType="slide" transparent>
-        <View className="flex-1 bg-black/60 justify-center p-4">
-          <View className="bg-card rounded-[24px] p-5 max-h-[85%]">
-            <View className="flex-row justify-between items-center mb-3.5">
+        <View className="flex-1 bg-black/65 justify-end">
+          <View
+            className="bg-surface rounded-t-[32px] p-5"
+            style={{ maxHeight: '88%' }}
+          >
+            {/* Modal Header */}
+            <View className="flex-row justify-between items-center mb-4">
               <View className="flex-1">
-                <Label className="text-lg font-extrabold text-foreground">{selectedJuego?.name}</Label>
-                <Label className="text-xs text-muted">Nivel {dificultad} • IA Groq</Label>
+                <Label className="text-lg font-extrabold text-foreground">
+                  {selectedJuego?.name}
+                </Label>
+                <View className="flex-row items-center gap-2 mt-0.5">
+                  <Label className="text-xs text-muted">
+                    {DIFICULTAD_CONFIG[dificultad].emoji} {dificultad}
+                  </Label>
+                  <Label className="text-xs text-muted">·</Label>
+                  <Label className="text-xs text-muted">🤖 Groq IA</Label>
+                </View>
               </View>
               <IconButton icon="close" onPress={() => setSelectedJuego(null)} />
             </View>
 
+            {/* Modal Content */}
             {loadingQuestions ? (
-              <View className="items-center py-10">
+              <View className="items-center py-12">
                 <Spinner size="lg" color="primary" />
-                <Label className="mt-4 text-sm text-center font-semibold text-primary">
-                  🤖 Groq IA está creando 10 retos ({dificultad}) con explicaciones...
+                <Label className="mt-5 text-sm text-center font-semibold text-foreground">
+                  Generando 10 preguntas con IA...
+                </Label>
+                <Label className="mt-1.5 text-xs text-center text-muted">
+                  Nivel {dificultad} · {selectedJuego?.categoria}
                 </Label>
               </View>
             ) : gameFinished ? (
-              <View className="items-center py-5">
-                <Ionicons name="trophy" size={64} color={warning} />
-                <Label className="text-[22px] font-extrabold text-foreground mt-3">¡Felicidades!</Label>
-                <Label className="text-[15px] text-muted mt-2 mb-5 text-center">
-                  Lograste {score} de {aiQuestions.length} aciertos en nivel {dificultad}
+              <View className="items-center py-8">
+                <View className="w-24 h-24 rounded-full bg-warning/15 items-center justify-center mb-4">
+                  <Ionicons name="trophy" size={48} color={warning} />
+                </View>
+                <Label className="text-2xl font-extrabold text-foreground">¡Felicidades!</Label>
+                <Label className="text-base text-muted mt-2 mb-2 text-center">
+                  Lograste {score} de {aiQuestions.length} aciertos
                 </Label>
-                <Button variant="primary" onPress={() => setSelectedJuego(null)}>
+                <View
+                  className="px-5 py-2 rounded-full mb-6"
+                  style={{
+                    backgroundColor: score >= aiQuestions.length * 0.7 ? '#10B981' + '20' : '#F59E0B' + '20',
+                  }}
+                >
+                  <Label
+                    className="text-sm font-bold"
+                    style={{
+                      color: score >= aiQuestions.length * 0.7 ? success : warning,
+                    } as any}
+                  >
+                    {score >= aiQuestions.length * 0.7 ? '⭐ ¡Excelente!' : '📚 ¡Sigue practicando!'}
+                  </Label>
+                </View>
+                <Button variant="primary" feedbackVariant="scale-ripple" onPress={() => setSelectedJuego(null)} className="w-full">
                   <Button.Label>Volver a los juegos</Button.Label>
                 </Button>
               </View>
-            ) : (
-              <ScrollView className="flex-grow">
-                <View className="h-1.5 rounded-full bg-surface mb-2.5 overflow-hidden">
+            ) : currentQ ? (
+              <ScrollView className="flex-grow" showsVerticalScrollIndicator={false}>
+                {/* Progress Bar */}
+                <View className="h-1.5 rounded-full bg-surface-secondary mb-1 overflow-hidden">
                   <View
                     className="h-full rounded-full"
                     style={{
-                      backgroundColor: primary,
-                      width: `${((currentQuestionIndex + 1) / (aiQuestions.length || 1)) * 100}%`
+                      backgroundColor: selectedJuego?.color || accent,
+                      width: `${progressPercent}%`,
                     }}
                   />
                 </View>
-                <Label className="text-xs text-muted mb-2">
-                  Pregunta {currentQuestionIndex + 1} de {aiQuestions.length}
-                </Label>
-                <Label className="text-[17px] font-bold text-foreground mb-4">
-                  {currentQ?.question}
+                <Label className="text-xs text-muted mb-4">
+                  Pregunta {currentQuestionIndex + 1} de {aiQuestions.length} · Puntos: {score}
                 </Label>
 
-                {currentQ?.options.map((option, idx) => {
-                  let isSelected = selectedAnswerIndex === idx;
-                  let isCorrect = idx === currentQ.answer;
+                {/* Question */}
+                <Label className="text-[17px] font-bold text-foreground leading-6 mb-5">
+                  {currentQ.question}
+                </Label>
 
-                  let bgColor = surface;
-                  let textColor = text;
+                {/* Options */}
+                {currentQ.options.map((option, idx) => {
+                  const isSelected = selectedAnswerIndex === idx;
+                  const isCorrect = idx === currentQ.answer;
+
+                  let bgColor = surfaceSecondary;
+                  let borderColor = 'transparent';
+                  let textColor = foreground;
 
                   if (showExplanation) {
                     if (isCorrect) {
-                      bgColor = success;
-                      textColor = '#FFFFFF';
-                    } else if (isSelected) {
-                      bgColor = danger;
-                      textColor = '#FFFFFF';
+                      bgColor = success + '20';
+                      borderColor = success;
+                      textColor = success;
+                    } else if (isSelected && !isCorrect) {
+                      bgColor = danger + '20';
+                      borderColor = danger;
+                      textColor = danger;
                     }
+                  } else if (isSelected) {
+                    bgColor = (selectedJuego?.color || accent) + '15';
+                    borderColor = selectedJuego?.color || accent;
                   }
 
                   return (
                     <Pressable
                       key={idx}
-                      className="flex-row justify-between items-center p-3.5 rounded-2xl mb-2.5"
-                      style={{ backgroundColor: bgColor }}
+                      className="flex-row items-center p-4 rounded-2xl mb-2.5"
+                      style={{
+                        backgroundColor: bgColor,
+                        borderWidth: 1.5,
+                        borderColor,
+                      }}
                       onPress={() => handleSelectOption(idx)}
                       disabled={showExplanation}
                     >
-                      <Label className={`text-[15px] ${showExplanation ? 'font-bold' : 'font-medium'} ${textColor === '#FFFFFF' ? 'text-white' : 'text-foreground'}`}>
+                      <View
+                        className="w-7 h-7 rounded-full items-center justify-center mr-3"
+                        style={{
+                          backgroundColor: showExplanation && isCorrect
+                            ? success
+                            : showExplanation && isSelected && !isCorrect
+                            ? danger
+                            : (selectedJuego?.color || accent) + '20',
+                        }}
+                      >
+                        {showExplanation && isCorrect ? (
+                          <Ionicons name="checkmark" size={16} color="white" />
+                        ) : showExplanation && isSelected && !isCorrect ? (
+                          <Ionicons name="close" size={16} color="white" />
+                        ) : (
+                          <Label
+                            className="text-xs font-extrabold"
+                            style={{ color: selectedJuego?.color || accent } as any}
+                          >
+                            {String.fromCharCode(65 + idx)}
+                          </Label>
+                        )}
+                      </View>
+                      <Label
+                        className="flex-1 text-[15px] font-semibold"
+                        style={{ color: textColor } as any}
+                      >
                         {option}
                       </Label>
-                      {showExplanation && isCorrect && <Ionicons name="checkmark-circle" size={20} color="white" />}
-                      {showExplanation && isSelected && !isCorrect && <Ionicons name="close-circle" size={20} color="white" />}
                     </Pressable>
                   );
                 })}
 
+                {/* Explanation Card */}
                 {showExplanation && (
-                  <Card variant="secondary" className="p-3.5 rounded-2xl mt-3 mb-2.5 bg-surface border-0">
-                    <Card.Body className="p-0">
-                      <View className="flex-row items-center gap-1.5 mb-1.5">
+                  <Card
+                    variant="secondary"
+                    className="mt-3 mb-4"
+                  >
+                    <Card.Body>
+                      <View className="flex-row items-center gap-2 mb-2">
                         <Ionicons
-                          name={selectedAnswerIndex === currentQ?.answer ? 'checkmark-circle' : 'alert-circle'}
-                          size={22}
-                          color={selectedAnswerIndex === currentQ?.answer ? success : danger}
+                          name={selectedAnswerIndex === currentQ.answer ? 'checkmark-circle' : 'information-circle'}
+                          size={20}
+                          color={selectedAnswerIndex === currentQ.answer ? success : warning}
                         />
                         <Label
-                          className={`text-sm font-bold ${selectedAnswerIndex === currentQ?.answer ? 'text-success' : 'text-danger'}`}
+                          className="text-sm font-bold"
+                          style={{ color: selectedAnswerIndex === currentQ.answer ? success : warning } as any}
                         >
-                          {selectedAnswerIndex === currentQ?.answer ? '¡Correcto!' : '¡Casi lo logras! Explicación:'}
+                          {selectedAnswerIndex === currentQ.answer ? '¡Correcto!' : 'Explicación:'}
                         </Label>
                       </View>
-                      <Label className="text-[13px] leading-[18px] text-foreground mb-3">
-                        {currentQ?.explanation}
+                      <Label className="text-[13px] leading-5 text-foreground mb-4">
+                        {currentQ.explanation}
                       </Label>
-
                       <Button
                         variant="primary"
+                        feedbackVariant="scale-ripple"
                         onPress={handleNextQuestion}
                       >
                         <Button.Label>
-                          {currentQuestionIndex + 1 < aiQuestions.length ? 'Siguiente Pregunta ➡️' : 'Ver Resultados 🏆'}
+                          {currentQuestionIndex + 1 < aiQuestions.length
+                            ? 'Siguiente →'
+                            : 'Ver Resultados 🏆'}
                         </Button.Label>
                       </Button>
                     </Card.Body>
                   </Card>
                 )}
+                <View className="h-4" />
               </ScrollView>
-            )}
+            ) : null}
           </View>
         </View>
       </Modal>

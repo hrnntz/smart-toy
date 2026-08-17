@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, ActivityIndicator, Alert, Pressable, Image } from 'react-native';
+import { View, ActivityIndicator, Alert, Pressable, Image, ScrollView } from 'react-native';
 import { Audio } from 'expo-av';
 import { Ionicons } from '@expo/vector-icons';
 import { Card, Button, Label, useThemeColor } from 'heroui-native';
@@ -194,7 +194,7 @@ export default function EnglishLessonScreen({ navigation, route }: any) {
   }
 
   return (
-    <View className="flex-1 bg-background px-4 pt-12">
+    <ScrollView className="flex-1 bg-background px-4 pt-12" contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
       <View className="flex-row justify-between items-center mb-4">
         <IconButton icon="arrow-back" onPress={() => navigation.goBack()} />
         <Label className="text-lg font-bold text-foreground">{themeLabel}</Label>
@@ -279,6 +279,6 @@ export default function EnglishLessonScreen({ navigation, route }: any) {
           </Button>
         )}
       </View>
-    </View>
+    </ScrollView>
   );
 }
