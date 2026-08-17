@@ -60,6 +60,11 @@ export const initSocketServer = (httpServer: HTTPServer): SocketIOServer => {
     });
 
     socket.on("join:parent", (userId: string) => {
+      const authSocket = socket as AuthenticatedSocket;
+      if (String(authSocket.userId) !== String(userId)) {
+        socket.emit("error", { message: "Acceso denegado: userId incorrecto" });
+        return;
+      }
       socket.join(`parent:${userId}`);
       console.log(`Socket ${socket.id} se unió a la sala parent:${userId}`);
     });
@@ -81,7 +86,7 @@ export const initSocketServer = (httpServer: HTTPServer): SocketIOServer => {
     socket.on("camera:join_stream", (roomId: string) => {
       const authSocket = socket as AuthenticatedSocket;
       // Verifica que el roomId empiece con el userId para prevenir acceso cruzado
-      if (!roomId || !roomId.toString().startsWith(String(authSocket.userId))) {
+      if (!roomId || !roomId.toString().startsWith(String(authSocket.userId) + "-")) {
         socket.emit("camera:error", { message: "Acceso denegado a la sala de cámara" });
         return;
       }
@@ -91,7 +96,7 @@ export const initSocketServer = (httpServer: HTTPServer): SocketIOServer => {
 
     socket.on("camera:stream_frame", (data: { roomId: string; frame: string; timestamp: number }) => {
       const authSocket = socket as AuthenticatedSocket;
-      if (!data?.roomId || !data.roomId.toString().startsWith(String(authSocket.userId))) {
+      if (!data?.roomId || !data.roomId.toString().startsWith(String(authSocket.userId) + "-")) {
         socket.emit("camera:error", { message: "No autorizado para transmitir en esta sala" });
         return;
       }
@@ -100,7 +105,7 @@ export const initSocketServer = (httpServer: HTTPServer): SocketIOServer => {
 
     socket.on("camera:stop_stream", (roomId: string) => {
       const authSocket = socket as AuthenticatedSocket;
-      if (!roomId || !roomId.toString().startsWith(String(authSocket.userId))) {
+      if (!roomId || !roomId.toString().startsWith(String(authSocket.userId) + "-")) {
         socket.emit("camera:error", { message: "No autorizado" });
         return;
       }

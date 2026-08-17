@@ -147,7 +147,7 @@ export default function InglesScreen({ navigation }: any) {
           <Button
             variant="secondary"
             className="w-full mb-10 mt-2"
-            disabled={!nextTheme}
+            isDisabled={!nextTheme}
             onPress={() =>
               nextTheme &&
               navigation.navigate('EnglishLesson', { themeKey: nextTheme.key, themeLabel: nextTheme.label })
