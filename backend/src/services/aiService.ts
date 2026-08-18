@@ -42,7 +42,7 @@ Nunca uses lenguaje técnico ni complejo. Siempre responde en español.
         ...formattedHistory,
         { role: 'user', content: message },
       ],
-      model: process.env.GROQ_TEXT_MODEL || 'llama-3.3-70b-versatile',
+      model: process.env.GROQ_TEXT_MODEL || 'mixtral-8x7b-32768',
       temperature: 0.7,
       max_tokens: 200,
     });
@@ -120,7 +120,7 @@ Donde "answer" es el índice numérico (0, 1 o 2) de la opción correcta.
 
     const response = await groq.chat.completions.create({
       messages: [{ role: 'user', content: prompt }],
-      model: process.env.GROQ_TEXT_MODEL || 'llama-3.3-70b-versatile',
+      model: process.env.GROQ_TEXT_MODEL || 'mixtral-8x7b-32768',
       temperature: 0.7,
       max_tokens: 2000,
     });
@@ -225,7 +225,7 @@ Solo responde con la letra de la canción de cuna en español, poética, tierna 
 
     const chatCompletion = await groq.chat.completions.create({
       messages: [{ role: 'system', content: systemPrompt }],
-      model: process.env.GROQ_TEXT_MODEL || 'llama-3.3-70b-versatile',
+      model: process.env.GROQ_TEXT_MODEL || 'mixtral-8x7b-32768',
       temperature: 0.7,
       max_tokens: 150,
     });
@@ -277,7 +277,7 @@ Estructura exacta por objeto:
 
     const response = await groq.chat.completions.create({
       messages: [{ role: 'user', content: prompt }],
-      model: process.env.GROQ_TEXT_MODEL || 'llama-3.3-70b-versatile',
+      model: process.env.GROQ_TEXT_MODEL || 'mixtral-8x7b-32768',
       temperature: 0.6,
       max_tokens: 800,
     });
@@ -326,7 +326,7 @@ TÍTULO: <título>
 
     const response = await groq.chat.completions.create({
       messages: [{ role: 'user', content: prompt }],
-      model: process.env.GROQ_TEXT_MODEL || 'llama-3.3-70b-versatile',
+      model: process.env.GROQ_TEXT_MODEL || 'mixtral-8x7b-32768',
       temperature: 0.8,
       max_tokens: 800,
     });
