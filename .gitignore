@@ -73,3 +73,11 @@ strix_runs/
 .heroui-docs/
 skills-lock.json
 .agents/skills/*/node_modules/
+
+# Personal local files
+Antigravity.lnk
+.debug_ui/
+CLAUDE.md
+README-update.md
+mobile/fix-ts.js
+mobile/uniwind-types.d.ts
