@@ -1,4 +1,4 @@
-﻿import Groq from 'groq-sdk';
+import Groq from 'groq-sdk';
 import fs from 'fs';
 import path from 'path';
 
@@ -23,12 +23,12 @@ export const getAIResponse = async (
 ): Promise<string> => {
   try {
     const systemPrompt = `
-Eres ${toyName}, un juguete inteligente y amigable para niÃ±os.
-${personality ? `Tu personalidad es: ${personality}.` : 'Eres amable, divertido y siempre ayudas a los niÃ±os.'}
+Eres ${toyName}, un juguete inteligente y amigable para niños.
+${personality ? `Tu personalidad es: ${personality}.` : 'Eres amable, divertido y siempre ayudas a los niños.'}
 ${context ? `Contexto adicional: ${context}.` : ''}
-Responde de manera breve (mÃ¡ximo 2 oraciones), cÃ¡lida y adecuada para un niÃ±o de 6 aÃ±os. Usa un tono alegre y sencillo.
+Responde de manera breve (máximo 2 oraciones), cálida y adecuada para un niño de 6 años. Usa un tono alegre y sencillo.
 Recuerda lo conversado anteriormente en el chat para mantener la continuidad.
-Nunca uses lenguaje tÃ©cnico ni complejo. Siempre responde en espaÃ±ol.
+Nunca uses lenguaje técnico ni complejo. Siempre responde en español.
 `;
 
     const formattedHistory = history.map((msg) => ({
@@ -49,7 +49,7 @@ Nunca uses lenguaje tÃ©cnico ni complejo. Siempre responde en espaÃ±ol.
 
     return chatCompletion.choices[0]?.message?.content || 'No pude entender eso.';
   } catch (error) {
-    console.error('âŒ Error en Groq chat con historial:', error);
+    console.error('❌ Error en Groq chat con historial:', error);
     return 'Lo siento, tuve un problema. Intenta de nuevo.';
   }
 };
@@ -64,7 +64,7 @@ export const transcribeAudioWithWhisper = async (filePath: string): Promise<stri
       throw new Error('El archivo de audio no existe');
     }
 
-    // Si el archivo no tiene extensiÃ³n .m4a, renombrarlo para que Groq valide el tipo
+    // Si el archivo no tiene extensión .m4a, renombrarlo para que Groq valide el tipo
     if (!path.extname(filePath)) {
       targetPath = `${filePath}.m4a`;
       fs.renameSync(filePath, targetPath);
@@ -79,13 +79,13 @@ export const transcribeAudioWithWhisper = async (filePath: string): Promise<stri
 
     return transcription.text || '';
   } catch (error) {
-    console.error('âŒ Error en Groq Whisper STT:', error);
+    console.error('❌ Error en Groq Whisper STT:', error);
     return '';
   }
 };
 
 // ============================================
-// 3. GENERAR PREGUNTAS DE MINIJUEGOS CON DIFICULTAD E EXPLICACIÃ“N
+// 3. GENERAR PREGUNTAS DE MINIJUEGOS CON DIFICULTAD E EXPLICACIÓN
 // ============================================
 export interface GameQuestion {
   question: string;
@@ -102,20 +102,20 @@ export const generateGameQuestions = async (
 ): Promise<GameQuestion[]> => {
   try {
     const prompt = `
-Genera exactamente ${count} preguntas de opciÃ³n mÃºltiple divertidas y educativas para niÃ±os.
+Genera exactamente ${count} preguntas de opción múltiple divertidas y educativas para niños.
 Juego: "${gameName}"
-CategorÃ­a: "${category}"
-Nivel de Dificultad: "${difficulty}" (Adapta la complejidad del vocabulario y los cÃ¡lculos segÃºn esta dificultad).
+Categoría: "${category}"
+Nivel de Dificultad: "${difficulty}" (Adapta la complejidad del vocabulario y los cálculos según esta dificultad).
 
-DEBES responder ÃšNICAMENTE en formato JSON plano (un arreglo de objetos), SIN bloques de markdown (\`\`\`json ... \`\`\`), SIN texto antes ni despuÃ©s.
+DEBES responder ÚNICAMENTE en formato JSON plano (un arreglo de objetos), SIN bloques de markdown (\`\`\`json ... \`\`\`), SIN texto antes ni después.
 Estructura exacta por objeto:
 {
   "question": "Texto de la pregunta",
-  "options": ["OpciÃ³n A", "OpciÃ³n B", "OpciÃ³n C"],
+  "options": ["Opción A", "Opción B", "Opción C"],
   "answer": 0,
-  "explanation": "ExplicaciÃ³n amable y educativa para un niÃ±o de por quÃ© esta es la respuesta correcta"
+  "explanation": "Explicación amable y educativa para un niño de por qué esta es la respuesta correcta"
 }
-Donde "answer" es el Ã­ndice numÃ©rico (0, 1 o 2) de la opciÃ³n correcta.
+Donde "answer" es el índice numérico (0, 1 o 2) de la opción correcta.
 `;
 
     const response = await groq.chat.completions.create({
@@ -131,36 +131,36 @@ Donde "answer" es el Ã­ndice numÃ©rico (0, 1 o 2) de la opciÃ³n correcta.
 
     return questions.slice(0, count);
   } catch (error) {
-    console.error('âŒ Error en generateGameQuestions:', error);
+    console.error('❌ Error en generateGameQuestions:', error);
     return [
       {
-        question: 'Â¿CuÃ¡l de estos animales vive en el agua?',
-        options: ['DelfÃ­n', 'Perro', 'PÃ¡jaro'],
+        question: '¿Cuál de estos animales vive en el agua?',
+        options: ['Delfín', 'Perro', 'Pájaro'],
         answer: 0,
-        explanation: 'Â¡El delfÃ­n vive en el agua y nada muy rÃ¡pido en el ocÃ©ano!'
+        explanation: '¡El delfín vive en el agua y nada muy rápido en el océano!'
       },
       {
-        question: 'Â¿CuÃ¡nto es 5 + 5?',
+        question: '¿Cuánto es 5 + 5?',
         options: ['8', '10', '12'],
         answer: 1,
-        explanation: 'Â¡Si sumas 5 dedos de una mano mÃ¡s 5 dedos de la otra mano, obtienes 10!'
+        explanation: '¡Si sumas 5 dedos de una mano más 5 dedos de la otra mano, obtienes 10!'
       },
     ];
   }
 };
 
 // ============================================
-// 4. GENERADOR DE MÃšSICA Y CANCIONES DE CUNA CON IA
+// 4. GENERADOR DE MÚSICA Y CANCIONES DE CUNA CON IA
 // ============================================
 // ============================================
-// 4. GENERADOR DE MÃšSICA IA REAL (META MUSICGEN & GROQ/ELEVENLABS)
+// 4. GENERADOR DE MÚSICA IA REAL (META MUSICGEN & GROQ/ELEVENLABS)
 // ============================================
 export const generateAIMusicTrack = async (prompt: string): Promise<{ title: string; uri: string; duration: string }> => {
   try {
     const lowerPrompt = prompt.toLowerCase();
-    console.log(`ðŸŽ¶ Generando mÃºsica con IA para el prompt: "${prompt}"...`);
+    console.log(`🎶 Generando música con IA para el prompt: "${prompt}"...`);
 
-    // 1. Intentar generaciÃ³n instrumental de mÃºsica original con Meta MusicGen AI (Hugging Face Router API)
+    // 1. Intentar generación instrumental de música original con Meta MusicGen AI (Hugging Face Router API)
     const hfToken = (process.env.HUGGINGFACE_API_KEY || '').trim();
     if (hfToken) {
       try {
@@ -177,19 +177,19 @@ export const generateAIMusicTrack = async (prompt: string): Promise<{ title: str
         if (hfRes.ok) {
           const arrayBuffer = await hfRes.arrayBuffer();
           const base64Audio = Buffer.from(arrayBuffer).toString('base64');
-          console.log('âœ… Â¡Pista de mÃºsica instrumental generada con Ã©xito por Meta MusicGen AI!');
+          console.log('✅ ¡Pista de música instrumental generada con éxito por Meta MusicGen AI!');
           return {
-            title: `MÃºsica IA: ${prompt.charAt(0).toUpperCase() + prompt.slice(1)}`,
+            title: `Música IA: ${prompt.charAt(0).toUpperCase() + prompt.slice(1)}`,
             uri: `data:audio/wav;base64,${base64Audio}`,
             duration: '30 seg',
           };
         }
       } catch (hfErr: any) {
-        console.warn(`â„¹ï¸ Meta MusicGen API no disponible (${hfErr?.message || 'Offline'}). Usando compositor inteligente Groq...`);
+        console.warn(`ℹ️ Meta MusicGen API no disponible (${hfErr?.message || 'Offline'}). Usando compositor inteligente Groq...`);
       }
     }
 
-    // 2. Si la peticiÃ³n es sobre un tema ambiental especÃ­fico (lluvia, mar, bosque, ruido blanco, etc.)
+    // 2. Si la petición es sobre un tema ambiental específico (lluvia, mar, bosque, ruido blanco, etc.)
     const ambientLibrary: Record<string, string> = {
       lluvia: 'https://actions.google.com/sounds/v1/weather/rain_heavy_loud.ogg',
       mar: 'https://actions.google.com/sounds/v1/water/ocean_waves.ogg',
@@ -217,11 +217,11 @@ export const generateAIMusicTrack = async (prompt: string): Promise<{ title: str
       }
     }
 
-    // 3. ComposiciÃ³n poÃ©tica de canciÃ³n de cuna personalizada con Groq Llama 3.3 + Voz Dulce Cantada (ElevenLabs/TTS)
+    // 3. Composición poética de canción de cuna personalizada con Groq Llama 3.3 + Voz Dulce Cantada (ElevenLabs/TTS)
     const { generateSpeechFromText } = require("./elevenlabsService");
     const systemPrompt = `Eres un compositor experto en nanas e historias musicales infantiles. 
-Genera una nana de cuna muy dulce de 4 versos rÃ­tmicos basada en el tema: "${prompt}". 
-Solo responde con la letra de la canciÃ³n de cuna en espaÃ±ol, poÃ©tica, tierna y con rima para niÃ±os. Sin introducciones.`;
+Genera una nana de cuna muy dulce de 4 versos rítmicos basada en el tema: "${prompt}". 
+Solo responde con la letra de la canción de cuna en español, poética, tierna y con rima para niños. Sin introducciones.`;
 
     const chatCompletion = await groq.chat.completions.create({
       messages: [{ role: 'system', content: systemPrompt }],
@@ -230,10 +230,10 @@ Solo responde con la letra de la canciÃ³n de cuna en espaÃ±ol, poÃ©tica, t
       max_tokens: 150,
     });
 
-    const songLyrics = chatCompletion.choices[0]?.message?.content || `DuÃ©rmete mi niÃ±o, duÃ©rmete mi amor, las estrellas brillan con su resplandor. ${prompt}`;
+    const songLyrics = chatCompletion.choices[0]?.message?.content || `Duérmete mi niño, duérmete mi amor, las estrellas brillan con su resplandor. ${prompt}`;
     
     // Sintetizar la nana cantada por la voz dulce de Bella / ElevenLabs / TTS
-    const audioUrl = await generateSpeechFromText(`ðŸŽ¶ ${songLyrics}`, 'EXAVITQu4vr4xnSDxMaL');
+    const audioUrl = await generateSpeechFromText(`🎶 ${songLyrics}`, 'EXAVITQu4vr4xnSDxMaL');
 
     return {
       title: `Nana IA: ${prompt.charAt(0).toUpperCase() + prompt.slice(1)}`,
@@ -241,9 +241,9 @@ Solo responde con la letra de la canciÃ³n de cuna en espaÃ±ol, poÃ©tica, t
       duration: '3 min',
     };
   } catch (error) {
-    console.error('âŒ Error en generateAIMusicTrack:', error);
+    console.error('❌ Error en generateAIMusicTrack:', error);
     return {
-      title: 'CanciÃ³n de Cuna Panda',
+      title: 'Canción de Cuna Panda',
       uri: 'https://actions.google.com/sounds/v1/ambiences/white_noise.ogg',
       duration: '10 min',
     };
@@ -251,7 +251,7 @@ Solo responde con la letra de la canciÃ³n de cuna en espaÃ±ol, poÃ©tica, t
 };
 
 // ============================================
-// 6. GENERAR PALABRAS DE UN TEMA DE INGLÃ‰S (englishController)
+// 6. GENERAR PALABRAS DE UN TEMA DE INGLÉS (englishController)
 // ============================================
 export interface EnglishWordItem {
   english: string;
@@ -264,14 +264,14 @@ export const generateEnglishThemeWords = async (
 ): Promise<EnglishWordItem[]> => {
   try {
     const prompt = `
-Genera exactamente ${count} palabras o frases MUY simples en inglÃ©s para enseÃ±arle a un niÃ±o que no sabe absolutamente nada de inglÃ©s, sobre el tema: "${themeLabel}".
-Deben ser palabras concretas y fÃ¡ciles de imaginar/dibujar (sustantivos simples como "dog", "red", "table"), o frases cortas de mÃ¡ximo 4 palabras si el tema lo pide (ej. "Good morning", "How are you").
-No repitas palabras. OrdÃ©nalas de la mÃ¡s fÃ¡cil a la mÃ¡s difÃ­cil.
-DEBES responder ÃšNICAMENTE en formato JSON plano (un arreglo de objetos), SIN bloques de markdown (\`\`\`json ... \`\`\`), SIN texto antes ni despuÃ©s.
+Genera exactamente ${count} palabras o frases MUY simples en inglés para enseñarle a un niño que no sabe absolutamente nada de inglés, sobre el tema: "${themeLabel}".
+Deben ser palabras concretas y fáciles de imaginar/dibujar (sustantivos simples como "dog", "red", "table"), o frases cortas de máximo 4 palabras si el tema lo pide (ej. "Good morning", "How are you").
+No repitas palabras. Ordénalas de la más fácil a la más difícil.
+DEBES responder ÚNICAMENTE en formato JSON plano (un arreglo de objetos), SIN bloques de markdown (\`\`\`json ... \`\`\`), SIN texto antes ni después.
 Estructura exacta por objeto:
 {
-  "english": "palabra o frase en inglÃ©s",
-  "spanish": "su traducciÃ³n exacta al espaÃ±ol"
+  "english": "palabra o frase en inglés",
+  "spanish": "su traducción exacta al español"
 }
 `;
 
@@ -288,11 +288,11 @@ Estructura exacta por objeto:
 
     return words.slice(0, count);
   } catch (error) {
-    console.error('âŒ Error en generateEnglishThemeWords:', error);
-    // Respaldo fijo para que la lecciÃ³n nunca se quede vacÃ­a si la IA falla
+    console.error('❌ Error en generateEnglishThemeWords:', error);
+    // Respaldo fijo para que la lección nunca se quede vacía si la IA falla
     return [
       { english: 'Hello', spanish: 'Hola' },
-      { english: 'Yes', spanish: 'SÃ­' },
+      { english: 'Yes', spanish: 'Sí' },
       { english: 'No', spanish: 'No' },
       { english: 'Please', spanish: 'Por favor' },
       { english: 'Thank you', spanish: 'Gracias' },
@@ -307,19 +307,19 @@ export const generateStoryWithImage = async (
   tema: string,
   duracion: string,
   personajes?: string,
-  enseÃ±anza?: string
+  enseñanza?: string
 ): Promise<{ titulo: string; contenido: string; imagen: string }> => {
   try {
     const prompt = `
 Crea una historia infantil corta basada en los siguientes datos:
 - Tema: ${tema}
-- DuraciÃ³n aproximada: ${duracion}
+- Duración aproximada: ${duracion}
 ${personajes ? `- Personajes sugeridos: ${personajes}` : ''}
-${enseÃ±anza ? `- EnseÃ±anza o mensaje: ${enseÃ±anza}` : ''}
+${enseñanza ? `- Enseñanza o mensaje: ${enseñanza}` : ''}
 
-La historia debe tener un tÃ­tulo llamativo y un contenido de aproximadamente 200-300 palabras.
+La historia debe tener un título llamativo y un contenido de aproximadamente 200-300 palabras.
 Formato de respuesta:
-TÃTULO: <tÃ­tulo>
+TÍTULO: <título>
 ---
 <contenido de la historia>
 `;
@@ -333,17 +333,17 @@ TÃTULO: <tÃ­tulo>
 
     const fullText = response.choices[0]?.message?.content || '';
     const [tituloRaw, ...contenidoParts] = fullText.split('---');
-    const titulo = tituloRaw.replace('TÃTULO:', '').trim() || 'Historia generada';
+    const titulo = tituloRaw.replace('TÍTULO:', '').trim() || 'Historia generada';
     const contenido = contenidoParts.join('---').trim() || fullText;
 
     const imagePrompt = encodeURIComponent(
-      `ilustraciÃ³n infantil de ${tema}, cuento, dibujo colorido, estilo cuento infantil, personajes lindos`
+      `ilustración infantil de ${tema}, cuento, dibujo colorido, estilo cuento infantil, personajes lindos`
     );
     const imagen = `https://image.pollinations.ai/prompt/${imagePrompt}?width=512&height=512&seed=${encodeURIComponent(tema)}`;
 
     return { titulo, contenido, imagen };
   } catch (error) {
-    console.error('âŒ Error en generateStoryWithImage:', error);
+    console.error('❌ Error en generateStoryWithImage:', error);
     throw new Error('Error al generar la historia con IA');
   }
 };
