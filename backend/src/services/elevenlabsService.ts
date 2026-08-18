@@ -6,7 +6,7 @@ export const CHARACTER_VOICES: Record<string, { id: string; name: string; desc: 
   RACHEL: { id: '21m00Tcm4TlvDq8ikWAM', name: 'Rachel (Amiga Panda)', desc: 'Voz dulce y calmada para antes de dormir' },
   FREYA: { id: 'jsCqWAovK2LkecYy1ClR', name: 'Freya (Princesa/Hada)', desc: 'Voz alegre y expresiva' },
   GLINDA: { id: 'z9fAnlkznG4ndvfOBYJU', name: 'Glinda (Mágica)', desc: 'Voz de personaje de fantasía' },
-  GIOVANNI: { id: 'zcAAsDuNqEBlko7h1jiB', name: 'Giovanni (Panda Explorador)', desc: 'Voz animada masculina de caricatura' },
+  GIOVANNI: { id: 'ErXwobaYiN019PkySvjV', name: 'Giovanni (Panda Explorador)', desc: 'Voz animada masculina de caricatura' },
   DOMI: { id: 'AZnzlk1XvdvUeBnXmlld', name: 'Domi (Aventurera)', desc: 'Voz enérgica y juguetona' },
   CHARLIE: { id: 'IKne3meq5aSn9XLyUdCD', name: 'Charlie (Chico Divertido)', desc: 'Voz juvenil amigable' },
   FINN: { id: 'D38z5RcWu1voky8WS1ja', name: 'Finn (Caricatura)', desc: 'Voz graciosa de personaje animado' },
