@@ -4,7 +4,6 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Image,
   Alert,
   Modal,
   Pressable,
@@ -13,8 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Audio } from 'expo-av';
 import { toyService } from '../../services/api';
 import { playAudio, stopAudio } from '../../services/audioService';
-import { Card, Button, Label, TextField, Input, Spinner, useThemeColor } from 'heroui-native';
-import { IconButton } from '../../components/ui/IconButton';
+import { Card, Button, Label, TextField, Input, Spinner, useThemeColor, Avatar } from 'heroui-native';
 
 interface Message {
   id: string;
@@ -58,14 +56,13 @@ export default function ChatScreen({ navigation, route }: any) {
   const isProcessingRef = useRef(false);
   const scrollViewRef = useRef<ScrollView>(null);
 
-  const [primary, success, danger, muted, background, surface, card] = useThemeColor([
+  const [primary, success, danger, muted, background, surface] = useThemeColor([
     'accent',
     'success',
     'danger',
     'muted',
     'background',
     'surface',
-    'surface'
   ]);
 
   useEffect(() => {
@@ -219,25 +216,27 @@ export default function ChatScreen({ navigation, route }: any) {
   return (
     <View className="flex-1 bg-background">
       {/* Header */}
-      <View className="flex-row items-center px-4 pt-[50px] pb-3.5 bg-card border-b border-separator shadow-sm z-10">
+      <View className="flex-row items-center px-4 pt-14 pb-3 bg-surface border-b border-separator shadow-sm z-10">
         <Pressable onPress={() => navigation.goBack()} className="p-1 mr-2">
           <Ionicons name="arrow-back" size={26} color={primary} />
         </Pressable>
-        <Image
-          source={{ uri: avatarUrl || 'https://image.pollinations.ai/prompt/cute%20panda%20toy?width=100&height=100' }}
-          className="w-10 h-10 rounded-full mr-2.5 bg-surface"
-        />
+        <View className="mr-3">
+          <Avatar size="md" className="w-[44px] h-[44px] rounded-full">
+            <Avatar.Image source={{ uri: avatarUrl || 'https://image.pollinations.ai/prompt/cute%20panda%20toy?width=100&height=100' }} />
+            <Avatar.Fallback>{toyName ? toyName[0] : 'P'}</Avatar.Fallback>
+          </Avatar>
+        </View>
         <View className="flex-1">
           <Label className="text-base font-bold text-foreground">{toyName || 'Panda Inteligente'}</Label>
-          <Label className="text-xs font-semibold text-success mt-0.5">🟢 Voz: {currentVoiceObj.name.split(' ')[0]}</Label>
+          <Label className="text-xs font-semibold text-success mt-0.5">🟢 {currentVoiceObj.name.split(' ')[0]}</Label>
         </View>
 
         <Pressable className="p-1.5 mr-1" onPress={() => setShowVoiceModal(true)}>
-          <Ionicons name="mic-circle" size={28} color="#8E44AD" />
+          <Ionicons name="mic-circle" size={28} color={primary} />
         </Pressable>
 
         <Pressable
-          className={`p-2 rounded-full ${voiceMode ? 'bg-primary' : 'bg-surface'}`}
+          className={`p-2 rounded-full ${voiceMode ? 'bg-accent' : 'bg-surface'}`}
           onPress={() => setVoiceMode(!voiceMode)}
         >
           <Ionicons name="volume-medium" size={20} color={voiceMode ? 'white' : muted} />
@@ -258,24 +257,25 @@ export default function ChatScreen({ navigation, route }: any) {
           {messages.map((msg) => (
             <View key={msg.id} className={`flex-row items-end mb-3 ${msg.isUser ? 'justify-end' : 'justify-start'}`}>
               {!msg.isUser && (
-                <Image
-                  source={{ uri: avatarUrl || 'https://image.pollinations.ai/prompt/cute%20panda%20toy?width=100&height=100' }}
-                  className="w-8 h-8 rounded-full mr-2 bg-surface"
-                />
+                <View className="mr-2 mb-1">
+                  <Avatar size="sm" className="w-8 h-8 rounded-full">
+                    <Avatar.Image source={{ uri: avatarUrl || 'https://image.pollinations.ai/prompt/cute%20panda%20toy?width=100&height=100' }} />
+                  </Avatar>
+                </View>
               )}
               <View
-                className={`max-w-[78%] p-3.5 rounded-2xl ${msg.isUser ? 'bg-primary rounded-br-sm' : 'bg-card rounded-bl-sm shadow-sm'}`}
+                className={`max-w-[78%] p-3.5 rounded-2xl ${msg.isUser ? 'bg-accent rounded-br-sm' : 'bg-surface rounded-bl-sm shadow-sm'}`}
               >
                 <Label className={`text-[15px] leading-5 ${msg.isUser ? 'text-white' : 'text-foreground'}`}>
                   {msg.text}
                 </Label>
                 {msg.audioUrl && (
                   <Pressable
-                    className="flex-row items-center bg-[#E8F8F5] px-2.5 py-1.5 rounded-xl mt-2 gap-1.5"
+                    className="flex-row items-center bg-success/15 px-3 py-1.5 rounded-full mt-2 self-start gap-1.5"
                     onPress={() => msg.audioUrl && playAudio(msg.audioUrl)}
                   >
                     <Ionicons name="play-circle" size={20} color={success} />
-                    <Label className="text-xs font-bold text-success">Escuchar Voz</Label>
+                    <Label className="text-xs font-bold text-success">Escuchar</Label>
                   </Pressable>
                 )}
                 <Label className={`text-[10px] mt-1.5 self-end ${msg.isUser ? 'text-white/70' : 'text-muted'}`}>
@@ -294,26 +294,26 @@ export default function ChatScreen({ navigation, route }: any) {
 
           {loading && (
             <View className="flex-row items-end mb-3 justify-start">
-              <View className="max-w-[78%] p-3.5 bg-card rounded-2xl rounded-bl-sm shadow-sm flex-row items-center gap-2">
-                <Spinner size="sm" color="primary" />
+              <View className="max-w-[78%] p-3.5 bg-surface rounded-2xl rounded-bl-sm shadow-sm flex-row items-center gap-2">
+                <Spinner size="sm" color="accent" />
                 <Label className="text-[13px] text-muted">Procesando respuesta...</Label>
               </View>
             </View>
           )}
         </ScrollView>
 
-        {/* Barra de Entrada */}
-        <View className="flex-row p-3 bg-card border-t border-separator items-center gap-2.5">
+        {/* Input Bar */}
+        <View className="flex-row p-3 bg-surface border-t border-separator items-center gap-2.5">
           <Pressable
-            className={`w-11 h-11 rounded-full justify-center items-center ${loading ? 'bg-muted' : isRecording ? 'bg-danger' : 'bg-success'}`}
+            className={`w-[52px] h-[52px] rounded-full justify-center items-center ${loading ? 'bg-muted' : isRecording ? 'bg-danger' : 'bg-success'}`}
             onPressIn={startRecording}
             onPressOut={stopRecording}
             disabled={loading}
           >
-            <Ionicons name={isRecording ? "stop-circle" : "mic"} size={24} color="white" />
+            <Ionicons name={isRecording ? "stop-circle" : "mic"} size={26} color="white" />
           </Pressable>
 
-          <TextField className="flex-1 bg-surface rounded-full px-4 max-h-[100px] border-0">
+          <TextField className="flex-1 bg-surface-secondary rounded-2xl px-4 max-h-[100px] border-0">
             <Input
               placeholder="Habla o escribe aquí..."
               value={inputText}
@@ -325,7 +325,7 @@ export default function ChatScreen({ navigation, route }: any) {
           </TextField>
 
           <Pressable
-            className={`w-11 h-11 rounded-full justify-center items-center ${(!inputText.trim() || loading) ? 'bg-muted' : 'bg-primary'}`}
+            className={`w-[44px] h-[44px] rounded-full justify-center items-center ${(!inputText.trim() || loading) ? 'bg-default' : 'bg-accent'}`}
             onPress={() => sendMessage()}
             disabled={!inputText.trim() || loading}
           >
@@ -336,11 +336,10 @@ export default function ChatScreen({ navigation, route }: any) {
 
       <Modal visible={showVoiceModal} animationType="slide" transparent>
         <View className="flex-1 bg-black/50 justify-end">
-          <View className="bg-card rounded-t-[24px] p-5 max-h-[80%]">
+          <View className="bg-surface rounded-t-3xl px-5 pt-5 pb-10 max-h-[80%]">
             <View className="flex-row justify-between items-center mb-4">
               <View>
                 <Label className="text-lg font-bold text-foreground">Elige la Voz de Panda</Label>
-                <Label className="text-[13px] text-muted mt-0.5">10 voces oficiales estilo caricatura</Label>
               </View>
               <Pressable onPress={() => setShowVoiceModal(false)} className="p-1">
                 <Ionicons name="close" size={26} color={primary} />
@@ -351,20 +350,20 @@ export default function ChatScreen({ navigation, route }: any) {
               {VOICE_OPTIONS.map((v) => (
                 <Pressable
                   key={v.id}
-                  className={`flex-row items-center p-3.5 rounded-2xl mb-2.5 ${selectedVoice === v.id ? 'bg-[#F3E8FF] border border-[#8E44AD]' : 'bg-surface'}`}
+                  className={`flex-row items-center p-3.5 rounded-2xl mb-2.5 ${selectedVoice === v.id ? 'bg-accent/10 border border-accent' : 'bg-surface-secondary'}`}
                   onPress={() => {
                     setSelectedVoice(v.id);
                     setShowVoiceModal(false);
                   }}
                 >
-                  <View className={`w-10 h-10 rounded-full justify-center items-center mr-3 ${selectedVoice === v.id ? 'bg-[#8E44AD]' : 'bg-[#F3E8FF]'}`}>
-                    <Ionicons name={v.icon as any} size={22} color={selectedVoice === v.id ? 'white' : '#8E44AD'} />
+                  <View className={`w-10 h-10 rounded-full justify-center items-center mr-3 ${selectedVoice === v.id ? 'bg-accent' : 'bg-accent/10'}`}>
+                    <Ionicons name={v.icon as any} size={22} color={selectedVoice === v.id ? 'white' : primary} />
                   </View>
                   <View className="flex-1">
-                    <Label className={`text-[15px] font-bold ${selectedVoice === v.id ? 'text-[#8E44AD]' : 'text-foreground'}`}>{v.name}</Label>
+                    <Label className={`text-[15px] font-bold ${selectedVoice === v.id ? 'text-accent' : 'text-foreground'}`}>{v.name}</Label>
                     <Label className="text-xs text-muted mt-0.5">{v.desc}</Label>
                   </View>
-                  {selectedVoice === v.id && <Ionicons name="checkmark-circle" size={24} color="#8E44AD" />}
+                  {selectedVoice === v.id && <Ionicons name="checkmark-circle" size={24} color={primary} />}
                 </Pressable>
               ))}
             </ScrollView>

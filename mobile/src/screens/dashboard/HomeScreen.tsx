@@ -4,8 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { storage } from '../../services/storage';
 import { authService } from '../../services/auth';
 import { rutinaService, toyService, configService } from '../../services/api';
-import { Button, Card, Chip, Label, Spinner, useThemeColor } from 'heroui-native';
-import { IconButton } from '../../components/ui/IconButton';
+import { Button, Card, Chip, Label, Spinner, Avatar, useThemeColor } from 'heroui-native';
 
 export default function HomeScreen({ navigation }: any) {
   const primary = useThemeColor('accent');
@@ -15,6 +14,7 @@ export default function HomeScreen({ navigation }: any) {
   const warning = useThemeColor('warning');
   const success = useThemeColor('success');
   const textSecondary = useThemeColor('muted');
+  const foreground = useThemeColor('foreground');
 
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -161,134 +161,144 @@ export default function HomeScreen({ navigation }: any) {
     );
   }
 
+  const shortcuts = [
+    { id: 'cam', title: 'Cámara en Vivo', icon: 'camera', color: '#3B82F6', route: 'Supervision' },
+    { id: 'games', title: 'Minijuegos', icon: 'game-controller', color: '#7C3AED', route: 'Juegos' },
+    { id: 'music', title: 'Música & Nanas', icon: 'musical-notes', color: '#10B981', route: 'Musica' },
+    { id: 'chat', title: 'Historial', icon: 'chatbubbles', color: accent, route: 'Conversaciones' },
+    { id: 'routines', title: 'Rutinas', icon: 'calendar', color: '#6366F1', route: 'Rutinas' },
+    { id: 'stories', title: 'Cuentos IA', icon: 'book', color: '#F59E0B', route: 'Historias' },
+    { id: 'english', title: 'Aprender Inglés', icon: 'language', color: '#EF4444', route: 'Ingles' },
+    { id: 'settings', title: 'Configuración', icon: 'settings', color: '#6B7280', route: 'Configuracion' },
+  ];
+
   return (
-    <ScrollView className="flex-1 px-4 pt-12 bg-background" showsVerticalScrollIndicator={false}>
-      {/* Top Navigation Bar */}
-      <View className="flex-row justify-between items-center mb-5">
-        <View className="flex-1">
-          <Label className="text-sm font-medium text-foreground-muted">{greeting}</Label>
-          <Label className="text-2xl font-extrabold mt-0.5 text-foreground">{user?.name || 'Padre de Familia'} 👋</Label>
-        </View>
-        <IconButton icon="log-out-outline" color={danger} variant="solid" onPress={handleLogout} />
-      </View>
-
-      {/* Widget Card de Estado de Juguete */}
-      <Card variant="default" className="mb-4">
-        <Card.Body>
-          <View className="flex-row items-center gap-2 mb-4">
-            <Ionicons name="hardware-chip-outline" size={22} color={primary} />
-            <Label className="text-base font-bold text-foreground">Estado de {deviceName}</Label>
+    <View className="flex-1 bg-background">
+      <ScrollView className="flex-1 px-4" showsVerticalScrollIndicator={false}>
+        {/* Header */}
+        <View className="flex-row items-center justify-between pt-14 pb-4">
+          <View>
+            <Label className="text-muted text-sm">{greeting}</Label>
+            <Label className="text-foreground text-2xl font-bold">{user?.name || 'Usuario'} 👋</Label>
           </View>
+          <View className="flex-row items-center gap-3">
+            <Pressable className="w-10 h-10 rounded-full bg-surface items-center justify-center">
+              <Ionicons name="notifications-outline" size={22} color={textSecondary} />
+            </Pressable>
+            <Avatar className="w-10 h-10">
+              <Avatar.Fallback className="bg-accent/20">
+                <Label className="text-accent font-bold text-lg">
+                  {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                </Label>
+              </Avatar.Fallback>
+            </Avatar>
+          </View>
+        </View>
 
-          <View className="flex-row justify-between mb-4">
-            <View className="flex-row items-center gap-1.5">
-              <Ionicons name="wifi" size={18} color={totalToys > 0 ? success : textSecondary} />
-              <Label className="text-sm font-semibold text-foreground">
-                {totalToys > 0 ? `${connectedToys}/${totalToys} Online` : 'Sin conectar'}
+        {/* Panda Status Card */}
+        <Card variant="default" className="rounded-3xl mb-6">
+          <Card.Body>
+            <View className="flex-row items-center justify-between">
+              <View className="flex-row items-center flex-1">
+                <View className="w-14 h-14 rounded-full bg-accent/10 items-center justify-center mr-4">
+                  <Label className="text-3xl">🐼</Label>
+                </View>
+                <View>
+                  <Label className="text-foreground font-bold text-lg">{deviceName}</Label>
+                  <View className="flex-row items-center mt-1">
+                    <View className={`w-2 h-2 rounded-full mr-2 ${connectedToys > 0 ? 'bg-success' : 'bg-danger'}`} />
+                    <Label className="text-muted text-sm">
+                      {totalToys > 0 ? `Online ${connectedToys}/${totalToys}` : 'Sin conectar'}
+                    </Label>
+                  </View>
+                </View>
+              </View>
+              <Chip variant="soft" color={connectedToys > 0 ? 'success' : 'danger'}>
+                <Chip.Label>{connectedToys > 0 ? 'Online' : 'Offline'}</Chip.Label>
+              </Chip>
+            </View>
+            {nextRutina && (
+              <View className="mt-4 flex-row items-center bg-surface-secondary py-2 px-3 rounded-full self-start">
+                <Ionicons name="alarm-outline" size={16} color={textSecondary} className="mr-2" />
+                <Label className="text-muted text-xs ml-1 font-medium">{nextRutina}</Label>
+              </View>
+            )}
+          </Card.Body>
+        </Card>
+
+        {/* Hero CTA */}
+        <Pressable 
+          className="w-full bg-accent rounded-3xl p-6 mb-8 shadow-md"
+          onPress={handleTalk}
+        >
+          <View className="flex-row items-center justify-between w-full">
+            <View className="flex-row items-center">
+              <View className="w-12 h-12 rounded-full bg-white/20 items-center justify-center mr-4">
+                <Ionicons name="mic" size={24} color="white" />
+              </View>
+              <View>
+                <Label className="text-white text-xl font-bold">Hablar con Panda</Label>
+                <Label className="text-white/70 text-xs mt-0.5">Voz interactiva • ElevenLabs IA</Label>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color="white" />
+          </View>
+        </Pressable>
+
+        {/* Accesos Rápidos */}
+        <Label className="text-foreground text-lg font-bold mb-4">Accesos Rápidos</Label>
+        <View className="flex-row flex-wrap justify-between">
+          {shortcuts.map((item) => (
+            <View key={item.id} className="w-[48%] mb-4">
+              <Pressable 
+                className="w-full"
+                onPress={() => item.route && navigation.navigate(item.route)}
+              >
+                <Card variant="default" className="rounded-3xl py-5 items-center">
+                  <Card.Body className="items-center p-0">
+                    <View 
+                      className="w-12 h-12 rounded-full items-center justify-center mb-2"
+                      style={{ backgroundColor: `${item.color}1E` }} // 12% opacity approx
+                    >
+                      <Ionicons name={item.icon as any} size={24} color={item.color} />
+                    </View>
+                    <Label className="text-foreground text-xs font-bold text-center mt-2">
+                      {item.title}
+                    </Label>
+                  </Card.Body>
+                </Card>
+              </Pressable>
+            </View>
+          ))}
+        </View>
+
+        {/* Actividad Reciente */}
+        <Card variant="secondary" className="mt-4 rounded-3xl">
+          <Card.Body>
+            <View className="flex-row items-center mb-3">
+              <Ionicons name="time-outline" size={18} color={textSecondary} className="mr-2" />
+              <Label className="text-foreground font-bold">Actividad Reciente</Label>
+            </View>
+            
+            {recentActivity.length > 0 ? (
+              <View className="gap-3 mt-2">
+                {recentActivity.map((activity, index) => (
+                  <View key={index} className="flex-row items-start">
+                    <Ionicons name={activity.icon} size={16} color={activity.color} className="mr-3 mt-1" />
+                    <Label className="text-muted text-sm flex-1">{activity.text}</Label>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <Label className="text-muted text-sm mt-2">
+                No hay actividad reciente.
               </Label>
-            </View>
-            <View className="flex-row items-center gap-1.5">
-              <Ionicons name="shield-checkmark-outline" size={18} color={success} />
-              <Label className="text-sm font-semibold text-foreground">Protegido</Label>
-            </View>
-            <View className="flex-row items-center gap-1.5">
-              <Ionicons name="battery-charging" size={18} color={primary} />
-              <Label className="text-sm font-semibold text-foreground">85% Batería</Label>
-            </View>
-          </View>
-
-          <View className="flex-row items-center p-3 rounded-2xl gap-2 bg-surface">
-            <Ionicons name="alarm-outline" size={18} color={primary} />
-            <Label className="text-sm font-medium flex-1 text-foreground">
-              {nextRutina ? `Próxima rutina: ${nextRutina}` : 'No hay rutinas activas para hoy'}
-            </Label>
-          </View>
-        </Card.Body>
-      </Card>
-
-      {/* Botón Destacado: Hablar con Panda */}
-      <Button
-        variant="primary"
-        feedbackVariant="scale-ripple"
-        onPress={handleTalk}
-        className="w-full flex-row my-4 py-4 rounded-3xl"
-      >
-        <View className="w-11 h-11 rounded-full bg-white/20 justify-center items-center mr-3">
-          <Ionicons name="mic" size={22} color="white" />
-        </View>
-        <View className="flex-1">
-          <Button.Label className="text-lg font-extrabold text-left text-white">Hablar con Panda</Button.Label>
-          <Button.Label className="text-xs opacity-80 text-left text-white">Voz interactiva en tiempo real</Button.Label>
-        </View>
-        <Ionicons name="chevron-forward" size={22} color="white" />
-      </Button>
-
-      {/* Grid de Accesos Rápidos */}
-      <Label className="text-lg font-extrabold mt-2 mb-4 text-foreground">Accesos Rápidos</Label>
-
-      <View className="flex-row flex-wrap gap-3 mb-4">
-        <Pressable className="w-[31%] bg-surface rounded-3xl py-5 px-2 items-center mb-3" onPress={() => navigation.navigate('Supervision')}>
-          <View className="w-13 h-13 rounded-full justify-center items-center mb-2 bg-accent/10">
-            <Ionicons name="videocam" size={26} color={accent} />
-          </View>
-          <Label className="text-xs font-bold text-foreground text-center">Cámara en Vivo</Label>
-        </Pressable>
-
-        <Pressable className="w-[31%] bg-surface rounded-3xl py-5 px-2 items-center mb-3" onPress={() => navigation.navigate('Juegos')}>
-          <View className="w-13 h-13 rounded-full justify-center items-center mb-2 bg-danger/10">
-            <Ionicons name="game-controller" size={26} color={danger} />
-          </View>
-          <Label className="text-xs font-bold text-foreground text-center">Minijuegos IA</Label>
-        </Pressable>
-
-        <Pressable className="w-[31%] bg-surface rounded-3xl py-5 px-2 items-center mb-3" onPress={() => navigation.navigate('Música')}>
-          <View className="w-13 h-13 rounded-full justify-center items-center mb-2 bg-warning/10">
-            <Ionicons name="musical-notes" size={26} color={warning} />
-          </View>
-          <Label className="text-xs font-bold text-foreground text-center">Música & Nanas</Label>
-        </Pressable>
-
-        <Pressable className="w-[31%] bg-surface rounded-3xl py-5 px-2 items-center mb-3" onPress={() => navigation.navigate('Conversaciones')}>
-          <View className="w-13 h-13 rounded-full justify-center items-center mb-2 bg-success/10">
-            <Ionicons name="chatbubbles" size={26} color={success} />
-          </View>
-          <Label className="text-xs font-bold text-foreground text-center">Historial Chat</Label>
-        </Pressable>
-
-        <Pressable className="w-[31%] bg-surface rounded-3xl py-5 px-2 items-center mb-3" onPress={() => navigation.navigate('Rutinas')}>
-          <View className="w-13 h-13 rounded-full justify-center items-center mb-2 bg-warning/15">
-            <Ionicons name="time" size={26} color={warning} />
-          </View>
-          <Label className="text-xs font-bold text-foreground text-center">Rutinas</Label>
-        </Pressable>
-
-        <Pressable className="w-[31%] bg-surface rounded-3xl py-5 px-2 items-center mb-3" onPress={() => navigation.navigate('Historias')}>
-          <View className="w-13 h-13 rounded-full justify-center items-center mb-2 bg-success/15">
-            <Ionicons name="book" size={26} color={success} />
-          </View>
-          <Label className="text-xs font-bold text-foreground text-center">Cuentos IA</Label>
-        </Pressable>
-      </View>
-
-      {/* Actividad Reciente */}
-      <Card variant="secondary" className="mb-8">
-        <Card.Body className="gap-2">
-          <Label className="text-base font-bold text-foreground mb-1">Actividad Reciente</Label>
-          {recentActivity.length > 0 ? recentActivity.map((item, index) => (
-            <View key={index} className="flex-row items-center gap-2.5 py-3 border-b border-border">
-              <Ionicons name={item.icon} size={18} color={item.color} />
-              <Label className="text-sm flex-1 text-foreground">{item.text}</Label>
-            </View>
-          )) : (
-            <View className="flex-row items-center gap-2.5 py-3">
-              <Ionicons name="chatbubble-ellipses-outline" size={18} color={textSecondary} />
-              <Label className="text-sm text-foreground-muted">Sin interacciones recientes</Label>
-            </View>
-          )}
-        </Card.Body>
-      </Card>
-      
-      <View className="h-8" />
-    </ScrollView>
+            )}
+          </Card.Body>
+        </Card>
+        
+        <View className="h-8" />
+      </ScrollView>
+    </View>
   );
 }

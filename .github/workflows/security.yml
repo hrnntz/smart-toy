@@ -10,12 +10,12 @@ name: Security Scan (Strix)
 
 on:
   push:
-    branches: [ main ]
+    branches: [ "**" ]
     paths:
       - 'backend/**'
       - '.github/workflows/security.yml'
   pull_request:
-    branches: [ main ]
+    branches: [ "**" ]
     paths:
       - 'backend/**'
       - '.github/workflows/security.yml'

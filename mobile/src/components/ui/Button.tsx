@@ -17,9 +17,10 @@ import type { ButtonRootProps } from 'heroui-native';
 type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'solid' | 'flat';
 
 interface ButtonProps extends Omit<ButtonRootProps, 'variant' | 'feedbackVariant' | 'animation'> {
-  title: string;
+  title?: string;
   variant?: ButtonVariant;
   isLoading?: boolean;
+  children?: React.ReactNode;
 }
 
 export const Button = ({
@@ -28,6 +29,7 @@ export const Button = ({
   isLoading = false,
   className,
   isDisabled,
+  children,
   ...props
 }: ButtonProps) => {
   const accentForeground = useThemeColor('accent-foreground');
@@ -54,9 +56,12 @@ export const Button = ({
     >
       {isLoading ? (
         <Spinner color={spinnerColor} />
+      ) : children ? (
+        children
       ) : (
         <HeroButton.Label>{title}</HeroButton.Label>
       )}
     </HeroButton>
   );
 };
+Button.Label = HeroButton.Label;

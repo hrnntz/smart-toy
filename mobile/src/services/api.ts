@@ -111,6 +111,29 @@ export const musicService = {
   generateMusic: (prompt: string) => api.post('/music/generate', { prompt }),
 };
 
+// Servicio de la lección de Inglés (temas por voz, estilo Duolingo)
+export const englishService = {
+  getThemes: (childId?: number) =>
+    api.get('/english/themes', { params: childId ? { childId } : {} }),
+  getThemeContent: (themeKey: string, childId?: number) =>
+    api.get(`/english/theme/${themeKey}/content`, { params: childId ? { childId } : {} }),
+  speak: (text: string, voiceId?: string) => api.post('/english/speak', { text, voiceId }),
+  checkPronunciation: (audioUri: string, targetText: string) => {
+    const formData = new FormData();
+    formData.append('audio', {
+      uri: audioUri,
+      type: 'audio/m4a',
+      name: 'recording.m4a',
+    } as any);
+    formData.append('targetText', targetText);
+    return api.post('/english/check-pronunciation', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+  completeTheme: (themeKey: string, correctCount: number, totalCount: number, childId?: number) =>
+    api.post('/english/complete-theme', { themeKey, correctCount, totalCount, childId }),
+};
+
 // ✅ Servicio de autenticación (login, registro, etc.)
 export const authService = {
   login: (email: string, password: string) => api.post('/auth/login', { email, password }),

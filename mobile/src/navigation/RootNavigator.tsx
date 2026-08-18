@@ -15,6 +15,7 @@ import ChildFormScreen from '../screens/dashboard/ChildFormScreen';
 import ToyListScreen from '../screens/dashboard/ToyListScreen';
 import ToyFormScreen from '../screens/dashboard/ToyFormScreen';
 import InglesScreen from '../screens/dashboard/InglesScreen';
+import EnglishLessonScreen from '../screens/dashboard/EnglishLessonScreen';
 import JuegosScreen from '../screens/dashboard/JuegosScreen';
 import ConversacionesScreen from '../screens/dashboard/ConversacionesScreen';
 import PerfilScreen from '../screens/dashboard/PerfilScreen';
@@ -62,6 +63,7 @@ export default function RootNavigator() {
 
         {/* Pantallas de funcionalidades */}
         <Stack.Screen name="Ingles" component={InglesScreen} />
+        <Stack.Screen name="EnglishLesson" component={EnglishLessonScreen} />
         <Stack.Screen name="Juegos" component={JuegosScreen} />
         <Stack.Screen name="Conversaciones" component={ConversacionesScreen} />
         <Stack.Screen name="Perfil" component={PerfilScreen} />

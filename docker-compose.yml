@@ -19,12 +19,13 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: smart_toy_backend
+    env_file: ./backend/.env
     restart: always
     ports:
       - "3000:3000"
     environment:
       PORT: 3000
-      NODE_ENV: production
+      NODE_ENV: development
       DB_HOST: postgres
       DB_PORT: 5432
       DB_USER: postgres

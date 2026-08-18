@@ -20,6 +20,7 @@ import storyRoutes from "./routes/story";
 import configRoutes from "./routes/config";
 import gameRoutes from "./routes/game";
 import musicRoutes from "./routes/music";
+import englishRoutes from "./routes/english";
 
 const app = express();
 const server = http.createServer(app);
@@ -113,6 +114,7 @@ app.use("/api/story", storyRoutes);
 app.use("/api/config", configRoutes);
 app.use("/api/games", gameRoutes);
 app.use("/api/music", musicRoutes);
+app.use("/api/english", englishRoutes);
 
 // Base de datos + servidor
 AppDataSource.initialize()

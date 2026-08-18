@@ -9,6 +9,8 @@ import { Rutina } from "../models/Rutina";
 import { Message } from "../models/Message";
 import { Story } from "../models/Story";
 import { DeviceConfig } from "../models/DeviceConfig";
+import { EnglishProgress } from "../models/EnglishProgress";
+import { EnglishThemeContent } from "../models/EnglishThemeContent";
 
 dotenv.config();
 
@@ -24,7 +26,7 @@ const connectionOptions: DataSourceOptions = process.env.DATABASE_URL
       type: "postgres",
       url: process.env.DATABASE_URL,
       ssl: useSSL ? { rejectUnauthorized: false } : false,
-      entities: [User, Child, Toy, Rutina, Message, Story, DeviceConfig],
+      entities: [User, Child, Toy, Rutina, Message, Story, DeviceConfig, EnglishProgress, EnglishThemeContent],
       migrations: [__dirname + "/../migrations/*.ts"],
       synchronize: process.env.DB_SYNCHRONIZE !== undefined ? process.env.DB_SYNCHRONIZE === "true" : !isProduction,
       logging: false,
@@ -37,7 +39,7 @@ const connectionOptions: DataSourceOptions = process.env.DATABASE_URL
       password: process.env.DB_PASSWORD,
       database: process.env.DB_NAME || "smart_toy",
       ssl: useSSL ? { rejectUnauthorized: false } : false,
-      entities: [User, Child, Toy, Rutina, Message, Story, DeviceConfig],
+      entities: [User, Child, Toy, Rutina, Message, Story, DeviceConfig, EnglishProgress, EnglishThemeContent],
       migrations: [__dirname + "/../migrations/*.ts"],
       synchronize: process.env.DB_SYNCHRONIZE !== undefined ? process.env.DB_SYNCHRONIZE === "true" : !isProduction,
       logging: false,

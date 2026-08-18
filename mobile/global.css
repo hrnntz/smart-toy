@@ -6,133 +6,208 @@
 /* Path to heroui-native lib relative to this global.css (project root) */
 @source './node_modules/heroui-native/lib';
 
-/* ─────────────────────────────────────────────
-   Smart-Toy custom theme — overrides HeroUI Native defaults
-   Uses the project palette: Cyan primary + Violet secondary
-   ───────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════
+   PandaAI — Nuevo Sistema de Diseño
+   Paleta: Coral Cálido + Azul Marino Profundo
+   Filosofía: "Seguridad tranquila, magia encendida"
+   ═══════════════════════════════════════════════════════════════ */
+
 @layer theme {
   @variant light {
-    /* Accent → Cyan vibrante #06B6D4 */
-    --accent: oklch(0.71 0.15 196);
-    --accent-foreground: oklch(0.99 0 0);
+    /* ── Accent: Coral vivo — CTAs, tabs activos, highlights ── */
+    --accent: oklch(0.585 0.19 22);          /* #E8533F → Coral vibrante */
+    --accent-foreground: oklch(0.99 0 0);    /* Blanco puro sobre coral */
 
-    /* Backgrounds */
-    --background: oklch(0.98 0.003 240);
-    --foreground: oklch(0.15 0.02 240);
+    /* ── Backgrounds ── */
+    --background: oklch(0.962 0.004 255);    /* #F2F4F8 → Gris frío muy suave */
+    --foreground: oklch(0.148 0.014 258);    /* #101218 → Negro carbón azulado */
 
-    /* Surface (cards, sheets) */
-    --surface: oklch(1 0 0);
-    --surface-foreground: oklch(0.18 0.02 240);
+    /* ── Surface (cards, inputs, sheets) ── */
+    --surface: oklch(1 0 0);                 /* #FFFFFF → Blanco puro */
+    --surface-foreground: oklch(0.148 0.014 258);
 
-    /* Muted text → #717171 */
-    --muted: oklch(0.53 0 0);
+    --surface-secondary: oklch(0.947 0.006 255); /* #EEF0F5 → Gris perla */
+    --surface-secondary-foreground: oklch(0.148 0.014 258);
 
-    /* Default (neutral chips, tags) */
-    --default: oklch(0.95 0.005 240);
-    --default-foreground: oklch(0.25 0.02 240);
+    --surface-tertiary: oklch(0.93 0.007 255);   /* #E8EAEF → Gris un tono más */
+    --surface-tertiary-foreground: oklch(0.148 0.014 258);
 
-    /* Status */
-    --success: oklch(0.67 0.16 162);
+    /* ── Overlay (modales, menús, bottom sheets) ── */
+    --overlay: oklch(1 0 0);
+    --overlay-foreground: oklch(0.148 0.014 258);
+    --backdrop: oklch(0% 0 0 / 35%);
+
+    /* ── Texto secundario / placeholder ── */
+    --muted: oklch(0.535 0.018 255);         /* #757A89 → Gris medio azulado */
+
+    /* ── Default (neutral: chips inactivos, backgrounds sutiles) ── */
+    --default: oklch(0.93 0.006 255);        /* #EAECF2 */
+    --default-foreground: oklch(0.25 0.018 258);
+
+    /* ── Status Colors ── */
+    --success: oklch(0.715 0.185 148);       /* #22C55E → Verde vibrante */
     --success-foreground: oklch(0.99 0 0);
 
-    --danger: oklch(0.63 0.22 25);
+    --warning: oklch(0.775 0.155 74);        /* #F59E0B → Ámbar cálido */
+    --warning-foreground: oklch(0.19 0.06 74);
+
+    --danger: oklch(0.635 0.22 24);          /* #EF4444 → Rojo claro */
     --danger-foreground: oklch(0.99 0 0);
 
-    --warning: oklch(0.78 0.14 75);
-    --warning-foreground: oklch(0.2 0.05 75);
-
-    /* Separators / borders */
-    --separator: oklch(0.91 0.005 240);
-    --border: oklch(0 0 0 / 0%);
-
-    /* Overlay (modals, menus) */
-    --overlay: oklch(1 0 0);
-    --overlay-foreground: oklch(0.15 0.02 240);
-    --backdrop: oklch(0% 0 0 / 30%);
-
-    /* Fields */
-    --field-background: oklch(0.96 0.005 240);
-    --field-foreground: oklch(0.15 0.02 240);
+    /* ── Form Fields ── */
+    --field-background: oklch(0.955 0.005 255);  /* #F0F2F7 → Input bg sutilmente gris */
+    --field-foreground: oklch(0.148 0.014 258);
     --field-placeholder: var(--muted);
     --field-border: transparent;
 
-    /* Shadows */
-    --surface-shadow:
-      0 2px 4px 0 rgba(0, 0, 0, 0.04),
-      0 1px 2px 0 rgba(0, 0, 0, 0.06),
-      0 0 1px 0 rgba(0, 0, 0, 0.06);
-    --overlay-shadow:
-      0 4px 16px 0 rgba(0, 0, 0, 0.08),
-      0 1px 3px 0 rgba(0, 0, 0, 0.06);
-    --field-shadow:
-      0 1px 3px 0 rgba(0, 0, 0, 0.04),
-      0 0 1px 0 rgba(0, 0, 0, 0.04);
+    /* ── Separators & Borders ── */
+    --separator: oklch(0.895 0.007 255);     /* #E0E3EC → Separador suave */
+    --border: oklch(0 0 0 / 0%);
 
-    /* Focus ring */
+    /* ── Focus & Links ── */
     --focus: var(--accent);
     --link: var(--accent);
 
-    /* Segment (segmented controls) */
+    /* ── Segment controls ── */
     --segment: oklch(1 0 0);
-    --segment-foreground: oklch(0.15 0.02 240);
+    --segment-foreground: oklch(0.148 0.014 258);
+
+    /* ── Sombras premium ── */
+    --surface-shadow:
+      0 1px 3px 0 rgba(16, 24, 40, 0.06),
+      0 1px 2px -1px rgba(16, 24, 40, 0.04);
+    --overlay-shadow:
+      0 8px 24px -4px rgba(16, 24, 40, 0.12),
+      0 2px 8px -2px rgba(16, 24, 40, 0.06);
+    --field-shadow:
+      0 1px 2px 0 rgba(16, 24, 40, 0.04),
+      0 0 1px 0 rgba(16, 24, 40, 0.04);
   }
 
   @variant dark {
-    /* Accent → Verde Neón #00FF88 → mapped to oklch */
-    --accent: oklch(0.91 0.21 157);
-    --accent-foreground: oklch(0.12 0.02 157);
+    /* ── Accent: Coral luminoso sobre oscuro ── */
+    --accent: oklch(0.68 0.2 22);            /* #FF7A68 → Coral brillante sobre negro */
+    --accent-foreground: oklch(0.99 0 0);
 
-    /* Backgrounds */
-    --background: oklch(0.14 0.005 240);
-    --foreground: oklch(0.96 0.005 240);
+    /* ── Backgrounds: Azul marino profundo ── */
+    --background: oklch(0.108 0.015 258);    /* #0D0F16 → Negro azulado muy profundo */
+    --foreground: oklch(0.952 0.008 255);    /* #EEF0F5 → Blanco ligeramente frío */
 
-    /* Surface */
-    --surface: oklch(0.19 0.008 240);
-    --surface-foreground: oklch(0.92 0.005 240);
+    /* ── Surface ── */
+    --surface: oklch(0.158 0.018 258);       /* #171B26 → Azul noche oscuro */
+    --surface-foreground: oklch(0.945 0.008 255);
 
-    /* Muted */
-    --muted: oklch(0.56 0.01 240);
+    --surface-secondary: oklch(0.196 0.019 258); /* #1D2230 → Un tono más claro */
+    --surface-secondary-foreground: oklch(0.945 0.008 255);
 
-    /* Default */
-    --default: oklch(0.24 0.01 240);
-    --default-foreground: oklch(0.88 0.008 240);
+    --surface-tertiary: oklch(0.228 0.019 258);  /* #222838 */
+    --surface-tertiary-foreground: oklch(0.945 0.008 255);
 
-    /* Status */
-    --success: oklch(0.7 0.17 162);
-    --success-foreground: oklch(0.99 0 0);
+    /* ── Overlay ── */
+    --overlay: oklch(0.178 0.018 258);       /* #1A1F2C */
+    --overlay-foreground: oklch(0.945 0.008 255);
+    --backdrop: oklch(0% 0 0 / 55%);
 
-    --danger: oklch(0.65 0.22 25);
+    /* ── Muted ── */
+    --muted: oklch(0.508 0.02 258);          /* #6B7280 */
+
+    /* ── Default ── */
+    --default: oklch(0.23 0.018 258);        /* #1E2335 */
+    --default-foreground: oklch(0.87 0.01 255);
+
+    /* ── Status Colors ── */
+    --success: oklch(0.73 0.19 148);         /* #34D399 → Verde esmeralda */
+    --success-foreground: oklch(0.1 0.02 148);
+
+    --warning: oklch(0.795 0.145 76);        /* #FBBF24 → Ámbar luminoso */
+    --warning-foreground: oklch(0.15 0.05 76);
+
+    --danger: oklch(0.655 0.215 24);         /* #F87171 → Rojo suave */
     --danger-foreground: oklch(0.99 0 0);
 
-    --warning: oklch(0.78 0.14 75);
-    --warning-foreground: oklch(0.15 0.04 75);
-
-    /* Separators */
-    --separator: oklch(0.28 0.01 240);
-    --border: oklch(0 0 0 / 0%);
-
-    /* Overlay */
-    --overlay: oklch(0.22 0.01 240);
-    --overlay-foreground: oklch(0.92 0.005 240);
-    --backdrop: oklch(0% 0 0 / 50%);
-
-    /* Fields */
+    /* ── Form Fields ── */
     --field-background: var(--default);
     --field-foreground: var(--foreground);
     --field-placeholder: var(--muted);
     --field-border: transparent;
 
-    /* Shadows */
-    --surface-shadow: 0 0 0 0 transparent inset;
-    --overlay-shadow: 0 0 1px 0 rgba(255, 255, 255, 0.15) inset;
-    --field-shadow: 0 0 0 0 transparent inset;
+    /* ── Separators ── */
+    --separator: oklch(0.255 0.018 258);     /* #252B3A */
+    --border: oklch(0 0 0 / 0%);
 
-    /* Focus ring */
+    /* ── Focus & Links ── */
     --focus: var(--accent);
     --link: var(--accent);
 
-    /* Segment */
-    --segment: oklch(0.22 0.01 240);
-    --segment-foreground: oklch(0.92 0.005 240);
+    /* ── Segment ── */
+    --segment: oklch(0.2 0.018 258);
+    --segment-foreground: oklch(0.945 0.008 255);
+
+    /* ── Sombras en dark (sin sombra de elevación, se usa borde sutil) ── */
+    --surface-shadow: 0 0 0 0 transparent;
+    --overlay-shadow: 0 0 1px 0 rgba(255, 255, 255, 0.1) inset;
+    --field-shadow: 0 0 0 0 transparent;
   }
+}
+
+/* ══════════════════════════════════════════════════════
+   Colores Custom por Feature — Variables semánticas adicionales
+   ══════════════════════════════════════════════════════ */
+@layer theme {
+  @variant light {
+    /* Feature: Cámara en vivo */
+    --camera: oklch(0.59 0.2 255);           /* Azul zafiro */
+    --camera-foreground: oklch(0.99 0 0);
+
+    /* Feature: Juegos */
+    --games: oklch(0.50 0.26 295);           /* Violeta */
+    --games-foreground: oklch(0.99 0 0);
+
+    /* Feature: Música */
+    --music: oklch(0.64 0.18 162);           /* Verde esmeralda */
+    --music-foreground: oklch(0.99 0 0);
+
+    /* Feature: Historias */
+    --stories: oklch(0.75 0.16 74);          /* Ámbar dorado */
+    --stories-foreground: oklch(0.2 0.06 74);
+
+    /* Feature: Rutinas */
+    --routines: oklch(0.55 0.2 268);         /* Índigo */
+    --routines-foreground: oklch(0.99 0 0);
+  }
+
+  @variant dark {
+    --camera: oklch(0.68 0.19 255);
+    --camera-foreground: oklch(0.99 0 0);
+
+    --games: oklch(0.64 0.24 295);
+    --games-foreground: oklch(0.99 0 0);
+
+    --music: oklch(0.72 0.18 162);
+    --music-foreground: oklch(0.1 0.02 162);
+
+    --stories: oklch(0.81 0.14 76);
+    --stories-foreground: oklch(0.15 0.04 76);
+
+    --routines: oklch(0.65 0.19 268);
+    --routines-foreground: oklch(0.99 0 0);
+  }
+}
+
+/* Exponer colores custom a Tailwind */
+@theme inline {
+  --color-camera: var(--camera);
+  --color-camera-foreground: var(--camera-foreground);
+
+  --color-games: var(--games);
+  --color-games-foreground: var(--games-foreground);
+
+  --color-music: var(--music);
+  --color-music-foreground: var(--music-foreground);
+
+  --color-stories: var(--stories);
+  --color-stories-foreground: var(--stories-foreground);
+
+  --color-routines: var(--routines);
+  --color-routines-foreground: var(--routines-foreground);
 }

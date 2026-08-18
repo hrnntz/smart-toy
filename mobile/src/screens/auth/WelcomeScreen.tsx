@@ -26,22 +26,22 @@ export default function WelcomeScreen() {
 
   return (
     <View className="flex-1 bg-background justify-end">
-      {/* ── Área superior con burbujas decorativas + logo ── */}
+      {/* Top section */}
       <View
         style={{ flex: 1 }}
         className="justify-center items-center"
       >
-        {/* Burbuja grande */}
+        {/* Large decorative circle */}
         <View
           style={{
             position: 'absolute',
             width: width * 0.85,
             height: width * 0.85,
             borderRadius: 9999,
-            backgroundColor: accentColor + '18',
+            backgroundColor: accentColor + '26',
           }}
         />
-        {/* Burbuja pequeña */}
+        {/* Small decorative circle */}
         <View
           style={{
             position: 'absolute',
@@ -50,7 +50,7 @@ export default function WelcomeScreen() {
             borderRadius: 9999,
             top: height * 0.06,
             right: -16,
-            backgroundColor: accentColor + '28',
+            backgroundColor: accentColor + '26',
           }}
         />
 
@@ -59,12 +59,20 @@ export default function WelcomeScreen() {
           style={{ width: 150, height: 150, borderRadius: 32 }}
           resizeMode="contain"
         />
+        <View className="items-center mt-6">
+          <Label className="text-3xl font-extrabold text-foreground">
+            PandaAI
+          </Label>
+          <Label className="text-sm text-muted mt-1">
+            Tu compañero inteligente
+          </Label>
+        </View>
       </View>
 
-      {/* ── Tarjeta inferior ── */}
-      <View className="bg-surface rounded-t-4xl px-6 pt-10 pb-12 items-center shadow-surface">
-        <Label className="text-4xl font-extrabold text-foreground text-center mb-3">
-          Aprende y Juega
+      {/* Bottom card */}
+      <View className="bg-surface rounded-t-4xl px-6 pt-8 pb-14 items-center">
+        <Label className="text-3xl font-extrabold text-foreground text-center mb-3">
+          Aprende y Juega con IA
         </Label>
         <Label className="text-base text-muted text-center mb-8 leading-6">
           Conéctate con tu Smart Toy, crea historias, canta nanas y descubre un mundo de diversión y aprendizaje con IA.
@@ -75,14 +83,15 @@ export default function WelcomeScreen() {
             variant="primary"
             onPress={openRegister}
             className="w-full"
+            feedbackVariant="scale-ripple"
           >
             <Button.Label>Crear Cuenta</Button.Label>
           </Button>
 
           <Button
-            variant="outline"
+            variant="tertiary"
             onPress={openLogin}
-            className="w-full"
+            className="w-full bg-surface-secondary"
           >
             <Button.Label>Iniciar Sesión</Button.Label>
           </Button>
@@ -93,7 +102,7 @@ export default function WelcomeScreen() {
         </Label>
       </View>
 
-      {/* ── Bottom Sheets de autenticación ── */}
+      {/* Auth Bottom Sheets */}
       <CustomBottomSheet ref={loginSheetRef} snapPoints={['65%', '90%']}>
         <LoginScreen
           onAuthSuccess={() => {

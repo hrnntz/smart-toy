@@ -1,206 +1,154 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  ScrollView,
-  Alert,
-  Pressable,
-} from 'react-native';
+import { View, ScrollView, Alert, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { configService } from '../../services/api';
-import { Card, Button, Label, TextField, Input, Spinner, useThemeColor, Switch } from 'heroui-native';
+import { Card, Button, Label, TextField, Input, Spinner, useThemeColor, TextArea } from 'heroui-native';
 import { IconButton } from '../../components/ui/IconButton';
 
-interface DeviceConfig {
-  id: number;
-  deviceName: string;
-  volume: number;
-  eyeLights: boolean;
-  vibration: boolean;
-  nightMode: boolean;
-  wifi: string | null;
-}
-
 export default function ConfiguracionScreen({ navigation }: any) {
+  const [deviceName, setDeviceName] = useState('');
+  const [childName, setChildName] = useState('');
+  const [personality, setPersonality] = useState('');
+  const [voiceId, setVoiceId] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [config, setConfig] = useState<DeviceConfig>({
-    id: 0,
-    deviceName: 'Panda',
-    volume: 50,
-    eyeLights: true,
-    vibration: true,
-    nightMode: false,
-    wifi: null,
-  });
 
-  const [primary, separator, background, surface, muted] = useThemeColor([
-    'accent',
-    'separator',
-    'background',
-    'surface',
-    'muted'
+  const [accent, muted, surface, background] = useThemeColor([
+    'accent', 'muted', 'surface', 'background'
   ]);
 
-  useEffect(() => {
-    loadConfig();
-  }, []);
+  useEffect(() => { loadConfig(); }, []);
 
   const loadConfig = async () => {
     try {
       const res = await configService.getConfig();
       if (res.data.success && res.data.data) {
-        setConfig(res.data.data);
+        const cfg = res.data.data;
+        setDeviceName(cfg.deviceName || '');
+
+        setPersonality(cfg.personality || '');
+        setVoiceId(cfg.voiceId || '');
       }
-    } catch (error) {
-      console.error('Error cargando configuración:', error);
-      Alert.alert('Error', 'No se pudo cargar la configuración');
-    } finally {
-      setLoading(false);
-    }
+    } catch (error) { console.error(error); }
+    finally { setLoading(false); }
   };
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      const res = await configService.updateConfig({
-        deviceName: config.deviceName,
-        volume: config.volume,
-        eyeLights: config.eyeLights,
-        vibration: config.vibration,
-        nightMode: config.nightMode,
-        wifi: config.wifi || undefined,
-      });
-      if (res.data.success) {
-        Alert.alert('Éxito', 'Configuración guardada');
-      } else {
-        Alert.alert('Error', res.data.message || 'No se pudo guardar');
-      }
-    } catch (error) {
-      Alert.alert('Error', 'No se pudo guardar la configuración');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const adjustVolume = (delta: number) => {
-    setConfig((c) => ({
-      ...c,
-      volume: Math.min(100, Math.max(0, c.volume + delta)),
-    }));
+      await configService.updateConfig({ deviceName, personality, voiceId } as any);
+      Alert.alert('Éxito', 'Configuración guardada');
+    } catch (error) { Alert.alert('Error', 'No se pudo guardar'); }
+    finally { setSaving(false); }
   };
 
   if (loading) {
     return (
-      <View className="flex-1 justify-center items-center bg-background">
+      <View className="flex-1 justify-center items-center bg-[#0D0F16]">
         <Spinner size="lg" color="primary" />
       </View>
     );
   }
 
   return (
-    <ScrollView className="flex-1 bg-background px-4 pt-12" showsVerticalScrollIndicator={false}>
-      <View className="flex-row justify-between items-center mb-5">
+    <View className="flex-1 bg-[#0D0F16] pt-12">
+      <View className="flex-row justify-between items-center px-4 pb-4 border-b border-white/10">
         <IconButton icon="arrow-back" onPress={() => navigation.goBack()} />
-        <Label className="text-lg font-bold text-foreground">Configuración del dispositivo</Label>
-        <View className="w-10" />
+        <Label className="text-lg font-bold text-white flex-1 text-center mr-8">Configuración</Label>
+        <Pressable className="absolute right-4 top-0 h-10 justify-center" onPress={handleSave}>
+          <Ionicons name="checkmark" size={24} color={accent} />
+        </Pressable>
       </View>
 
-      <Card variant="default" className="mb-4 border-0 p-4 shadow-sm">
-        <Card.Body className="p-0">
-          <Label className="text-base font-bold text-foreground mb-4">Dispositivo</Label>
-          <Label className="text-sm font-semibold text-muted mb-1.5">Nombre del Panda</Label>
-          <TextField className="w-full">
-            <Input
-              value={config.deviceName}
-              onChangeText={(text) => setConfig({ ...config, deviceName: text })}
-              placeholder="Nombre del dispositivo"
-            />
-          </TextField>
-        </Card.Body>
-      </Card>
-
-      <Card variant="default" className="mb-4 border-0 p-4 shadow-sm">
-        <Card.Body className="p-0">
-          <Label className="text-base font-bold text-foreground mb-4">Volumen</Label>
-          <View className="flex-row items-center justify-center gap-6">
-            <Pressable
-              onPress={() => adjustVolume(-10)}
-              className="w-12 h-12 rounded-full items-center justify-center bg-primary/10"
-            >
-              <Ionicons name="remove" size={28} color={primary} />
-            </Pressable>
-            <Ionicons name="volume-medium" size={26} color={primary} />
-            <Label className="text-2xl font-bold text-foreground w-16 text-center">{config.volume}%</Label>
-            <Pressable
-              onPress={() => adjustVolume(10)}
-              className="w-12 h-12 rounded-full items-center justify-center bg-primary/10"
-            >
-              <Ionicons name="add" size={28} color={primary} />
-            </Pressable>
-          </View>
-        </Card.Body>
-      </Card>
-
-      <Card variant="default" className="mb-4 border-0 p-4 shadow-sm">
-        <Card.Body className="p-0 gap-0">
-          <Label className="text-base font-bold text-foreground mb-2">Preferencias</Label>
-          
-          <View className="flex-row justify-between items-center py-3 border-b border-separator">
-            <View className="flex-row items-center gap-3">
-              <Ionicons name="eye" size={22} color={primary} />
-              <Label className="text-[15px] font-medium text-foreground">Luces de los ojos</Label>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+        <Card variant="default" className="mb-6 rounded-3xl bg-surface border-0 overflow-hidden">
+          <Card.Body className="p-6 items-center flex-row gap-4">
+            <View className="w-16 h-16 rounded-full items-center justify-center" style={{ backgroundColor: 'rgba(232, 83, 63, 0.15)' }}>
+              <Label className="text-3xl">🐼</Label>
             </View>
-            <Switch
-              isSelected={config.eyeLights}
-              onSelectedChange={(value: boolean) => setConfig({ ...config, eyeLights: value })}
-            />
-          </View>
-
-          <View className="flex-row justify-between items-center py-3 border-b border-separator">
-            <View className="flex-row items-center gap-3">
-              <Ionicons name="phone-portrait" size={22} color="#E67E22" />
-              <Label className="text-[15px] font-medium text-foreground">Vibración</Label>
+            <View className="flex-1">
+              <Label className="text-lg font-extrabold text-white">Personaliza a tu Panda</Label>
+              <Label className="text-xs text-muted mt-1 leading-4">Ajusta cómo interactúa y suena el juguete para tu hijo.</Label>
             </View>
-            <Switch
-              isSelected={config.vibration}
-              onSelectedChange={(value: boolean) => setConfig({ ...config, vibration: value })}
-            />
-          </View>
+          </Card.Body>
+        </Card>
 
-          <View className="flex-row justify-between items-center py-3">
-            <View className="flex-row items-center gap-3">
-              <Ionicons name="moon" size={22} color="#2C3E50" />
-              <Label className="text-[15px] font-medium text-foreground">Modo noche</Label>
+        <View className="mb-6">
+          <Label className="text-sm font-bold text-white mb-3 uppercase tracking-wider" style={{ color: accent } as any}>Identidad</Label>
+          <View className="gap-4">
+            <View>
+              <Label className="text-sm font-medium text-white mb-1.5 ml-1">Nombre del dispositivo</Label>
+              <TextField className="w-full">
+                <Input
+                  value={deviceName}
+                  onChangeText={setDeviceName}
+                  placeholder="Ej: Panda Mágico"
+                  className="bg-surface text-white border-0"
+                  placeholderTextColor={muted}
+                />
+              </TextField>
             </View>
-            <Switch
-              isSelected={config.nightMode}
-              onSelectedChange={(value: boolean) => setConfig({ ...config, nightMode: value })}
-            />
+            
+            <View>
+              <Label className="text-sm font-medium text-white mb-1.5 ml-1">Nombre del niño</Label>
+              <TextField className="w-full">
+                <Input
+                  value={childName}
+                  onChangeText={setChildName}
+                  placeholder="Ej: Leo"
+                  className="bg-surface text-white border-0"
+                  placeholderTextColor={muted}
+                />
+              </TextField>
+            </View>
           </View>
-        </Card.Body>
-      </Card>
+        </View>
 
-      <Card variant="default" className="mb-4 border-0 p-4 shadow-sm">
-        <Card.Body className="p-0">
-          <Label className="text-base font-bold text-foreground mb-4">Red WiFi</Label>
-          <TextField className="w-full">
-            <Input
-              value={config.wifi || ''}
-              onChangeText={(text) => setConfig({ ...config, wifi: text })}
-              placeholder="Nombre de la red WiFi"
-            />
-          </TextField>
-        </Card.Body>
-      </Card>
+        <View className="mb-6">
+          <Label className="text-sm font-bold text-white mb-3 uppercase tracking-wider" style={{ color: accent } as any}>Personalidad</Label>
+          <View>
+            <Label className="text-sm font-medium text-white mb-1.5 ml-1">Personalidad de la IA</Label>
+            <TextField className="w-full h-24">
+              <Input
+                value={personality}
+                onChangeText={setPersonality}
+                placeholder="Alegre, curioso, amable..."
+                className="bg-surface text-white border-0"
+                placeholderTextColor={muted}
+                multiline
+                textAlignVertical="top"
+              />
+            </TextField>
+          </View>
+        </View>
 
-      <Button
-        variant="primary"
-        onPress={handleSave}
-        isDisabled={saving}
-        className="w-full mb-10"
-      >
-        {saving ? <Spinner size="sm" color="default" /> : <Button.Label>Guardar configuración</Button.Label>}
-      </Button>
-    </ScrollView>
+        <View className="mb-8">
+          <Label className="text-sm font-bold text-white mb-3 uppercase tracking-wider" style={{ color: accent } as any}>Voz</Label>
+          <View>
+            <Label className="text-sm font-medium text-white mb-1.5 ml-1">ID de Voz (ElevenLabs)</Label>
+            <TextField className="w-full">
+              <Input
+                value={voiceId}
+                onChangeText={setVoiceId}
+                placeholder="ID de la voz"
+                className="bg-surface text-white border-0"
+                placeholderTextColor={muted}
+              />
+            </TextField>
+          </View>
+        </View>
+
+        <Button
+          variant="primary"
+          feedbackVariant="scale-ripple"
+          onPress={handleSave}
+          isDisabled={saving}
+          className="w-full rounded-2xl py-4"
+          style={{ backgroundColor: accent }}
+        >
+          {saving ? <Spinner size="sm" color="white" /> : <Button.Label className="text-white font-bold text-base">Guardar configuración</Button.Label>}
+        </Button>
+      </ScrollView>
+    </View>
   );
 }

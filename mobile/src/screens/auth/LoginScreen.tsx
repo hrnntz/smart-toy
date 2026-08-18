@@ -7,8 +7,8 @@ import {
   Input,
   Label,
   TextField,
+  Spinner,
   useThemeColor,
-  cn,
 } from 'heroui-native';
 import { storage } from '../../services/storage';
 import api from '../../services/api';
@@ -31,7 +31,7 @@ export default function LoginScreen({ onAuthSuccess, navigation }: LoginScreenPr
   const [alertMessage, setAlertMessage] = useState('');
   const [alertType, setAlertType] = useState<'info' | 'error'>('info');
 
-  const muted = useThemeColor('muted');
+  const [accent, muted] = useThemeColor(['accent', 'muted']);
 
   const showAlert = (title: string, message: string, type: 'info' | 'error' = 'error') => {
     setAlertTitle(title);
@@ -82,16 +82,20 @@ export default function LoginScreen({ onAuthSuccess, navigation }: LoginScreenPr
 
   return (
     <View className="pb-5">
-      {/* Título */}
-      <Label className="text-2xl font-bold text-center text-foreground mb-5">
-        Iniciar Sesión
-      </Label>
+      {/* ── Title ── */}
+      <View className="items-center mb-6">
+        <View className="w-16 h-16 rounded-3xl bg-accent/12 items-center justify-center mb-3">
+          <Ionicons name="person-outline" size={30} color={accent} />
+        </View>
+        <Label className="text-2xl font-extrabold text-foreground">Iniciar Sesión</Label>
+        <Label className="text-sm text-muted mt-0.5">Accede a tu cuenta PandaAI</Label>
+      </View>
 
-      <View className="w-full gap-1">
-        {/* Campo Email */}
+      <View className="w-full gap-2.5">
+        {/* Email */}
         <TextField className="w-full">
           <Input
-            placeholder="Email"
+            placeholder="Correo electrónico"
             value={email}
             onChangeText={setEmail}
             autoCapitalize="none"
@@ -99,7 +103,7 @@ export default function LoginScreen({ onAuthSuccess, navigation }: LoginScreenPr
           />
         </TextField>
 
-        {/* Campo Contraseña */}
+        {/* Password */}
         <TextField className="w-full">
           <View className="w-full flex-row items-center">
             <Input
@@ -123,38 +127,34 @@ export default function LoginScreen({ onAuthSuccess, navigation }: LoginScreenPr
           </View>
         </TextField>
 
-        {/* Recordar sesión */}
+        {/* Remember Me */}
         <Pressable
-          className="flex-row items-center gap-2.5 my-3"
+          className="flex-row items-center gap-2.5 mt-1 mb-2"
           onPress={() => setRememberMe(!rememberMe)}
         >
-          <Checkbox
-            isSelected={rememberMe}
-            onSelectedChange={setRememberMe}
-          />
-          <Label className="text-sm font-medium text-foreground">
-            Recordar sesión
-          </Label>
+          <Checkbox isSelected={rememberMe} onSelectedChange={setRememberMe} />
+          <Label className="text-sm font-medium text-foreground">Recordar sesión</Label>
         </Pressable>
 
-        {/* Botón principal */}
+        {/* Login Button */}
         <Button
           variant="primary"
           isDisabled={loading}
           onPress={handleLogin}
-          className="w-full mt-2"
+          feedbackVariant="scale-ripple"
+          className="w-full"
         >
           {loading ? (
-            <Button.Label>Cargando...</Button.Label>
+            <Spinner size="sm" color="default" />
           ) : (
-            <Button.Label>Continuar</Button.Label>
+            <Button.Label>Iniciar Sesión</Button.Label>
           )}
         </Button>
 
-        {/* Link a registro */}
+        {/* Register Link */}
         {!onAuthSuccess && (
           <Button
-            variant="ghost"
+            variant="tertiary"
             onPress={() => navigation?.navigate('Register')}
             className="w-full"
           >

@@ -20,12 +20,25 @@ export default function TabNavigator() {
     'separator',
   ]);
 
+  const getFeatureColor = (routeName: string, focused: boolean) => {
+    if (!focused) return muted;
+    switch (routeName) {
+      case 'Inicio': return accent;
+      case 'Rutinas': return '#6366F1';
+      case 'Historias': return '#F59E0B';
+      case 'Música': return '#10B981';
+      case 'Conversaciones': return accent;
+      case 'Más': return muted;
+      default: return accent;
+    }
+  };
+
   return (
     <Tab.Navigator
       id="Tabs"
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarIcon: ({ focused, color, size }) => {
+        tabBarIcon: ({ focused, size }) => {
           let iconName: any = 'home';
 
           if (route.name === 'Inicio') {
@@ -42,30 +55,54 @@ export default function TabNavigator() {
             iconName = focused ? 'grid' : 'grid-outline';
           }
 
-          return <Ionicons name={iconName} size={size} color={color} />;
+          const color = getFeatureColor(route.name, focused);
+          return <Ionicons name={iconName} size={26} color={color} />;
         },
-        tabBarActiveTintColor: accent,
         tabBarInactiveTintColor: muted,
         tabBarStyle: {
           backgroundColor: surface,
           borderTopWidth: 0.5,
           borderTopColor: separator,
-          height: 68,
-          paddingBottom: 10,
-          paddingTop: 4,
+          height: 80,
+          paddingBottom: 18,
+          paddingTop: 6,
         },
         tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: '600',
+          fontSize: 10,
+          fontWeight: '700',
         },
       })}
     >
-      <Tab.Screen name="Inicio" component={HomeScreen} />
-      <Tab.Screen name="Rutinas" component={RutinasScreen} />
-      <Tab.Screen name="Historias" component={HistoriasScreen} />
-      <Tab.Screen name="Música" component={MusicaScreen} />
-      <Tab.Screen name="Conversaciones" component={ConversacionesScreen} />
-      <Tab.Screen name="Más" component={MasScreen} />
+      <Tab.Screen 
+        name="Inicio" 
+        component={HomeScreen} 
+        options={{ tabBarActiveTintColor: accent }} 
+      />
+      <Tab.Screen 
+        name="Rutinas" 
+        component={RutinasScreen} 
+        options={{ tabBarActiveTintColor: '#6366F1' }} 
+      />
+      <Tab.Screen 
+        name="Historias" 
+        component={HistoriasScreen} 
+        options={{ tabBarActiveTintColor: '#F59E0B' }} 
+      />
+      <Tab.Screen 
+        name="Música" 
+        component={MusicaScreen} 
+        options={{ tabBarActiveTintColor: '#10B981' }} 
+      />
+      <Tab.Screen 
+        name="Conversaciones" 
+        component={ConversacionesScreen} 
+        options={{ tabBarActiveTintColor: accent }} 
+      />
+      <Tab.Screen 
+        name="Más" 
+        component={MasScreen} 
+        options={{ tabBarActiveTintColor: muted }} 
+      />
     </Tab.Navigator>
   );
 }

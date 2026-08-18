@@ -42,7 +42,7 @@ Nunca uses lenguaje técnico ni complejo. Siempre responde en español.
         ...formattedHistory,
         { role: 'user', content: message },
       ],
-      model: 'llama-3.1-8b-instant',
+      model: 'openai/gpt-oss-20b',
       temperature: 0.7,
       max_tokens: 200,
     });
@@ -120,7 +120,7 @@ Donde "answer" es el índice numérico (0, 1 o 2) de la opción correcta.
 
     const response = await groq.chat.completions.create({
       messages: [{ role: 'user', content: prompt }],
-      model: 'llama-3.1-8b-instant',
+      model: 'openai/gpt-oss-20b',
       temperature: 0.7,
       max_tokens: 2000,
     });
@@ -225,7 +225,7 @@ Solo responde con la letra de la canción de cuna en español, poética, tierna 
 
     const chatCompletion = await groq.chat.completions.create({
       messages: [{ role: 'system', content: systemPrompt }],
-      model: 'llama-3.3-70b-versatile',
+      model: 'openai/gpt-oss-120b',
       temperature: 0.7,
       max_tokens: 150,
     });
@@ -247,6 +247,56 @@ Solo responde con la letra de la canción de cuna en español, poética, tierna 
       uri: 'https://actions.google.com/sounds/v1/ambiences/white_noise.ogg',
       duration: '10 min',
     };
+  }
+};
+
+// ============================================
+// 6. GENERAR PALABRAS DE UN TEMA DE INGLÉS (englishController)
+// ============================================
+export interface EnglishWordItem {
+  english: string;
+  spanish: string;
+}
+
+export const generateEnglishThemeWords = async (
+  themeLabel: string,
+  count = 6
+): Promise<EnglishWordItem[]> => {
+  try {
+    const prompt = `
+Genera exactamente ${count} palabras o frases MUY simples en inglés para enseñarle a un niño que no sabe absolutamente nada de inglés, sobre el tema: "${themeLabel}".
+Deben ser palabras concretas y fáciles de imaginar/dibujar (sustantivos simples como "dog", "red", "table"), o frases cortas de máximo 4 palabras si el tema lo pide (ej. "Good morning", "How are you").
+No repitas palabras. Ordénalas de la más fácil a la más difícil.
+DEBES responder ÚNICAMENTE en formato JSON plano (un arreglo de objetos), SIN bloques de markdown (\`\`\`json ... \`\`\`), SIN texto antes ni después.
+Estructura exacta por objeto:
+{
+  "english": "palabra o frase en inglés",
+  "spanish": "su traducción exacta al español"
+}
+`;
+
+    const response = await groq.chat.completions.create({
+      messages: [{ role: 'user', content: prompt }],
+      model: 'openai/gpt-oss-20b',
+      temperature: 0.6,
+      max_tokens: 800,
+    });
+
+    const content = response.choices[0]?.message?.content || '[]';
+    const cleanedJson = content.replace(/```json/g, '').replace(/```/g, '').trim();
+    const words: EnglishWordItem[] = JSON.parse(cleanedJson);
+
+    return words.slice(0, count);
+  } catch (error) {
+    console.error('❌ Error en generateEnglishThemeWords:', error);
+    // Respaldo fijo para que la lección nunca se quede vacía si la IA falla
+    return [
+      { english: 'Hello', spanish: 'Hola' },
+      { english: 'Yes', spanish: 'Sí' },
+      { english: 'No', spanish: 'No' },
+      { english: 'Please', spanish: 'Por favor' },
+      { english: 'Thank you', spanish: 'Gracias' },
+    ];
   }
 };
 
@@ -276,7 +326,7 @@ TÍTULO: <título>
 
     const response = await groq.chat.completions.create({
       messages: [{ role: 'user', content: prompt }],
-      model: 'llama-3.1-8b-instant',
+      model: 'openai/gpt-oss-20b',
       temperature: 0.8,
       max_tokens: 800,
     });
