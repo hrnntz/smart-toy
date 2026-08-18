@@ -127,7 +127,9 @@ export const englishService = {
     } as any);
     formData.append('targetText', targetText);
     return api.post('/english/check-pronunciation', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
+      transformRequest: (data, headers) => {
+        return data; // Prevent axios from stringifying FormData in React Native
+      }
     });
   },
   completeTheme: (themeKey: string, correctCount: number, totalCount: number, childId?: number) =>

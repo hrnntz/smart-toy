@@ -63,7 +63,7 @@ export const generateSpeechFromText = async (text: string, voiceId?: string): Pr
       },
       body: JSON.stringify({
         text,
-        model_id: 'eleven_multilingual_v2',
+        model_id: 'eleven_turbo_v2_5',
         voice_settings: {
           stability: 0.35,        // Menos estabilidad = más emoción y juego en la voz
           similarity_boost: 0.85, // Mayor nitidez del personaje
