@@ -7,7 +7,7 @@
 import React, { useCallback, forwardRef } from 'react';
 import {
   BottomSheetModal,
-  BottomSheetView,
+  BottomSheetScrollView,
   BottomSheetBackdrop,
   BottomSheetBackdropProps,
 } from '@gorhom/bottom-sheet';
@@ -42,6 +42,8 @@ export const CustomBottomSheet = forwardRef<BottomSheetModal, CustomBottomSheetP
         snapPoints={snapPoints}
         onDismiss={onDismiss}
         backdropComponent={renderBackdrop}
+        keyboardBehavior="extend"
+        keyboardBlurBehavior="restore"
         backgroundStyle={{
           backgroundColor: background,
           borderTopLeftRadius: 32,
@@ -52,9 +54,9 @@ export const CustomBottomSheet = forwardRef<BottomSheetModal, CustomBottomSheetP
           width: 40,
         }}
       >
-        <BottomSheetView className="flex-1 px-6 pt-2 pb-6">
+        <BottomSheetScrollView className="flex-1 px-6 pt-2 pb-6" showsVerticalScrollIndicator={false}>
           {children}
-        </BottomSheetView>
+        </BottomSheetScrollView>
       </BottomSheetModal>
     );
   }
