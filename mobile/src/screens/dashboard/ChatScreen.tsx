@@ -31,14 +31,8 @@ interface CharacterVoice {
 
 const VOICE_OPTIONS: CharacterVoice[] = [
   { id: 'EXAVITQu4vr4xnSDxMaL', name: 'Bella (Panda Dulce)', icon: 'paw', desc: 'Voz tierna e infantil' },
-  { id: 'jBpfOiLJlfdOoWvoflAa', name: 'Gigi (Cuento Mágico)', icon: 'sparkles', desc: 'Voz animada de hada' },
-  { id: 'zrHiDhphv95cyQqftM9H', name: 'Mimi (Oso Pequeño)', icon: 'heart', desc: 'Voz muy tierna tipo peluche' },
   { id: '21m00Tcm4TlvDq8ikWAM', name: 'Rachel (Amiga Panda)', icon: 'moon', desc: 'Voz calmada para dormir' },
-  { id: 'jsCqWAovK2LkecYy1ClR', name: 'Freya (Princesa)', icon: 'ribbon', desc: 'Voz alegre y expresiva' },
-  { id: 'z9fAnlkznG4ndvfOBYJU', name: 'Glinda (Fantasía)', icon: 'planet', desc: 'Voz mágica de cuento' },
-  { id: 'zcAAsDuNqEBlko7h1jiB', name: 'Giovanni (Explorador)', icon: 'compass', desc: 'Voz animada masculina' },
-  { id: 'AZnzlk1XvdvUeBnXmlld', name: 'Domi (Aventurera)', icon: 'flash', desc: 'Voz enérgica y risueña' },
-  { id: 'D38z5RcWu1voky8WS1ja', name: 'Finn (Caricatura)', icon: 'happy', desc: 'Voz graciosa de caricatura' },
+  { id: 'ErXwobaYiN019PkySvjV', name: 'Giovanni (Explorador)', icon: 'compass', desc: 'Voz animada masculina' },
   { id: 'IKne3meq5aSn9XLyUdCD', name: 'Charlie (Divertido)', icon: 'school', desc: 'Voz juvenil amigable' },
 ];
 
