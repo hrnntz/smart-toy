@@ -1,6 +1,6 @@
 # 🐼 Smart Toy (PandaAI) — Plataforma Interactiva para Padres y Niños
 
-![Status](https://img.shields.io/badge/Status-En_Desarrollo-orange)
+![Status](https://img.shields.io/badge/Status-Proto_0.2-orange)
 ![Mobile](https://img.shields.io/badge/Mobile-React_Native_Expo-blue)
 ![Backend](https://img.shields.io/badge/Backend-Node.js_Express-green)
 ![Security](https://img.shields.io/badge/Security-Strix_AI_Scan-red)
@@ -15,7 +15,7 @@ PandaAI es una plataforma móvil y backend inteligente diseñada para el acompa�
 *   **📱 Panel Parental Integral:** Aplicación para gestionar múltiples juguetes, monitorear la actividad, configurar perfiles infantiles y adaptar la experiencia del juguete.
 *   **🎙️ Interacción de Voz en Tiempo Real ("Hablar con Panda"):**
     *   **STT (Speech-to-Text):** Transcripción rápida y precisa con **Groq Whisper** (`whisper-large-v3`).
-    *   **Cerebro IA:** Motor conversacional con memoria contextual apoyado en **Groq LLM** (`llama-3.1-8b-instant`), manteniendo un historial fluido.
+    *   **Cerebro IA:** Motor conversacional con memoria contextual apoyado en **Groq LLM** (`openai/gpt-oss-20b`), manteniendo un historial fluido.
     *   **TTS (Text-to-Speech):** Síntesis de voz natural y expresiva utilizando **ElevenLabs API** para dar vida al personaje.
 *   **📹 Supervisión Remota de Video en Vivo:**
     *   Acceso desde la nube (4G/5G/Wi-Fi) a través de un sistema de retransmisión con WebSockets (Socket.io).
@@ -130,3 +130,9 @@ cd android
 
 ## 🎓 Notas Académicas
 Desarrollado como proyecto avanzado para la exploración de acompañamiento interactivo y supervisión parental de juguetes inteligentes — **Universidad de Córdoba**. El servicio actual en la nube utiliza tiers gratuitos (Render) y puede presentar "cold starts" iniciales.
+
+
+## Proto 0.2
+- **AI Update:** Transicin oficial a modelos de Groq 100% operativos ('openai/gpt-oss-20b' y 'whisper-large-v3-turbo').
+- **ElevenLabs:** Depuracin del catologo de voces gratuitas garantizadas.
+- **Mobile:** Correccin visual en mengs e instalacin directa optimizada.
