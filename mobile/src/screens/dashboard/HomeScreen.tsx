@@ -137,6 +137,7 @@ export default function HomeScreen({ navigation }: any) {
           toyId: toy.id,
           toyName: toy.name,
           avatarUrl: toy.avatarUrl,
+          initialMode: 'voice',
         });
       } else {
         Alert.alert('Sin juguetes', 'Primero agrega un juguete para poder hablar con Panda.');

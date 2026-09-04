@@ -207,7 +207,7 @@ export default function ChildFormScreen({ navigation, route }: ChildFormScreenPr
         onRequestClose={() => setShowCalendar(false)}
       >
         <View className="flex-1 bg-black/50 justify-center items-center px-4">
-          <View className="w-full max-w-md bg-card rounded-3xl p-5">
+          <View className="w-full max-w-md bg-surface rounded-3xl p-5">
             <View className="flex-row justify-between items-center mb-4">
               <Label className="text-lg font-bold text-foreground">Seleccionar fecha</Label>
               <Pressable onPress={() => setShowCalendar(false)}>

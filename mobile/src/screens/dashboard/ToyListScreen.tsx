@@ -143,15 +143,29 @@ export default function ToyListScreen({ navigation }: any) {
                 
                 <View className="flex-row items-center gap-2 flex-wrap">
                   <Pressable
-                    className="flex-row items-center bg-[#8E44AD] px-2.5 py-1.5 rounded-2xl gap-1.5"
+                    className="flex-row items-center bg-accent px-3 py-1.5 rounded-2xl gap-1.5"
                     onPress={() => navigation.navigate('Chat', {
                       toyId: toy.id,
                       toyName: toy.name,
                       avatarUrl: toy.avatarUrl,
+                      initialMode: 'voice',
                     })}
                   >
-                    <Ionicons name="chatbubble" size={16} color="white" />
-                    <Label className="text-white text-[11px] font-bold">Chat</Label>
+                    <Ionicons name="sparkles" size={15} color="white" />
+                    <Label className="text-white text-[11px] font-bold">Voz</Label>
+                  </Pressable>
+
+                  <Pressable
+                    className="flex-row items-center bg-surface-secondary px-3 py-1.5 rounded-2xl gap-1.5 border border-separator"
+                    onPress={() => navigation.navigate('Chat', {
+                      toyId: toy.id,
+                      toyName: toy.name,
+                      avatarUrl: toy.avatarUrl,
+                      initialMode: 'text',
+                    })}
+                  >
+                    <Ionicons name="chatbubble-outline" size={15} color={primary} />
+                    <Label className="text-foreground text-[11px] font-bold">Chat</Label>
                   </Pressable>
 
                   <Pressable

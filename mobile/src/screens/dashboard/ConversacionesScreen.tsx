@@ -52,6 +52,16 @@ export default function ConversacionesScreen({ navigation }: any) {
       toyId: toy.id,
       toyName: toy.name,
       avatarUrl: toy.avatarUrl,
+      initialMode: 'text',
+    });
+  };
+
+  const openLiveVoice = (toy: Toy) => {
+    navigation.navigate('Chat', {
+      toyId: toy.id,
+      toyName: toy.name,
+      avatarUrl: toy.avatarUrl,
+      initialMode: 'voice',
     });
   };
 
@@ -142,12 +152,24 @@ export default function ConversacionesScreen({ navigation }: any) {
                         </View>
                       </View>
 
-                      {/* Chat Action */}
-                      <View
-                        className="w-11 h-11 rounded-full items-center justify-center"
-                        style={{ backgroundColor: accent + '18' }}
-                      >
-                        <Ionicons name="chatbubble-ellipses" size={20} color={accent} />
+                      {/* Actions */}
+                      <View className="flex-row items-center gap-2">
+                        <Pressable
+                          className="px-3 py-2 rounded-full flex-row items-center bg-accent"
+                          onPress={() => openLiveVoice(toy)}
+                          accessibilityLabel="Hablar por voz en vivo"
+                        >
+                          <Ionicons name="sparkles" size={15} color="white" />
+                          <Label className="text-white text-xs font-bold ml-1">Voz</Label>
+                        </Pressable>
+
+                        <Pressable
+                          className="w-9 h-9 rounded-full items-center justify-center bg-surface-secondary"
+                          onPress={() => openChat(toy)}
+                          accessibilityLabel="Abrir chat de texto"
+                        >
+                          <Ionicons name="chatbubble-ellipses-outline" size={18} color={accent} />
+                        </Pressable>
                       </View>
                     </View>
                   </Card.Body>

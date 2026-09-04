@@ -52,7 +52,7 @@ export default function HistoriaDetalleScreen({ navigation, route }: any) {
   return (
     <ScrollView className="flex-1 bg-background" showsVerticalScrollIndicator={false}>
       {/* Header */}
-      <View className="flex-row items-center px-4 pt-12 pb-4 border-b border-separator bg-card">
+      <View className="flex-row items-center px-4 pt-12 pb-4 border-b border-separator bg-surface">
         <IconButton icon="arrow-back" onPress={() => navigation.goBack()} />
         <Label className="text-lg font-bold text-foreground flex-1 text-center mx-2">
           {titulo || 'Historia'}
