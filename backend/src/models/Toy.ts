@@ -47,6 +47,27 @@ export class Toy {
   @JoinColumn({ name: "userId" })
   user!: User;
 
+  @Column({ type: "float", default: 100.0 })
+  batteryLevel!: number;
+
+  @Column({ type: "float", default: 6600.0 })
+  batteryMah!: number;
+
+  @Column({ type: "float", default: 41.2 })
+  batteryHours!: number;
+
+  @Column({ default: false })
+  isHugging!: boolean;
+
+  @Column({ default: 0 })
+  hugCount!: number;
+
+  @Column({ type: "timestamp", nullable: true })
+  lastHugAt!: Date | null;
+
+  @Column({ length: 50, default: "LIBRE" })
+  sensorStatus!: string;
+
   // ✅ Relación con mensajes
   @OneToMany(() => Message, (message) => message.toy)
   messages!: Message[];

@@ -5,6 +5,8 @@ import { storage } from '../../services/storage';
 import { authService } from '../../services/auth';
 import { rutinaService, toyService, configService } from '../../services/api';
 import { Button, Card, Chip, Label, Spinner, Avatar, useThemeColor } from 'heroui-native';
+import io, { Socket } from 'socket.io-client';
+import { API_URL } from '../../config/env';
 
 export default function HomeScreen({ navigation }: any) {
   const primary = useThemeColor('accent');
@@ -24,6 +26,40 @@ export default function HomeScreen({ navigation }: any) {
   const [totalToys, setTotalToys] = useState(0);
   const [deviceName, setDeviceName] = useState('Panda');
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
+  const [toyData, setToyData] = useState<any>(null);
+
+  useEffect(() => {
+    let socket: Socket | null = null;
+    const connectSocket = async () => {
+      try {
+        const token = await storage.getItem('token');
+        const userStr = await storage.getItem('user');
+        const u = userStr ? JSON.parse(userStr) : null;
+        const socketServerUrl = API_URL.replace(/\/api\/?$/, '');
+        socket = io(socketServerUrl, {
+          transports: ['websocket'],
+          auth: { token },
+        });
+
+        socket.on('connect', () => {
+          if (u?.id) socket?.emit('join:parent', String(u.id));
+        });
+
+        socket.on('toy:status_changed', (data: any) => {
+          setToyData((prev: any) => ({ ...prev, ...data }));
+          if (data.isConnected !== undefined) {
+            setConnectedToys(data.isConnected ? 1 : 0);
+          }
+        });
+      } catch (e) {
+        console.error('Error conectando socket en Home:', e);
+      }
+    };
+    connectSocket();
+    return () => {
+      if (socket) socket.disconnect();
+    };
+  }, []);
 
   useEffect(() => {
     const hour = new Date().getHours();
@@ -98,6 +134,9 @@ export default function HomeScreen({ navigation }: any) {
         const toys = toysRes.data.data || [];
         setTotalToys(toys.length);
         setConnectedToys(toys.filter((t: any) => t.isConnected).length);
+        if (toys.length > 0) {
+          setToyData(toys[0]);
+        }
       }
       const configRes = await configService.getConfig();
       if (configRes.data.success) {
@@ -196,36 +235,76 @@ export default function HomeScreen({ navigation }: any) {
           </View>
         </View>
 
-        {/* Panda Status Card */}
-        <Card variant="default" className="rounded-3xl mb-6">
-          <Card.Body>
-            <View className="flex-row items-center justify-between">
-              <View className="flex-row items-center flex-1">
-                <View className="w-14 h-14 rounded-full bg-accent/10 items-center justify-center mr-4">
-                  <Label className="text-3xl">🐼</Label>
+        {/* Panda Status Card con Batería y Abrazos en Vivo */}
+        <Pressable
+          onPress={() =>
+            navigation.navigate('ToyControl', {
+              toyId: toyData?.id,
+              toyName: deviceName,
+            })
+          }
+        >
+          <Card variant="default" className="rounded-3xl mb-6">
+            <Card.Body>
+              <View className="flex-row items-center justify-between">
+                <View className="flex-row items-center flex-1">
+                  <View className="w-14 h-14 rounded-full bg-accent/10 items-center justify-center mr-4">
+                    <Label className="text-3xl">{toyData?.isHugging ? '🤗' : '🐼'}</Label>
+                  </View>
+                  <View>
+                    <Label className="text-foreground font-bold text-lg">{deviceName}</Label>
+                    <View className="flex-row items-center mt-1 gap-2">
+                      <View className="flex-row items-center">
+                        <View className={`w-2 h-2 rounded-full mr-1.5 ${connectedToys > 0 ? 'bg-success' : 'bg-danger'}`} />
+                        <Label className="text-muted text-xs">
+                          {totalToys > 0 ? `Online` : 'Sin conectar'}
+                        </Label>
+                      </View>
+                      {toyData?.batteryLevel !== undefined && (
+                        <View className="flex-row items-center bg-surface-secondary px-2 py-0.5 rounded-full">
+                          <Ionicons
+                            name="battery-charging"
+                            size={12}
+                            color={toyData.batteryLevel > 20 ? success : danger}
+                            className="mr-1"
+                          />
+                          <Label className="text-foreground text-[11px] font-semibold">
+                            {Math.round(toyData.batteryLevel)}%
+                          </Label>
+                        </View>
+                      )}
+                    </View>
+                  </View>
                 </View>
-                <View>
-                  <Label className="text-foreground font-bold text-lg">{deviceName}</Label>
-                  <View className="flex-row items-center mt-1">
-                    <View className={`w-2 h-2 rounded-full mr-2 ${connectedToys > 0 ? 'bg-success' : 'bg-danger'}`} />
-                    <Label className="text-muted text-sm">
-                      {totalToys > 0 ? `Online ${connectedToys}/${totalToys}` : 'Sin conectar'}
-                    </Label>
+                <View className="items-end gap-1">
+                  <Chip variant="soft" color={connectedToys > 0 ? 'success' : 'danger'}>
+                    <Chip.Label>{connectedToys > 0 ? 'Online' : 'Offline'}</Chip.Label>
+                  </Chip>
+                  <View className="flex-row items-center">
+                    <Label className="text-accent text-xs font-semibold">Controlar</Label>
+                    <Ionicons name="chevron-forward" size={14} color={primary} />
                   </View>
                 </View>
               </View>
-              <Chip variant="soft" color={connectedToys > 0 ? 'success' : 'danger'}>
-                <Chip.Label>{connectedToys > 0 ? 'Online' : 'Offline'}</Chip.Label>
-              </Chip>
-            </View>
-            {nextRutina && (
-              <View className="mt-4 flex-row items-center bg-surface-secondary py-2 px-3 rounded-full self-start">
-                <Ionicons name="alarm-outline" size={16} color={textSecondary} className="mr-2" />
-                <Label className="text-muted text-xs ml-1 font-medium">{nextRutina}</Label>
-              </View>
-            )}
-          </Card.Body>
-        </Card>
+
+              {/* Banner si el sensor o servos están en abrazo activo */}
+              {toyData?.isHugging && (
+                <View className="mt-3 flex-row items-center bg-accent/15 py-1.5 px-3 rounded-2xl">
+                  <Label className="text-xs font-bold text-accent">
+                    🤗 ¡Panda está dando un abrazo en vivo a tu hijo!
+                  </Label>
+                </View>
+              )}
+
+              {nextRutina && (
+                <View className="mt-3 flex-row items-center bg-surface-secondary py-2 px-3 rounded-full self-start">
+                  <Ionicons name="alarm-outline" size={16} color={textSecondary} className="mr-2" />
+                  <Label className="text-muted text-xs ml-1 font-medium">{nextRutina}</Label>
+                </View>
+              )}
+            </Card.Body>
+          </Card>
+        </Pressable>
 
         {/* Hero CTA */}
         <Pressable 

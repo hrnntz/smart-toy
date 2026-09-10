@@ -7,6 +7,7 @@ import { Message } from "../models/Message";
 import { AuthRequest } from "../middleware/auth";
 import { getAIResponse, transcribeAudioWithWhisper, ChatHistoryMessage } from "../services/aiService";
 import { generateSpeechFromText } from "../services/elevenlabsService";
+import { getIO } from "../socket";
 
 const toyRepository = AppDataSource.getRepository(Toy);
 const childRepository = AppDataSource.getRepository(Child);
@@ -308,4 +309,193 @@ export const voiceChatWithToy = async (req: AuthRequest, res: Response): Promise
     console.error("Error en voiceChatWithToy:", error);
     res.status(500).json({ success: false, message: "Error procesando voz con IA" });
   }
-};  
+};
+
+// ==========================================
+// 📡 NUEVAS FUNCIONES DE TELEMETRÍA Y CONTROL
+// ==========================================
+
+// ✅ 1. Reportar telemetría desde el ESP32 (o simulador)
+export const reportTelemetry = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const {
+      serialNumber,
+      batteryLevel,
+      batteryMah,
+      batteryHours,
+      sensorStatus,
+      isHugging,
+    } = req.body;
+
+    if (!serialNumber) {
+      res.status(400).json({ success: false, message: "serialNumber es requerido" });
+      return;
+    }
+
+    const toy = await toyRepository.findOne({
+      where: { serialNumber },
+      relations: ["user", "child"],
+    });
+
+    if (!toy) {
+      res.status(404).json({ success: false, message: "Juguete no encontrado con ese serial" });
+      return;
+    }
+
+    // Detectar nuevo abrazo iniciado
+    const estabaAbrazando = toy.isHugging;
+    const ahoraAbraza = Boolean(isHugging);
+
+    if (!estabaAbrazando && ahoraAbraza) {
+      toy.hugCount = (toy.hugCount || 0) + 1;
+      toy.lastHugAt = new Date();
+    }
+
+    toy.isConnected = true;
+    if (batteryLevel !== undefined) toy.batteryLevel = Number(batteryLevel);
+    if (batteryMah !== undefined) toy.batteryMah = Number(batteryMah);
+    if (batteryHours !== undefined) toy.batteryHours = Number(batteryHours);
+    if (sensorStatus !== undefined) toy.sensorStatus = String(sensorStatus);
+    if (isHugging !== undefined) toy.isHugging = ahoraAbraza;
+
+    await toyRepository.save(toy);
+
+    // Notificar en tiempo real a los clientes conectados (App Móvil del padre)
+    try {
+      const io = getIO();
+      const payload = {
+        toyId: toy.id,
+        serialNumber: toy.serialNumber,
+        name: toy.name,
+        isConnected: true,
+        batteryLevel: toy.batteryLevel,
+        batteryMah: toy.batteryMah,
+        batteryHours: toy.batteryHours,
+        sensorStatus: toy.sensorStatus,
+        isHugging: toy.isHugging,
+        hugCount: toy.hugCount,
+        lastHugAt: toy.lastHugAt,
+      };
+
+      io.to(`toy:${toy.id}`).emit("toy:status_changed", payload);
+      if (toy.user?.id) {
+        io.to(`parent:${toy.user.id}`).emit("toy:status_changed", payload);
+      }
+    } catch (socketErr) {
+      // Ignorar si socket no está listo
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        id: toy.id,
+        name: toy.name,
+        batteryLevel: toy.batteryLevel,
+        batteryMah: toy.batteryMah,
+        batteryHours: toy.batteryHours,
+        sensorStatus: toy.sensorStatus,
+        isHugging: toy.isHugging,
+        hugCount: toy.hugCount,
+        lastHugAt: toy.lastHugAt,
+      },
+    });
+  } catch (error) {
+    console.error("Error al reportar telemetría:", error);
+    res.status(500).json({ success: false, message: "Error procesando telemetría" });
+  }
+};
+
+// ✅ 2. Obtener estado y telemetría de un juguete específico
+export const getToyTelemetry = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.userId;
+
+    const toy = await toyRepository.findOne({
+      where: { id: Number(id), user: { id: userId } },
+      relations: ["child"],
+    });
+
+    if (!toy) {
+      res.status(404).json({ success: false, message: "Juguete no encontrado" });
+      return;
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        id: toy.id,
+        name: toy.name,
+        serialNumber: toy.serialNumber,
+        isConnected: toy.isConnected,
+        batteryLevel: toy.batteryLevel,
+        batteryMah: toy.batteryMah,
+        batteryHours: toy.batteryHours,
+        sensorStatus: toy.sensorStatus,
+        isHugging: toy.isHugging,
+        hugCount: toy.hugCount,
+        lastHugAt: toy.lastHugAt,
+        child: toy.child ? { id: toy.child.id, name: toy.child.name } : null,
+      },
+    });
+  } catch (error) {
+    console.error("Error obteniendo telemetría:", error);
+    res.status(500).json({ success: false, message: "Error interno del servidor" });
+  }
+};
+
+// ✅ 3. Enviar acción o comando remoto al juguete (ej. abrazo remoto)
+export const triggerToyAction = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { action } = req.body; // "HUG", "OPEN_ARMS", "RESET_BATTERY"
+    const userId = req.user?.userId;
+
+    const toy = await toyRepository.findOne({
+      where: { id: Number(id), user: { id: userId } },
+    });
+
+    if (!toy) {
+      res.status(404).json({ success: false, message: "Juguete no encontrado" });
+      return;
+    }
+
+    // Si la acción es resetear batería:
+    if (action === "RESET_BATTERY") {
+      toy.batteryLevel = 100.0;
+      toy.batteryMah = 6600.0;
+      toy.batteryHours = 41.2;
+      await toyRepository.save(toy);
+    } else if (action === "HUG") {
+      toy.isHugging = true;
+      toy.hugCount = (toy.hugCount || 0) + 1;
+      toy.lastHugAt = new Date();
+      await toyRepository.save(toy);
+    }
+
+    // Emitir comando por WebSockets a los canales del juguete
+    try {
+      const io = getIO();
+      io.to(`toy:${toy.id}`).emit("toy:command", { action, timestamp: Date.now() });
+      io.to(`parent:${userId}`).emit("toy:status_changed", {
+        toyId: toy.id,
+        isHugging: toy.isHugging,
+        hugCount: toy.hugCount,
+        lastHugAt: toy.lastHugAt,
+        batteryLevel: toy.batteryLevel,
+      });
+    } catch (socketErr) {
+      // Ignorar si socket no está listo
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Acción '${action}' transmitida exitosamente`,
+      data: { action, isHugging: toy.isHugging, hugCount: toy.hugCount },
+    });
+  } catch (error) {
+    console.error("Error ejecutando acción de juguete:", error);
+    res.status(500).json({ success: false, message: "Error ejecutando acción" });
+  }
+};
+  

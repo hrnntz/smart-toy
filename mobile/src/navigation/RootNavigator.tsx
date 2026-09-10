@@ -23,6 +23,7 @@ import ConfiguracionScreen from '../screens/dashboard/ConfiguracionScreen';
 import RutinasScreen from '../screens/dashboard/RutinasScreen';
 import RutinaFormScreen from '../screens/dashboard/RutinaFormScreen';
 import ChatScreen from '../screens/dashboard/ChatScreen';
+import ToyControlScreen from '../screens/toy/ToyControlScreen';
 
 import MusicaScreen from '../screens/dashboard/MusicaScreen';
 
@@ -59,6 +60,7 @@ export default function RootNavigator() {
         {/* Pantallas de juguetes */}
         <Stack.Screen name="ToyList" component={ToyListScreen} />
         <Stack.Screen name="ToyForm" component={ToyFormScreen} />
+        <Stack.Screen name="ToyControl" component={ToyControlScreen} />
         <Stack.Screen name="Chat" component={ChatScreen} />
 
         {/* Pantallas de funcionalidades */}

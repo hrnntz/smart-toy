@@ -169,6 +169,17 @@ export default function ToyListScreen({ navigation }: any) {
                   </Pressable>
 
                   <Pressable
+                    className="flex-row items-center bg-accent/15 px-3 py-1.5 rounded-2xl gap-1.5"
+                    onPress={() => navigation.navigate('ToyControl', {
+                      toyId: toy.id,
+                      toyName: toy.name,
+                    })}
+                  >
+                    <Ionicons name="game-controller" size={15} color={primary} />
+                    <Label className="text-accent text-[11px] font-bold">Control & Batería</Label>
+                  </Pressable>
+
+                  <Pressable
                     className="flex-row items-center px-2.5 py-1.5 rounded-2xl gap-1.5"
                     style={{ backgroundColor: toy.isConnected ? success : muted }}
                     onPress={() => handleToggle(toy.id)}

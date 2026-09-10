@@ -6,7 +6,7 @@ import { Platform } from 'react-native';
  * coloca tu URL de Render en RENDER_API_URL (ej: 'https://tu-app.onrender.com/api')
  * o usa la variable de entorno EXPO_PUBLIC_API_URL.
  */
-const RENDER_API_URL = ''; // 👈 Escribe tu URL de Render aquí si no usas variables de entorno
+const RENDER_API_URL = 'https://smart-toy.onrender.com/api';
 
 const getDefaultApiUrl = (): string => {
   const envUrl = process.env.EXPO_PUBLIC_API_URL;

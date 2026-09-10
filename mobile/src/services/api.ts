@@ -60,6 +60,10 @@ export const toyService = {
   getMessages: (toyId: number) => api.get(`/toy/${toyId}/messages`),
   saveMessage: (toyId: number, content: string, isUser: boolean) =>
     api.post(`/toy/${toyId}/messages`, { content, isUser }),
+  // 📡 Métodos de telemetría y control de hardware ESP32
+  getTelemetry: (toyId: number) => api.get(`/toy/${toyId}/telemetry`),
+  triggerAction: (toyId: number, action: string) =>
+    api.post(`/toy/${toyId}/action`, { action }),
 };
 
 // Servicios de perfil del niño

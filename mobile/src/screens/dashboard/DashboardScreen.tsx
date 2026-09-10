@@ -16,19 +16,32 @@ export default function DashboardScreen({ navigation }: any) {
         </Pressable>
       </View>
 
-      <Card variant="default" className="mb-4">
-        <Card.Body>
-          <Card.Title>👶 Mis Niños</Card.Title>
-          <Card.Description>Agrega y gestiona tus hijos</Card.Description>
-        </Card.Body>
-      </Card>
+      <Pressable onPress={() => navigation.navigate('ChildList')}>
+        <Card variant="default" className="mb-4">
+          <Card.Body>
+            <Card.Title>👶 Mis Niños</Card.Title>
+            <Card.Description>Agrega y gestiona los perfiles infantiles</Card.Description>
+          </Card.Body>
+        </Card>
+      </Pressable>
 
-      <Card variant="default" className="mb-4">
-        <Card.Body>
-          <Card.Title>🧸 Mis Juguetes</Card.Title>
-          <Card.Description>Controla los juguetes inteligentes</Card.Description>
-        </Card.Body>
-      </Card>
+      <Pressable onPress={() => navigation.navigate('ToyList')}>
+        <Card variant="default" className="mb-4">
+          <Card.Body>
+            <Card.Title>🧸 Mis Juguetes</Card.Title>
+            <Card.Description>Gestiona los dispositivos y abre el control del Panda</Card.Description>
+          </Card.Body>
+        </Card>
+      </Pressable>
+
+      <Pressable onPress={() => navigation.navigate('ToyControl')}>
+        <Card variant="default" className="mb-4 bg-accent/10 border border-accent/20">
+          <Card.Body>
+            <Card.Title>🔋 Telemetría & Control del Panda</Card.Title>
+            <Card.Description>Supervisa la batería de 10.000 mAh, sensor TTP223 y abrazos en vivo</Card.Description>
+          </Card.Body>
+        </Card>
+      </Pressable>
     </ScrollView>
   );
 }
