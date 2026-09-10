@@ -44,15 +44,15 @@ export default function ToyWifiSetupScreen({ route, navigation }: any) {
   const [testingHug, setTestingHug] = useState(false);
 
   useEffect(() => {
-    checkPandaConnection();
+    checkPandaConnection(false);
   }, []);
 
   // 1. Verificar si el celular está conectado al AP Panda_Setup (192.168.4.1)
-  const checkPandaConnection = async () => {
+  const checkPandaConnection = async (manual = false) => {
     setCheckingPanda(true);
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3500);
+      const timeoutId = setTimeout(() => controller.abort(), 4000);
 
       const res = await fetch('http://192.168.4.1/telemetry', {
         signal: controller.signal,
@@ -66,13 +66,25 @@ export default function ToyWifiSetupScreen({ route, navigation }: any) {
         if (data.serialNumber) {
           setSerial(data.serialNumber);
         }
+        if (manual) {
+          Alert.alert('¡Panda Detectado! 🎉', `Conectado correctamente. Batería al ${Math.round(data.batteryLevel || 100)}%.`);
+        }
         // Escanear redes automáticamente una vez detectado
         scanNearbyNetworks();
       } else {
         setPandaDetected(false);
+        if (manual) {
+          Alert.alert('No se pudo comunicar', 'El Panda respondió con error. Intenta de nuevo.');
+        }
       }
-    } catch (e) {
+    } catch (e: any) {
       setPandaDetected(false);
+      if (manual) {
+        Alert.alert(
+          'Panda no detectado',
+          'No se pudo conectar a http://192.168.4.1.\n\n1. Verifica estar conectado a la red Wi-Fi "Panda_Setup".\n2. Si tu celular dice "Red sin internet", selecciona "Mantener conexión".\n3. Si tienes datos móviles activos, desactívalos temporalmente para que el celular no desvíe el tráfico.'
+        );
+      }
     } finally {
       setCheckingPanda(false);
     }
@@ -273,7 +285,7 @@ export default function ToyWifiSetupScreen({ route, navigation }: any) {
                 </View>
 
                 <Pressable
-                  onPress={checkPandaConnection}
+                  onPress={() => checkPandaConnection(true)}
                   disabled={checkingPanda}
                   className="py-3 bg-accent rounded-2xl items-center flex-row justify-center gap-2"
                 >
