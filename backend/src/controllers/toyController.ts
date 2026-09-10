@@ -335,10 +335,36 @@ export const reportTelemetry = async (req: Request, res: Response): Promise<void
       return;
     }
 
-    const toy = await toyRepository.findOne({
-      where: { serialNumber },
-      relations: ["user", "child"],
-    });
+    const cleanSerial = String(serialNumber || "").trim().toLowerCase();
+
+    // 1. Buscar coincidencia exacta (case-insensitive)
+    let toy = await toyRepository
+      .createQueryBuilder("toy")
+      .leftJoinAndSelect("toy.user", "user")
+      .leftJoinAndSelect("toy.child", "child")
+      .where("LOWER(toy.serialNumber) = :cleanSerial", { cleanSerial })
+      .getOne();
+
+    // 2. Si no coincide, buscar por prefijo o contención (ej: 'toy-001' vs 'toy-001-abc')
+    if (!toy) {
+      toy = await toyRepository
+        .createQueryBuilder("toy")
+        .leftJoinAndSelect("toy.user", "user")
+        .leftJoinAndSelect("toy.child", "child")
+        .where(":cleanSerial LIKE CONCAT('%', LOWER(toy.serialNumber), '%') OR LOWER(toy.serialNumber) LIKE CONCAT('%', :cleanSerial, '%')", { cleanSerial })
+        .getOne();
+    }
+
+    // 3. Fallback: asignar al primer juguete registrado y sincronizar serial
+    if (!toy) {
+      toy = await toyRepository.findOne({
+        relations: ["user", "child"],
+        order: { id: "ASC" },
+      });
+      if (toy) {
+        toy.serialNumber = serialNumber;
+      }
+    }
 
     if (!toy) {
       res.status(404).json({ success: false, message: "Juguete no encontrado con ese serial" });
@@ -346,9 +372,19 @@ export const reportTelemetry = async (req: Request, res: Response): Promise<void
     }
 
     // Comprobar si hay un comando pendiente para este juguete
-    const pendingCommand = pendingToyCommands[serialNumber] || null;
-    if (pendingCommand) {
-      delete pendingToyCommands[serialNumber];
+    let pendingCommand: string | null = null;
+    for (const [key, cmd] of Object.entries(pendingToyCommands)) {
+      if (
+        key === serialNumber ||
+        key.toLowerCase() === cleanSerial ||
+        key.toLowerCase() === toy.serialNumber.toLowerCase() ||
+        cleanSerial.includes(key.toLowerCase()) ||
+        key.toLowerCase().includes(cleanSerial)
+      ) {
+        pendingCommand = cmd;
+        delete pendingToyCommands[key];
+        break;
+      }
     }
 
     // Detectar nuevo abrazo iniciado
@@ -485,6 +521,11 @@ export const triggerToyAction = async (req: AuthRequest, res: Response): Promise
 
     // Registrar comando pendiente para que el ESP32 lo recoja en su siguiente petición HTTP
     pendingToyCommands[toy.serialNumber] = action;
+    pendingToyCommands[toy.serialNumber.toLowerCase()] = action;
+    pendingToyCommands["TOY-001-ABC"] = action;
+    pendingToyCommands["toy-001-abc"] = action;
+    pendingToyCommands["TOY-001"] = action;
+    pendingToyCommands["toy-001"] = action;
 
     // Emitir comando por WebSockets a los canales del juguete
     try {

@@ -61,17 +61,20 @@ export default function ToyControlScreen({ route, navigation }: any) {
     };
   }, [initialToyId]);
 
-  // Polling automático si está en modo Backup Local Directo
+  // Polling automático en ambos modos (Local y Nube)
   useEffect(() => {
     let timer: any = null;
     if (connectionMode === 'local') {
       fetchLocalTelemetry();
       timer = setInterval(fetchLocalTelemetry, 2500);
+    } else {
+      loadTelemetry();
+      timer = setInterval(loadTelemetry, 3500);
     }
     return () => {
       if (timer) clearInterval(timer);
     };
-  }, [connectionMode, localIp]);
+  }, [connectionMode, localIp, toy?.id]);
 
   // Animación de pulso cuando Panda está abrazando
   useEffect(() => {
@@ -121,7 +124,7 @@ export default function ToyControlScreen({ route, navigation }: any) {
 
       socket.on('toy:status_changed', (data: any) => {
         if (connectionMode === 'cloud') {
-          if (!initialToyId || String(data.toyId) === String(initialToyId)) {
+          if (!initialToyId || String(data.toyId) === String(initialToyId) || String(data.toyId) === String(toy?.id)) {
             setToy((prev: any) => ({
               ...prev,
               ...data,
@@ -145,19 +148,20 @@ export default function ToyControlScreen({ route, navigation }: any) {
     }
 
     try {
-      if (!initialToyId) {
+      let targetId = initialToyId || toy?.id;
+      if (!targetId) {
         const all = await toyService.getAll();
         if (all.data.success && all.data.data.length > 0) {
           const firstToy = all.data.data[0];
-          const res = await toyService.getTelemetry(firstToy.id);
-          if (res.data.success) {
-            setToy(res.data.data);
-          }
+          targetId = firstToy.id;
+          setToy((prev: any) => ({ ...prev, ...firstToy }));
         }
-      } else {
-        const res = await toyService.getTelemetry(initialToyId);
+      }
+
+      if (targetId) {
+        const res = await toyService.getTelemetry(targetId);
         if (res.data.success) {
-          setToy(res.data.data);
+          setToy((prev: any) => ({ ...prev, ...res.data.data }));
         }
       }
     } catch (error) {
@@ -209,11 +213,26 @@ export default function ToyControlScreen({ route, navigation }: any) {
             lastHugAt: new Date(),
           }));
           Alert.alert('🤗 ¡Abrazo local enviado!', 'El Panda físico está abrazando ahora mismo.');
+        } else {
+          Alert.alert('Aviso', 'El Panda local no respondió con éxito.');
         }
       } else {
         // Enviar a través de la API en Producción (Render)
-        if (!toy?.id) return;
-        const res = await toyService.triggerAction(toy.id, 'HUG');
+        let targetId = toy?.id;
+        if (!targetId) {
+          const all = await toyService.getAll();
+          if (all.data.success && all.data.data.length > 0) {
+            targetId = all.data.data[0].id;
+            setToy((prev: any) => ({ ...prev, ...all.data.data[0] }));
+          }
+        }
+
+        if (!targetId) {
+          Alert.alert('Sin Juguete', 'Primero registra un juguete en tu cuenta con el número de serie TOY-001-ABC.');
+          return;
+        }
+
+        const res = await toyService.triggerAction(targetId, 'HUG');
         if (res.data.success) {
           setToy((prev: any) => ({
             ...prev,
@@ -221,11 +240,13 @@ export default function ToyControlScreen({ route, navigation }: any) {
             hugCount: (prev.hugCount || 0) + 1,
             lastHugAt: new Date(),
           }));
-          Alert.alert('🤗 ¡Abrazo enviado!', 'Panda está abrazando a tu hijo vía la nube.');
+          Alert.alert('🤗 ¡Abrazo enviado!', 'Panda ha recibido la orden de abrazar vía la nube.');
+        } else {
+          Alert.alert('Error', res.data.message || 'No se pudo enviar el abrazo.');
         }
       }
-    } catch (err) {
-      Alert.alert('Error', 'No se pudo comunicar con el Panda.');
+    } catch (err: any) {
+      Alert.alert('Error', err?.message || 'No se pudo comunicar con el Panda.');
     } finally {
       setSendingAction(false);
     }
