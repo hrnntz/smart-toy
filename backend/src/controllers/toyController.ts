@@ -337,37 +337,30 @@ export const reportTelemetry = async (req: Request, res: Response): Promise<void
 
     const cleanSerial = String(serialNumber || "").trim().toLowerCase();
 
-    // 1. Buscar coincidencia exacta (case-insensitive)
-    let toy = await toyRepository
-      .createQueryBuilder("toy")
-      .leftJoinAndSelect("toy.user", "user")
-      .leftJoinAndSelect("toy.child", "child")
-      .where("LOWER(toy.serialNumber) = :cleanSerial", { cleanSerial })
-      .getOne();
+    // Buscar coincidencia de forma 100% segura sin errores de sintaxis SQL
+    const allToys = await toyRepository.find({ relations: ["user", "child"] });
+    let toy = allToys.find(
+      (t) => t.serialNumber && t.serialNumber.trim().toLowerCase() === cleanSerial
+    );
 
-    // 2. Si no coincide, buscar por prefijo o contención (ej: 'toy-001' vs 'toy-001-abc')
+    // Si no coincide exactamente, buscar si uno contiene al otro (ej. 'toy-001' con 'toy-001-abc')
     if (!toy) {
-      toy = await toyRepository
-        .createQueryBuilder("toy")
-        .leftJoinAndSelect("toy.user", "user")
-        .leftJoinAndSelect("toy.child", "child")
-        .where(":cleanSerial LIKE CONCAT('%', LOWER(toy.serialNumber), '%') OR LOWER(toy.serialNumber) LIKE CONCAT('%', :cleanSerial, '%')", { cleanSerial })
-        .getOne();
+      toy = allToys.find(
+        (t) =>
+          t.serialNumber &&
+          (cleanSerial.includes(t.serialNumber.trim().toLowerCase()) ||
+           t.serialNumber.trim().toLowerCase().includes(cleanSerial))
+      );
     }
 
-    // 3. Fallback: asignar al primer juguete registrado y sincronizar serial
-    if (!toy) {
-      toy = await toyRepository.findOne({
-        relations: ["user", "child"],
-        order: { id: "ASC" },
-      });
-      if (toy) {
-        toy.serialNumber = serialNumber;
-      }
+    // Fallback: Si no coincide pero existe un juguete en la BD, vincular al primer juguete
+    if (!toy && allToys.length > 0) {
+      toy = allToys[0];
+      toy.serialNumber = serialNumber;
     }
 
     if (!toy) {
-      res.status(404).json({ success: false, message: "Juguete no encontrado con ese serial" });
+      res.status(404).json({ success: false, message: "No hay juguetes registrados en el sistema" });
       return;
     }
 
