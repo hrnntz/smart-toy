@@ -176,7 +176,17 @@ export default function ToyListScreen({ navigation }: any) {
                     })}
                   >
                     <Ionicons name="game-controller" size={15} color={primary} />
-                    <Label className="text-accent text-[11px] font-bold">Control & Batería</Label>
+                    <Label className="text-accent text-[11px] font-bold">Control</Label>
+                  </Pressable>
+
+                  <Pressable
+                    className="flex-row items-center bg-surface-secondary px-3 py-1.5 rounded-2xl gap-1.5 border border-separator/40"
+                    onPress={() => navigation.navigate('ToyWifiSetup', {
+                      serialNumber: toy.serialNumber,
+                    })}
+                  >
+                    <Ionicons name="wifi" size={15} color={primary} />
+                    <Label className="text-foreground text-[11px] font-bold">Wi-Fi</Label>
                   </Pressable>
 
                   <Pressable

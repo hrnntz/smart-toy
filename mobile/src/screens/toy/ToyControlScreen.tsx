@@ -310,6 +310,27 @@ export default function ToyControlScreen({ route, navigation }: any) {
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={primary} />
         }
       >
+        {/* Banner de Configuración Wi-Fi */}
+        <Pressable
+          onPress={() => navigation.navigate('ToyWifiSetup', { serialNumber: toy.serialNumber })}
+          className="mb-4 p-3.5 bg-accent/10 border border-accent/30 rounded-2xl flex-row items-center justify-between"
+        >
+          <View className="flex-row items-center gap-3 flex-1 mr-2">
+            <View className="w-9 h-9 rounded-xl bg-accent/20 items-center justify-center">
+              <Ionicons name="wifi" size={20} color={primary} />
+            </View>
+            <View className="flex-1">
+              <Label className="text-foreground text-xs font-bold">
+                ¿Conectar Panda al Wi-Fi de tu casa?
+              </Label>
+              <Label className="text-muted text-[11px]">
+                Configuración rápida para controlarlo desde fuera de casa
+              </Label>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={primary} />
+        </Pressable>
+
         {/* Selector de Modo: Producción vs Backup Local Directo */}
         <View className="flex-row bg-surface-secondary p-1.5 rounded-2xl mb-5">
           <Pressable
@@ -476,9 +497,9 @@ export default function ToyControlScreen({ route, navigation }: any) {
             <Button
               variant="primary"
               size="lg"
-              className="rounded-2xl"
+              className="w-full rounded-2xl py-4 flex-row items-center justify-center gap-2 shadow-lg"
               onPress={handleRemoteHug}
-              disabled={sendingAction}
+              isDisabled={sendingAction}
             >
               <Button.Label className="font-bold">
                 {sendingAction ? 'Transmitiendo...' : '🤗 Dar Abrazo Remoto'}
