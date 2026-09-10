@@ -315,6 +315,9 @@ export const voiceChatWithToy = async (req: AuthRequest, res: Response): Promise
 // 📡 NUEVAS FUNCIONES DE TELEMETRÍA Y CONTROL
 // ==========================================
 
+// Cola en memoria de comandos pendientes para cada juguete (por serial)
+const pendingToyCommands: Record<string, string> = {};
+
 // ✅ 1. Reportar telemetría desde el ESP32 (o simulador)
 export const reportTelemetry = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -340,6 +343,12 @@ export const reportTelemetry = async (req: Request, res: Response): Promise<void
     if (!toy) {
       res.status(404).json({ success: false, message: "Juguete no encontrado con ese serial" });
       return;
+    }
+
+    // Comprobar si hay un comando pendiente para este juguete
+    const pendingCommand = pendingToyCommands[serialNumber] || null;
+    if (pendingCommand) {
+      delete pendingToyCommands[serialNumber];
     }
 
     // Detectar nuevo abrazo iniciado
@@ -387,6 +396,7 @@ export const reportTelemetry = async (req: Request, res: Response): Promise<void
 
     res.status(200).json({
       success: true,
+      command: pendingCommand,
       data: {
         id: toy.id,
         name: toy.name,
@@ -472,6 +482,9 @@ export const triggerToyAction = async (req: AuthRequest, res: Response): Promise
       toy.lastHugAt = new Date();
       await toyRepository.save(toy);
     }
+
+    // Registrar comando pendiente para que el ESP32 lo recoja en su siguiente petición HTTP
+    pendingToyCommands[toy.serialNumber] = action;
 
     // Emitir comando por WebSockets a los canales del juguete
     try {
