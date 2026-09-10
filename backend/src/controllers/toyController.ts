@@ -438,9 +438,9 @@ export const reportTelemetry = async (req: Request, res: Response): Promise<void
         lastHugAt: toy.lastHugAt,
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error al reportar telemetría:", error);
-    res.status(500).json({ success: false, message: "Error procesando telemetría" });
+    res.status(500).json({ success: false, message: error?.message || "Error procesando telemetría" });
   }
 };
 

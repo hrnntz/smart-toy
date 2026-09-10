@@ -118,9 +118,26 @@ app.use("/api/english", englishRoutes);
 
 // Base de datos + servidor
 AppDataSource.initialize()
-  .then(() => {
+  .then(async () => {
     console.log("PostgreSQL conectado correctamente");
     console.log(`🗄️  Base de datos: ${process.env.DB_NAME} @ ${process.env.DB_HOST}`);
+
+    // Asegurar columnas de telemetría en PostgreSQL en producción
+    try {
+      await AppDataSource.query(`
+        ALTER TABLE "toys" ADD COLUMN IF NOT EXISTS "batteryLevel" double precision DEFAULT 100.0;
+        ALTER TABLE "toys" ADD COLUMN IF NOT EXISTS "batteryMah" double precision DEFAULT 6600.0;
+        ALTER TABLE "toys" ADD COLUMN IF NOT EXISTS "batteryHours" double precision DEFAULT 41.2;
+        ALTER TABLE "toys" ADD COLUMN IF NOT EXISTS "isHugging" boolean DEFAULT false;
+        ALTER TABLE "toys" ADD COLUMN IF NOT EXISTS "hugCount" integer DEFAULT 0;
+        ALTER TABLE "toys" ADD COLUMN IF NOT EXISTS "lastHugAt" timestamp;
+        ALTER TABLE "toys" ADD COLUMN IF NOT EXISTS "sensorStatus" varchar(50) DEFAULT 'LIBRE';
+      `);
+      console.log("✅ Columnas de telemetría aseguradas en tabla toys");
+    } catch (migErr) {
+      console.warn("Aviso migración toys:", migErr);
+    }
+
     server.listen(PORT, '0.0.0.0', () => {
       console.log(`Smart Toy Backend ejecutándose en http://localhost:${PORT}`);
       console.log(`📡 Socket.io y HTTP escuchando en la IP local :${PORT}`);
