@@ -6,7 +6,6 @@ import {
   Alert,
   RefreshControl,
   Animated,
-  TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { io, Socket } from 'socket.io-client';
@@ -14,6 +13,7 @@ import { Card, Label, Button, Chip, Spinner, useThemeColor } from 'heroui-native
 import { toyService } from '../../services/api';
 import { storage } from '../../services/storage';
 import { API_URL } from '../../config/env';
+import { pandaBluetooth } from '../../services/pandaBluetooth';
 
 export default function ToyControlScreen({ route, navigation }: any) {
   const { toyId: initialToyId, toyName: initialToyName } = route.params || {};
@@ -28,9 +28,10 @@ export default function ToyControlScreen({ route, navigation }: any) {
   const [refreshing, setRefreshing] = useState(false);
   const [sendingAction, setSendingAction] = useState(false);
 
-  // Modo de conexión: 'cloud' (Producción Render) o 'local' (Backup Wi-Fi directo)
-  const [connectionMode, setConnectionMode] = useState<'cloud' | 'local'>('cloud');
-  const [localIp, setLocalIp] = useState('192.168.4.1'); // IP por defecto del ESP32 (SoftAP o LAN)
+  // Modo de conexión: 'bluetooth' (Escuela / Directo) o 'cloud' (Producción)
+  const [connectionMode, setConnectionMode] = useState<'bluetooth' | 'cloud'>('bluetooth');
+  const [isBtConnected, setIsBtConnected] = useState(false);
+  const [connectingBt, setConnectingBt] = useState(false);
 
   // Datos del juguete y telemetría
   const [toy, setToy] = useState<any>({
@@ -61,20 +62,45 @@ export default function ToyControlScreen({ route, navigation }: any) {
     };
   }, [initialToyId]);
 
-  // Polling automático en ambos modos (Local y Nube)
+  const connectBluetooth = async (silent = false) => {
+    setConnectingBt(true);
+    try {
+      await pandaBluetooth.connect('Panda_Fisico_BT');
+      setIsBtConnected(true);
+      setToy((prev: any) => ({ ...prev, isConnected: true }));
+      if (!silent) {
+        Alert.alert('🔵 ¡Bluetooth Conectado!', 'Panda_Fisico_BT está listo para recibir comandos.');
+      }
+    } catch (err: any) {
+      setIsBtConnected(false);
+      if (!silent) {
+        Alert.alert(
+          'Bluetooth no conectado',
+          err?.message || 'Asegúrate de haber vinculado "Panda_Fisico_BT" en los Ajustes de Bluetooth de tu teléfono.'
+        );
+      }
+    } finally {
+      setConnectingBt(false);
+    }
+  };
+
+  useEffect(() => {
+    if (connectionMode === 'bluetooth') {
+      connectBluetooth(true);
+    }
+  }, [connectionMode]);
+
+  // Polling automático en modo Nube
   useEffect(() => {
     let timer: any = null;
-    if (connectionMode === 'local') {
-      fetchLocalTelemetry();
-      timer = setInterval(fetchLocalTelemetry, 2500);
-    } else {
+    if (connectionMode === 'cloud') {
       loadTelemetry();
       timer = setInterval(loadTelemetry, 3500);
     }
     return () => {
       if (timer) clearInterval(timer);
     };
-  }, [connectionMode, localIp, toy?.id]);
+  }, [connectionMode, toy?.id]);
 
   // Animación de pulso cuando Panda está abrazando
   useEffect(() => {
@@ -140,13 +166,6 @@ export default function ToyControlScreen({ route, navigation }: any) {
 
   // Cargar telemetría desde la API en Producción
   const loadTelemetry = async () => {
-    if (connectionMode === 'local') {
-      await fetchLocalTelemetry();
-      setLoading(false);
-      setRefreshing(false);
-      return;
-    }
-
     try {
       let targetId = initialToyId || toy?.id;
       if (!targetId) {
@@ -172,50 +191,44 @@ export default function ToyControlScreen({ route, navigation }: any) {
     }
   };
 
-  // Consultar telemetría en Modo Backup Local Directo (sin internet)
-  const fetchLocalTelemetry = async () => {
-    try {
-      const response = await fetch(`http://${localIp}/telemetry`);
-      if (response.ok) {
-        const data = await response.json();
-        setToy((prev: any) => ({
-          ...prev,
-          ...data,
-          isConnected: true,
-        }));
-      }
-    } catch (e) {
-      // Fallo local temporal
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    if (connectionMode === 'bluetooth') {
+      await connectBluetooth(true);
+      setRefreshing(false);
+    } else {
+      await loadTelemetry();
     }
   };
 
-  const handleRefresh = () => {
-    setRefreshing(true);
-    loadTelemetry();
-  };
-
-  // Ejecutar abrazo remoto (en Producción o Backup Local)
+  // Ejecutar abrazo remoto (por Bluetooth directo o Nube)
   const handleRemoteHug = async () => {
     setSendingAction(true);
     try {
-      if (connectionMode === 'local') {
-        // Enviar directo al servidor HTTP local del ESP32
-        const res = await fetch(`http://${localIp}/action`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'HUG' }),
-        });
-        if (res.ok) {
-          setToy((prev: any) => ({
-            ...prev,
-            isHugging: true,
-            hugCount: (prev.hugCount || 0) + 1,
-            lastHugAt: new Date(),
-          }));
-          Alert.alert('🤗 ¡Abrazo local enviado!', 'El Panda físico está abrazando ahora mismo.');
-        } else {
-          Alert.alert('Aviso', 'El Panda local no respondió con éxito.');
+      if (connectionMode === 'bluetooth') {
+        let connected = isBtConnected;
+        if (!connected) {
+          try {
+            await pandaBluetooth.connect('Panda_Fisico_BT');
+            connected = true;
+            setIsBtConnected(true);
+          } catch (e: any) {
+            Alert.alert(
+              'Bluetooth no conectado',
+              'Por favor vincula "Panda_Fisico_BT" en los Ajustes de Bluetooth de tu teléfono y pulsa de nuevo.'
+            );
+            return;
+          }
         }
+        await pandaBluetooth.sendHug();
+        setToy((prev: any) => ({
+          ...prev,
+          isHugging: true,
+          hugCount: (prev.hugCount || 0) + 1,
+          lastHugAt: new Date(),
+          isConnected: true,
+        }));
+        Alert.alert('🤗 ¡Abrazo enviado!', 'El Panda físico está abrazando ahora mismo vía Bluetooth.');
       } else {
         // Enviar a través de la API en Producción (Render)
         let targetId = toy?.id;
@@ -228,7 +241,7 @@ export default function ToyControlScreen({ route, navigation }: any) {
         }
 
         if (!targetId) {
-          Alert.alert('Sin Juguete', 'Primero registra un juguete en tu cuenta con el número de serie TOY-001-ABC.');
+          Alert.alert('Sin Juguete', 'Primero registra un juguete en tu cuenta con el número de serie TOY-001.');
           return;
         }
 
@@ -263,14 +276,8 @@ export default function ToyControlScreen({ route, navigation }: any) {
           text: 'Sí, reiniciar al 100%',
           onPress: async () => {
             try {
-              if (connectionMode === 'local') {
-                await fetch(`http://${localIp}/action`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ action: 'RESET_BATTERY' }),
-                });
-              } else {
-                if (toy?.id) await toyService.triggerAction(toy.id, 'RESET_BATTERY');
+              if (connectionMode === 'cloud' && toy?.id) {
+                await toyService.triggerAction(toy.id, 'RESET_BATTERY');
               }
               setToy((prev: any) => ({
                 ...prev,
@@ -331,31 +338,25 @@ export default function ToyControlScreen({ route, navigation }: any) {
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={primary} />
         }
       >
-        {/* Banner de Configuración Wi-Fi */}
-        <Pressable
-          onPress={() => navigation.navigate('ToyWifiSetup', { serialNumber: toy.serialNumber })}
-          className="mb-4 p-3.5 bg-accent/10 border border-accent/30 rounded-2xl flex-row items-center justify-between"
-        >
-          <View className="flex-row items-center gap-3 flex-1 mr-2">
-            <View className="w-9 h-9 rounded-xl bg-accent/20 items-center justify-center">
-              <Ionicons name="wifi" size={20} color={primary} />
-            </View>
-            <View className="flex-1">
-              <Label className="text-foreground text-xs font-bold">
-                ¿Conectar Panda al Wi-Fi de tu casa?
-              </Label>
-              <Label className="text-muted text-[11px]">
-                Configuración rápida para controlarlo desde fuera de casa
-              </Label>
-            </View>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={primary} />
-        </Pressable>
-
-        {/* Selector de Modo: Producción vs Backup Local Directo */}
-        <View className="flex-row bg-surface-secondary p-1.5 rounded-2xl mb-5">
+        {/* Selector de Modo: Bluetooth (Directo) vs Nube */}
+        <View className="flex-row bg-surface-secondary p-1 rounded-2xl mb-4">
           <Pressable
-            className={`flex-1 py-2 items-center rounded-xl ${
+            className={`flex-1 py-2.5 items-center rounded-xl ${
+              connectionMode === 'bluetooth' ? 'bg-accent shadow-sm' : ''
+            }`}
+            onPress={() => setConnectionMode('bluetooth')}
+          >
+            <Label
+              className={`text-xs font-bold ${
+                connectionMode === 'bluetooth' ? 'text-white' : 'text-muted'
+              }`}
+            >
+              🔵 Bluetooth (Directo)
+            </Label>
+          </Pressable>
+
+          <Pressable
+            className={`flex-1 py-2.5 items-center rounded-xl ${
               connectionMode === 'cloud' ? 'bg-accent shadow-sm' : ''
             }`}
             onPress={() => setConnectionMode('cloud')}
@@ -365,45 +366,40 @@ export default function ToyControlScreen({ route, navigation }: any) {
                 connectionMode === 'cloud' ? 'text-white' : 'text-muted'
               }`}
             >
-              ☁️ Nube (Producción)
-            </Label>
-          </Pressable>
-
-          <Pressable
-            className={`flex-1 py-2 items-center rounded-xl ${
-              connectionMode === 'local' ? 'bg-accent shadow-sm' : ''
-            }`}
-            onPress={() => setConnectionMode('local')}
-          >
-            <Label
-              className={`text-xs font-bold ${
-                connectionMode === 'local' ? 'text-white' : 'text-muted'
-              }`}
-            >
-              📶 Backup Local Directo
+              ☁️ Nube (Remoto)
             </Label>
           </Pressable>
         </View>
 
-        {/* Configuración IP en modo Backup Local */}
-        {connectionMode === 'local' && (
-          <View className="bg-surface p-3.5 rounded-2xl mb-5 border border-separator/30">
-            <Label className="text-foreground text-xs font-bold mb-1">
-              IP del ESP32 en tu Wi-Fi / SoftAP:
-            </Label>
-            <View className="flex-row items-center bg-surface-secondary px-3 py-1.5 rounded-xl">
-              <Ionicons name="wifi" size={16} color={primary} className="mr-2" />
-              <TextInput
-                value={localIp}
-                onChangeText={setLocalIp}
-                placeholder="192.168.4.1"
-                className="flex-1 text-foreground text-sm font-medium"
-                autoCapitalize="none"
-              />
+        {/* Panel Bluetooth */}
+        {connectionMode === 'bluetooth' && (
+          <View className="bg-surface p-4 rounded-2xl mb-5 border border-accent/40 bg-accent/5">
+            <View className="flex-row items-center justify-between mb-2">
+              <View className="flex-row items-center gap-2">
+                <Ionicons name="bluetooth" size={22} color={primary} />
+                <Label className="text-foreground text-sm font-bold">Bluetooth ESP32</Label>
+              </View>
+              <Chip variant="soft" color={isBtConnected ? 'success' : 'warning'}>
+                <Chip.Label>{isBtConnected ? 'Conectado' : 'Desconectado'}</Chip.Label>
+              </Chip>
             </View>
-            <Label className="text-muted text-[11px] mt-1.5">
-              Si estás conectado a la red propia del Panda ("Panda_AP"), usa 192.168.4.1
+
+            <Label className="text-muted text-xs mb-3">
+              Dispositivo: <Label className="text-foreground font-semibold">Panda_Fisico_BT</Label>
+              {'\n'}Comunicación directa sin cables ni router Wi-Fi.
             </Label>
+
+            <Button
+              variant={isBtConnected ? 'outline' : 'primary'}
+              size="sm"
+              className="rounded-xl"
+              onPress={() => connectBluetooth(false)}
+              isDisabled={connectingBt}
+            >
+              <Button.Label className="text-xs">
+                {connectingBt ? 'Conectando...' : isBtConnected ? '🔄 Reconectar Bluetooth' : '🔵 Conectar a Panda_Fisico_BT'}
+              </Button.Label>
+            </Button>
           </View>
         )}
 
@@ -510,9 +506,9 @@ export default function ToyControlScreen({ route, navigation }: any) {
           <Card.Body className="p-5">
             <Label className="text-foreground text-lg font-bold mb-1">Acción Remota</Label>
             <Label className="text-muted text-xs mb-4">
-              {connectionMode === 'cloud'
-                ? 'Envía la señal a través de la nube a los servomotores del Panda.'
-                : 'Envía la señal directamente por Wi-Fi local sin internet.'}
+              {connectionMode === 'bluetooth'
+                ? 'Envía la señal directa e instantánea por Bluetooth al Panda (< 10 ms).'
+                : 'Envía la señal a través de la nube a los servomotores del Panda.'}
             </Label>
 
             <Button
@@ -523,7 +519,11 @@ export default function ToyControlScreen({ route, navigation }: any) {
               isDisabled={sendingAction}
             >
               <Button.Label className="font-bold">
-                {sendingAction ? 'Transmitiendo...' : '🤗 Dar Abrazo Remoto'}
+                {sendingAction
+                  ? 'Transmitiendo...'
+                  : connectionMode === 'bluetooth'
+                  ? '🤗 Dar Abrazo (Bluetooth)'
+                  : '🤗 Dar Abrazo Remoto'}
               </Button.Label>
             </Button>
           </Card.Body>

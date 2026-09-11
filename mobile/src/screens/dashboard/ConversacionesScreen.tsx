@@ -91,23 +91,104 @@ export default function ConversacionesScreen({ navigation }: any) {
 
       <ScrollView showsVerticalScrollIndicator={false} className="flex-1 px-4">
         {toys.length === 0 ? (
-          <View className="items-center mt-20">
-            <View className="w-24 h-24 rounded-full bg-surface-secondary items-center justify-center mb-5">
-              <Ionicons name="chatbubbles-outline" size={48} color={muted} />
-            </View>
-            <Label className="text-lg font-bold text-foreground mb-2">
-              Sin juguetes vinculados
-            </Label>
-            <Label className="text-sm text-muted text-center px-8 mb-6">
-              Registra tu juguete Panda para comenzar a chatear con IA.
-            </Label>
-            <Button
-              variant="primary"
-              feedbackVariant="scale-ripple"
-              onPress={() => navigation.navigate('ToyList')}
+          <View className="mt-2">
+            {/* Tarjeta de Panda Inteligente por defecto */}
+            <Pressable
+              onPress={() =>
+                openChat({
+                  id: 1,
+                  name: 'Panda Inteligente',
+                  serialNumber: 'PANDA-VIRTUAL',
+                  isConnected: true,
+                })
+              }
             >
-              <Button.Label>Agregar juguete</Button.Label>
-            </Button>
+              <Card variant="default" className="mb-4 rounded-3xl border border-accent/30 shadow-sm">
+                <Card.Body className="p-4">
+                  <View className="flex-row items-center gap-3.5">
+                    <View className="w-14 h-14 rounded-2xl bg-accent/20 items-center justify-center">
+                      <Label className="text-3xl">🐼</Label>
+                    </View>
+
+                    <View className="flex-1">
+                      <Label className="text-base font-bold text-foreground">
+                        Panda Inteligente
+                      </Label>
+                      <Label className="text-xs text-muted mt-0.5">
+                        Tu compañero con IA de voz y texto
+                      </Label>
+                      <View className="flex-row items-center gap-1.5 mt-1">
+                        <View className="w-2 h-2 rounded-full bg-emerald-500" />
+                        <Label className="text-xs font-semibold text-emerald-600">
+                          En línea · Listo para hablar
+                        </Label>
+                      </View>
+                    </View>
+
+                    <Pressable
+                      className="w-11 h-11 rounded-full items-center justify-center bg-accent shadow-sm"
+                      onPress={() =>
+                        openLiveVoice({
+                          id: 1,
+                          name: 'Panda Inteligente',
+                          serialNumber: 'PANDA-VIRTUAL',
+                          isConnected: true,
+                        })
+                      }
+                      accessibilityLabel="Hablar por voz en vivo"
+                    >
+                      <Ionicons name="mic" size={20} color="white" />
+                    </Pressable>
+                  </View>
+
+                  <View className="flex-row gap-2 mt-4 pt-3 border-t border-separator/20">
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      className="flex-1 rounded-xl"
+                      onPress={() =>
+                        openChat({
+                          id: 1,
+                          name: 'Panda Inteligente',
+                          serialNumber: 'PANDA-VIRTUAL',
+                          isConnected: true,
+                        })
+                      }
+                    >
+                      <Button.Label className="text-xs">💬 Chatear</Button.Label>
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 rounded-xl"
+                      onPress={() =>
+                        openLiveVoice({
+                          id: 1,
+                          name: 'Panda Inteligente',
+                          serialNumber: 'PANDA-VIRTUAL',
+                          isConnected: true,
+                        })
+                      }
+                    >
+                      <Button.Label className="text-xs">🎙️ Llamada en Vivo</Button.Label>
+                    </Button>
+                  </View>
+                </Card.Body>
+              </Card>
+            </Pressable>
+
+            {/* Banner para agregar juguete físico */}
+            <Pressable
+              onPress={() => navigation.navigate('ToyList')}
+              className="p-4 rounded-2xl bg-surface-secondary flex-row items-center justify-between mt-2"
+            >
+              <View className="flex-row items-center gap-3">
+                <Ionicons name="hardware-chip-outline" size={20} color={muted} />
+                <Label className="text-xs text-muted font-medium">¿Tienes un Panda físico? Vincúlalo aquí</Label>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={muted} />
+            </Pressable>
           </View>
         ) : (
           <>

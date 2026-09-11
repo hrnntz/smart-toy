@@ -115,20 +115,128 @@ export default function JuegosScreen({ navigation }: any) {
         throw new Error('Respuesta de IA inválida');
       }
     } catch (error) {
-      setAiQuestions([
-        {
-          question: '¿De qué color es la manzana madura?',
-          options: ['Roja', 'Azul', 'Negra'],
-          answer: 0,
-          explanation: 'Las manzanas maduras más comunes en los árboles son rojas o verdes.',
-        },
-        {
-          question: '¿Cuánto es 3 + 2?',
-          options: ['4', '5', '6'],
-          answer: 1,
-          explanation: 'Si cuentas 3 dedos y agregas 2 dedos más, en total tienes 5.',
-        },
-      ]);
+      console.warn('Usando banco temático de preguntas para', juego.name, error);
+      if (juego.name.includes('Adivinanza')) {
+        setAiQuestions([
+          {
+            question: 'Tengo agujas pero no sé coser, tengo números pero no sé leer. ¿Qué soy?',
+            options: ['El reloj', 'Un libro', 'La brújula'],
+            answer: 0,
+            explanation: '¡El reloj tiene agujas (manecillas) que marcan las horas y minutos!',
+          },
+          {
+            question: 'Blanco por dentro, verde por fuera, si quieres que te lo diga, espera... ¿Qué es?',
+            options: ['La manzana', 'La pera', 'El limón'],
+            answer: 1,
+            explanation: '¡Es la pera! "Es-pera" te da la pista en la adivinanza.',
+          },
+          {
+            question: 'Oro parece, plata no es, el que no lo adivine, bien despistado es. ¿Qué es?',
+            options: ['La naranja', 'El plátano', 'El mango'],
+            answer: 1,
+            explanation: '¡Es el plátano! "Plata no es" suena como plátano.',
+          },
+          {
+            question: 'Vuelo de noche, duermo de día y nunca verás plumas en el ala mía. ¿Quién soy?',
+            options: ['El murciélago', 'La lechuza', 'El águila'],
+            answer: 0,
+            explanation: '¡El murciélago es un mamífero volador que caza de noche!',
+          },
+          {
+            question: 'Canto en la orilla, vivo en el agua, no soy pescado ni soy cigarra. ¿Quién soy?',
+            options: ['El pato', 'La rana', 'El delfín'],
+            answer: 1,
+            explanation: '¡La rana croa alegremente en la orilla del estanque!',
+          },
+        ]);
+      } else if (juego.categoria === 'Matemáticas') {
+        setAiQuestions([
+          {
+            question: '¿Cuánto es 4 + 3?',
+            options: ['6', '7', '8'],
+            answer: 1,
+            explanation: 'Si a 4 le sumas 3 obtienes 7.',
+          },
+          {
+            question: 'Si tienes 6 manzanas y regalas 2, ¿cuántas manzanas te quedan?',
+            options: ['3', '4', '5'],
+            answer: 1,
+            explanation: '6 menos 2 es igual a 4 manzanas.',
+          },
+          {
+            question: '¿Cuánto es 5 + 5?',
+            options: ['10', '11', '9'],
+            answer: 0,
+            explanation: '5 dedos en una mano más 5 en la otra suman 10.',
+          },
+          {
+            question: '¿Cuánto es 2 x 3?',
+            options: ['5', '6', '7'],
+            answer: 1,
+            explanation: '2 multiplicado por 3 es 2 + 2 + 2 = 6.',
+          },
+          {
+            question: '¿Cuánto es 10 - 4?',
+            options: ['5', '6', '7'],
+            answer: 1,
+            explanation: 'A 10 le quitas 4 y te quedan 6.',
+          },
+        ]);
+      } else if (juego.name.includes('Colores') || juego.name.includes('Formas')) {
+        setAiQuestions([
+          {
+            question: '¿De qué color es el cielo en un día soleado?',
+            options: ['Rojo', 'Azul', 'Verde'],
+            answer: 1,
+            explanation: 'El cielo se ve de un hermoso color azul despejado.',
+          },
+          {
+            question: '¿Cuántos lados tiene un triángulo?',
+            options: ['3', '4', '5'],
+            answer: 0,
+            explanation: 'El triángulo siempre tiene exactamente 3 lados.',
+          },
+          {
+            question: '¿Qué color obtienes si mezclas amarillo con azul?',
+            options: ['Naranja', 'Verde', 'Morado'],
+            answer: 1,
+            explanation: 'Al combinar amarillo y azul se crea el color verde.',
+          },
+          {
+            question: '¿Qué figura geométrica es redonda como una pelota?',
+            options: ['Cuadrado', 'Círculo', 'Rectángulo'],
+            answer: 1,
+            explanation: 'El círculo es perfectamente redondo y no tiene esquinas.',
+          },
+        ]);
+      } else {
+        setAiQuestions([
+          {
+            question: '¿Cuál de estos animales vive en el agua y nada muy rápido?',
+            options: ['El delfín', 'El conejo', 'El oso'],
+            answer: 0,
+            explanation: '¡Los delfines viven en el mar y son nadadores increíbles!',
+          },
+          {
+            question: '¿Qué animal dice "miau" y tiene bigotes?',
+            options: ['El perro', 'El gato', 'El loro'],
+            answer: 1,
+            explanation: '¡Los gatos maúllan y ronronean cuando están contentos!',
+          },
+          {
+            question: '¿Qué sentido usamos para escuchar música y canciones?',
+            options: ['La vista', 'El oído', 'El gusto'],
+            answer: 1,
+            explanation: 'Usamos nuestros oídos para escuchar todos los sonidos.',
+          },
+          {
+            question: '¿En qué planeta vivimos todos nosotros?',
+            options: ['Marte', 'La Tierra', 'Júpiter'],
+            answer: 1,
+            explanation: 'Vivimos en el planeta Tierra, nuestro hogar azul y verde.',
+          },
+        ]);
+      }
     } finally {
       setLoadingQuestions(false);
     }

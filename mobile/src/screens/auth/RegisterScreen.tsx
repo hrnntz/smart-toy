@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Pressable } from 'react-native';
+import { View, Pressable, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import {
   Button,
@@ -10,7 +10,7 @@ import {
   useThemeColor,
 } from 'heroui-native';
 import api from '../../services/api';
-import CustomAlert from '../../components/common/CustomAlert';
+import { storage } from '../../services/storage';
 
 interface RegisterScreenProps {
   onAuthSuccess?: () => void;
@@ -24,22 +24,10 @@ export default function RegisterScreen({ onAuthSuccess, navigation }: RegisterSc
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const [alertVisible, setAlertVisible] = useState(false);
-  const [alertTitle, setAlertTitle] = useState('');
-  const [alertMessage, setAlertMessage] = useState('');
-  const [alertType, setAlertType] = useState<'info' | 'error' | 'success'>('error');
-
   const [accent, muted] = useThemeColor(['accent', 'muted']);
 
-  const showAlert = (
-    title: string,
-    message: string,
-    type: 'info' | 'error' | 'success' = 'error'
-  ) => {
-    setAlertTitle(title);
-    setAlertMessage(message);
-    setAlertType(type);
-    setAlertVisible(true);
+  const showAlert = (title: string, message: string, _type?: string) => {
+    Alert.alert(title, message);
   };
 
   const handleRegister = async () => {
@@ -56,17 +44,22 @@ export default function RegisterScreen({ onAuthSuccess, navigation }: RegisterSc
     setLoading(true);
 
     try {
-      const response = await api.post('/auth/register', { name, email, password });
+      const response = await api.post('/auth/register', { name, nombre: name, email, password });
 
       if (response.data.success) {
+        const token = response.data?.data?.token;
+        const user = response.data?.data?.user;
+        if (token) await storage.setItem('token', token);
+        if (user) await storage.setItem('user', JSON.stringify(user));
+
         showAlert('¡Listo!', 'Cuenta creada correctamente. Bienvenido a PandaAI 🐼', 'success');
         setTimeout(() => {
-          if (navigation) {
-            navigation.navigate('Login');
-          } else {
-            showAlert('Aviso', 'Por favor inicia sesión con tu nueva cuenta', 'info');
+          if (onAuthSuccess) {
+            onAuthSuccess();
+          } else if (navigation) {
+            navigation.replace('Home');
           }
-        }, 1500);
+        }, 1000);
       } else {
         showAlert('Error', response.data.message || 'Error al registrar');
       }
@@ -170,14 +163,6 @@ export default function RegisterScreen({ onAuthSuccess, navigation }: RegisterSc
           </Button>
         )}
       </View>
-
-      <CustomAlert
-        visible={alertVisible}
-        title={alertTitle}
-        message={alertMessage}
-        type={alertType}
-        onClose={() => setAlertVisible(false)}
-      />
     </View>
   );
 }

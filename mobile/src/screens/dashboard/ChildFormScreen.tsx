@@ -9,7 +9,6 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Calendar } from 'react-native-calendars';
 import { childService } from '../../services/api';
-import CustomAlert from '../../components/common/CustomAlert';
 import { Card, Button, Label, TextField, Input, Spinner, useThemeColor } from 'heroui-native';
 import { IconButton } from '../../components/ui/IconButton';
 
@@ -37,10 +36,6 @@ export default function ChildFormScreen({ navigation, route }: ChildFormScreenPr
   const [loading, setLoading] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
 
-  const [alertVisible, setAlertVisible] = useState(false);
-  const [alertTitle, setAlertTitle] = useState('');
-  const [alertMessage, setAlertMessage] = useState('');
-
   const [primary, danger, muted, surface, background] = useThemeColor([
     'accent',
     'danger',
@@ -50,9 +45,7 @@ export default function ChildFormScreen({ navigation, route }: ChildFormScreenPr
   ]);
 
   const showAlert = (title: string, message: string) => {
-    setAlertTitle(title);
-    setAlertMessage(message);
-    setAlertVisible(true);
+    Alert.alert(title, message);
   };
 
   const handleDateSelect = (day: any) => {
@@ -301,13 +294,6 @@ export default function ChildFormScreen({ navigation, route }: ChildFormScreenPr
           </View>
         </View>
       </Modal>
-
-      <CustomAlert
-        visible={alertVisible}
-        title={alertTitle}
-        message={alertMessage}
-        onClose={() => setAlertVisible(false)}
-      />
     </ScrollView>
   );
 }

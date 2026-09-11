@@ -5,11 +5,11 @@ import {
   Switch,
   Platform,
   Pressable,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { rutinaService } from '../../services/api';
-import CustomAlert from '../../components/common/CustomAlert';
 import { Card, Button, Label, TextField, Input, Spinner, useThemeColor } from 'heroui-native';
 import { IconButton } from '../../components/ui/IconButton';
 
@@ -39,10 +39,6 @@ export default function RutinaFormScreen({ navigation, route }: RutinaFormScreen
   const [loading, setLoading] = useState(false);
   const [isTimePickerVisible, setTimePickerVisible] = useState(false);
 
-  const [alertVisible, setAlertVisible] = useState(false);
-  const [alertTitle, setAlertTitle] = useState('');
-  const [alertMessage, setAlertMessage] = useState('');
-
   const [primary, muted, separator, background, surface] = useThemeColor([
     'accent',
     'muted',
@@ -52,9 +48,7 @@ export default function RutinaFormScreen({ navigation, route }: RutinaFormScreen
   ]);
 
   const showAlert = (title: string, message: string) => {
-    setAlertTitle(title);
-    setAlertMessage(message);
-    setAlertVisible(true);
+    Alert.alert(title, message);
   };
 
   const getInitialTime = () => {
@@ -251,13 +245,6 @@ export default function RutinaFormScreen({ navigation, route }: RutinaFormScreen
         date={getInitialTime()}
         locale="es_ES"
         display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-      />
-
-      <CustomAlert
-        visible={alertVisible}
-        title={alertTitle}
-        message={alertMessage}
-        onClose={() => setAlertVisible(false)}
       />
     </ScrollView>
   );

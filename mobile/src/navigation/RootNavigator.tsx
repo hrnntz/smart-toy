@@ -2,7 +2,6 @@ import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 
-import AuthLoadingScreen from '../screens/auth/AuthLoadingScreen';
 import SplashScreen from '../screens/auth/SplashScreen';
 import WelcomeScreen from '../screens/auth/WelcomeScreen';
 import LoginScreen from '../screens/auth/LoginScreen';
@@ -24,7 +23,6 @@ import RutinasScreen from '../screens/dashboard/RutinasScreen';
 import RutinaFormScreen from '../screens/dashboard/RutinaFormScreen';
 import ChatScreen from '../screens/dashboard/ChatScreen';
 import ToyControlScreen from '../screens/toy/ToyControlScreen';
-import ToyWifiSetupScreen from '../screens/toy/ToyWifiSetupScreen';
 
 import MusicaScreen from '../screens/dashboard/MusicaScreen';
 
@@ -48,7 +46,6 @@ export default function RootNavigator() {
         screenOptions={{ headerShown: false }}
       >
         <Stack.Screen name="Splash" component={SplashScreen} />
-        <Stack.Screen name="AuthLoading" component={AuthLoadingScreen} />
         <Stack.Screen name="Welcome" component={WelcomeScreen} />
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Register" component={RegisterScreen} />
@@ -62,7 +59,6 @@ export default function RootNavigator() {
         <Stack.Screen name="ToyList" component={ToyListScreen} />
         <Stack.Screen name="ToyForm" component={ToyFormScreen} />
         <Stack.Screen name="ToyControl" component={ToyControlScreen} />
-        <Stack.Screen name="ToyWifiSetup" component={ToyWifiSetupScreen} />
         <Stack.Screen name="Chat" component={ChatScreen} />
 
         {/* Pantallas de funcionalidades */}

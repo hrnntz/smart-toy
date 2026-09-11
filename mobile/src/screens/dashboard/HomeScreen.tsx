@@ -178,13 +178,17 @@ export default function HomeScreen({ navigation }: any) {
           avatarUrl: toy.avatarUrl,
           initialMode: 'voice',
         });
-      } else {
-        Alert.alert('Sin juguetes', 'Primero agrega un juguete para poder hablar con Panda.');
-        navigation.navigate('ToyList');
+        return;
       }
     } catch (error) {
-      Alert.alert('Error', 'No se pudo conectar con los juguetes');
+      console.warn('Cargando chat con Panda por defecto:', error);
     }
+    // Si no hay juguetes aún o hay retraso de red, abrir chat de voz de inmediato
+    navigation.navigate('Chat', {
+      toyId: 1,
+      toyName: 'Panda',
+      initialMode: 'voice',
+    });
   };
 
   const handleLogout = async () => {

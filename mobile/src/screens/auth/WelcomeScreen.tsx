@@ -95,6 +95,16 @@ export default function WelcomeScreen() {
           >
             <Button.Label>Iniciar Sesión</Button.Label>
           </Button>
+
+          <Button
+            variant="outline"
+            onPress={() => navigation.navigate('ToyControl')}
+            className="w-full border-accent/40 bg-accent/10 mt-1"
+          >
+            <Button.Label className="text-accent font-extrabold">
+              🎮 Control Rápido del Panda (Sin Cuenta)
+            </Button.Label>
+          </Button>
         </View>
 
         <Label className="text-xs text-muted text-center opacity-80">

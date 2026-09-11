@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Pressable } from 'react-native';
+import { View, Pressable, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import {
   Button,
@@ -12,7 +12,6 @@ import {
 } from 'heroui-native';
 import { storage } from '../../services/storage';
 import api from '../../services/api';
-import CustomAlert from '../../components/common/CustomAlert';
 
 interface LoginScreenProps {
   onAuthSuccess?: () => void;
@@ -26,18 +25,10 @@ export default function LoginScreen({ onAuthSuccess, navigation }: LoginScreenPr
   const [loading, setLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
 
-  const [alertVisible, setAlertVisible] = useState(false);
-  const [alertTitle, setAlertTitle] = useState('');
-  const [alertMessage, setAlertMessage] = useState('');
-  const [alertType, setAlertType] = useState<'info' | 'error'>('info');
-
   const [accent, muted] = useThemeColor(['accent', 'muted']);
 
-  const showAlert = (title: string, message: string, type: 'info' | 'error' = 'error') => {
-    setAlertTitle(title);
-    setAlertMessage(message);
-    setAlertType(type);
-    setAlertVisible(true);
+  const showAlert = (title: string, message: string) => {
+    Alert.alert(title, message);
   };
 
   const handleLogin = async () => {
@@ -162,14 +153,6 @@ export default function LoginScreen({ onAuthSuccess, navigation }: LoginScreenPr
           </Button>
         )}
       </View>
-
-      <CustomAlert
-        visible={alertVisible}
-        title={alertTitle}
-        message={alertMessage}
-        type={alertType}
-        onClose={() => setAlertVisible(false)}
-      />
     </View>
   );
 }
