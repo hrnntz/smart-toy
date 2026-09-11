@@ -11,6 +11,16 @@ export interface ChatHistoryMessage {
   content: string;
 }
 
+const CANDIDATE_MODELS = [
+  process.env.GROQ_TEXT_MODEL,
+  'llama-3.1-8b-instant',
+  'llama3-8b-8192',
+  'gemma2-9b-it',
+  'mixtral-8x7b-32768',
+  'openai/gpt-oss-20b',
+  'llama-3.3-70b-versatile',
+].filter(Boolean) as string[];
+
 // ============================================
 // 1. CHAT CON JUGUETES CON HISTORIAL (toyController)
 // ============================================
@@ -36,21 +46,43 @@ Nunca uses lenguaje técnico ni complejo. Siempre responde en español.
       content: msg.content,
     }));
 
-    const chatCompletion = await groq.chat.completions.create({
-      messages: [
-        { role: 'system', content: systemPrompt },
-        ...formattedHistory,
-        { role: 'user', content: message },
-      ],
-      model: process.env.GROQ_TEXT_MODEL || 'llama-3.3-70b-versatile',
-      temperature: 0.7,
-      max_tokens: 200,
-    });
+    for (const model of CANDIDATE_MODELS) {
+      try {
+        const chatCompletion = await groq.chat.completions.create({
+          messages: [
+            { role: 'system', content: systemPrompt },
+            ...formattedHistory,
+            { role: 'user', content: message },
+          ],
+          model,
+          temperature: 0.7,
+          max_tokens: 200,
+        });
 
-    return chatCompletion.choices[0]?.message?.content || 'No pude entender eso.';
+        const reply = chatCompletion.choices[0]?.message?.content;
+        if (reply && reply.trim().length > 0) {
+          return reply.trim();
+        }
+      } catch (err: any) {
+        console.warn(`⚠️ Groq modelo "${model}" falló: ${err?.message || err}. Probando siguiente modelo...`);
+      }
+    }
+
+    // Fallback inteligente y cariñoso si Groq está saturado o sin conexión
+    const lower = message.toLowerCase();
+    if (lower.includes('hola') || lower.includes('cómo estás') || lower.includes('buenos')) {
+      return `¡Hola, amiguito! Qué lindo escucharte. Soy ${toyName}, ¡estoy muy feliz de hablar contigo hoy! 🐼✨`;
+    }
+    if (lower.includes('adivinanza') || lower.includes('juego')) {
+      return '¡Tengo una adivinanza! Tengo agujas pero no sé coser, tengo números pero no sé leer. ¿Qué soy? ... ¡El reloj! ⏰';
+    }
+    if (lower.includes('abrazo')) {
+      return '¡Te mando un abrazo enorme y suave como de oso panda! Eres mi mejor amigo. 🐼🤗';
+    }
+    return `¡Qué divertido lo que me dices! Me encanta ser tu compañero y aprender juntos todos los días. 🐼`;
   } catch (error) {
     console.error('❌ Error en Groq chat con historial:', error);
-    return 'Lo siento, tuve un problema. Intenta de nuevo.';
+    return `¡Hola! Soy ${toyName}, tu amigo inteligente. ¡Qué lindo jugar contigo hoy! 🐼`;
   }
 };
 
@@ -118,18 +150,26 @@ Estructura exacta por objeto:
 Donde "answer" es el índice numérico (0, 1 o 2) de la opción correcta.
 `;
 
-    const response = await groq.chat.completions.create({
-      messages: [{ role: 'user', content: prompt }],
-      model: process.env.GROQ_TEXT_MODEL || 'llama-3.3-70b-versatile',
-      temperature: 0.7,
-      max_tokens: 2000,
-    });
+    for (const model of CANDIDATE_MODELS) {
+      try {
+        const response = await groq.chat.completions.create({
+          messages: [{ role: 'user', content: prompt }],
+          model,
+          temperature: 0.7,
+          max_tokens: 2000,
+        });
 
-    const content = response.choices[0]?.message?.content || '[]';
-    const cleanedJson = content.replace(/```json/g, '').replace(/```/g, '').trim();
-    const questions: GameQuestion[] = JSON.parse(cleanedJson);
-
-    return questions.slice(0, count);
+        const content = response.choices[0]?.message?.content || '[]';
+        const cleanedJson = content.replace(/```json/g, '').replace(/```/g, '').trim();
+        const questions: GameQuestion[] = JSON.parse(cleanedJson);
+        if (Array.isArray(questions) && questions.length > 0) {
+          return questions.slice(0, count);
+        }
+      } catch (err: any) {
+        console.warn(`⚠️ Groq preguntas modelo "${model}" falló: ${err?.message || err}`);
+      }
+    }
+    throw new Error('Todos los modelos de Groq fallaron para preguntas');
   } catch (error) {
     console.error('❌ Error en generateGameQuestions:', error);
     return [
@@ -223,14 +263,23 @@ export const generateAIMusicTrack = async (prompt: string): Promise<{ title: str
 Genera una nana de cuna muy dulce de 4 versos rítmicos basada en el tema: "${prompt}". 
 Solo responde con la letra de la canción de cuna en español, poética, tierna y con rima para niños. Sin introducciones.`;
 
-    const chatCompletion = await groq.chat.completions.create({
-      messages: [{ role: 'system', content: systemPrompt }],
-      model: process.env.GROQ_TEXT_MODEL || 'llama-3.3-70b-versatile',
-      temperature: 0.7,
-      max_tokens: 150,
-    });
-
-    const songLyrics = chatCompletion.choices[0]?.message?.content || `Duérmete mi niño, duérmete mi amor, las estrellas brillan con su resplandor. ${prompt}`;
+    let songLyrics = `Duérmete mi niño, duérmete mi amor, las estrellas brillan con su resplandor. ${prompt}`;
+    for (const model of CANDIDATE_MODELS) {
+      try {
+        const chatCompletion = await groq.chat.completions.create({
+          messages: [{ role: 'system', content: systemPrompt }],
+          model,
+          temperature: 0.7,
+          max_tokens: 150,
+        });
+        if (chatCompletion.choices[0]?.message?.content) {
+          songLyrics = chatCompletion.choices[0].message.content;
+          break;
+        }
+      } catch (err: any) {
+        console.warn(`⚠️ Groq música modelo "${model}" falló: ${err?.message || err}`);
+      }
+    }
     
     // Sintetizar la nana cantada por la voz dulce de Bella / ElevenLabs / TTS
     const audioUrl = await generateSpeechFromText(`🎶 ${songLyrics}`, 'EXAVITQu4vr4xnSDxMaL');
@@ -275,18 +324,26 @@ Estructura exacta por objeto:
 }
 `;
 
-    const response = await groq.chat.completions.create({
-      messages: [{ role: 'user', content: prompt }],
-      model: process.env.GROQ_TEXT_MODEL || 'llama-3.3-70b-versatile',
-      temperature: 0.6,
-      max_tokens: 800,
-    });
+    for (const model of CANDIDATE_MODELS) {
+      try {
+        const response = await groq.chat.completions.create({
+          messages: [{ role: 'user', content: prompt }],
+          model,
+          temperature: 0.6,
+          max_tokens: 800,
+        });
 
-    const content = response.choices[0]?.message?.content || '[]';
-    const cleanedJson = content.replace(/```json/g, '').replace(/```/g, '').trim();
-    const words: EnglishWordItem[] = JSON.parse(cleanedJson);
-
-    return words.slice(0, count);
+        const content = response.choices[0]?.message?.content || '[]';
+        const cleanedJson = content.replace(/```json/g, '').replace(/```/g, '').trim();
+        const words: EnglishWordItem[] = JSON.parse(cleanedJson);
+        if (Array.isArray(words) && words.length > 0) {
+          return words.slice(0, count);
+        }
+      } catch (err: any) {
+        console.warn(`⚠️ Groq inglés modelo "${model}" falló: ${err?.message || err}`);
+      }
+    }
+    throw new Error('Todos los modelos de Groq fallaron para inglés');
   } catch (error) {
     console.error('❌ Error en generateEnglishThemeWords:', error);
     // Respaldo fijo para que la lección nunca se quede vacía si la IA falla
@@ -324,14 +381,23 @@ TÍTULO: <título>
 <contenido de la historia>
 `;
 
-    const response = await groq.chat.completions.create({
-      messages: [{ role: 'user', content: prompt }],
-      model: process.env.GROQ_TEXT_MODEL || 'llama-3.3-70b-versatile',
-      temperature: 0.8,
-      max_tokens: 800,
-    });
-
-    const fullText = response.choices[0]?.message?.content || '';
+    let fullText = '';
+    for (const model of CANDIDATE_MODELS) {
+      try {
+        const response = await groq.chat.completions.create({
+          messages: [{ role: 'user', content: prompt }],
+          model,
+          temperature: 0.8,
+          max_tokens: 800,
+        });
+        if (response.choices[0]?.message?.content) {
+          fullText = response.choices[0].message.content;
+          break;
+        }
+      } catch (err: any) {
+        console.warn(`⚠️ Groq historia modelo "${model}" falló: ${err?.message || err}`);
+      }
+    }
     const [tituloRaw, ...contenidoParts] = fullText.split('---');
     const titulo = tituloRaw.replace('TÍTULO:', '').trim() || 'Historia generada';
     const contenido = contenidoParts.join('---').trim() || fullText;
