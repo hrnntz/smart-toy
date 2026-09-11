@@ -25,6 +25,21 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+// Interceptor para limpiar token si expira
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (error.response?.status === 401) {
+      console.warn('⚠️ Token expirado o inválido (401). Limpiando credenciales obsoletas...');
+      try {
+        await storage.removeItem('token');
+        await storage.removeItem('user');
+      } catch (_) {}
+    }
+    return Promise.reject(error);
+  }
+);
+
 // Servicios de niños
 export const childService = {
   getAll: () => api.get('/child/all'),

@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { View, Image, Animated } from 'react-native';
 import { Label, Spinner } from 'heroui-native';
 import { storage } from '../../services/storage';
+import { authService } from '../../services/api';
 
 export default function SplashScreen({ navigation }: any) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -26,10 +27,20 @@ export default function SplashScreen({ navigation }: any) {
       try {
         const token = await storage.getItem('token');
         if (token) {
-          navigation.replace('Home');
-        } else {
-          navigation.replace('Welcome');
+          try {
+            const profileRes = await authService.getProfile();
+            if (profileRes.data.success) {
+              navigation.replace('Home');
+              return;
+            }
+          } catch (e: any) {
+            if (e?.response?.status === 401) {
+              await storage.removeItem('token');
+              await storage.removeItem('user');
+            }
+          }
         }
+        navigation.replace('Welcome');
       } catch (error) {
         navigation.replace('Welcome');
       }
