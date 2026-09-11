@@ -12,7 +12,7 @@ import {
   getToyTelemetry,
   triggerToyAction,
 } from "../controllers/toyController";
-import { authenticateToken } from "../middleware/auth";
+import { authenticateToken, optionalAuth } from "../middleware/auth";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -34,7 +34,11 @@ const router = Router();
 // 📡 Ruta pública para que el ESP32 reporte telemetría con su serialNumber
 router.post("/telemetry", reportTelemetry);
 
-// Rutas protegidas para la aplicación móvil
+// 💬 Rutas de chat y voz con Panda (accesibles con o sin cuenta para máxima fluidez)
+router.post("/:id/chat", optionalAuth, chatWithToy);
+router.post("/:id/voice-chat", optionalAuth, upload.single("audio"), voiceChatWithToy);
+
+// Rutas protegidas para la gestión de juguetes en la app móvil
 router.use(authenticateToken);
 
 router.get("/", toyStatus);
@@ -43,8 +47,6 @@ router.post("/", createToy);
 router.put("/:id", updateToy);
 router.delete("/:id", deleteToy);
 router.patch("/:id/toggle", toggleToyConnection);
-router.post("/:id/chat", chatWithToy);
-router.post("/:id/voice-chat", upload.single("audio"), voiceChatWithToy);
 
 // 🎮 Rutas de telemetría y control para la app de padres
 router.get("/:id/telemetry", getToyTelemetry);

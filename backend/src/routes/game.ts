@@ -4,7 +4,7 @@ import { authenticateToken } from "../middleware/auth";
 
 const router = Router();
 
-router.use(authenticateToken);
+// Minijuegos educativos disponibles con o sin token para que los niños siempre puedan jugar
 router.post("/generate-questions", generateQuestions);
 
 export default router;

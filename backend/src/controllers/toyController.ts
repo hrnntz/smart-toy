@@ -4,6 +4,7 @@ import { AppDataSource } from "../config/database";
 import { Toy } from "../models/Toy";
 import { Child } from "../models/Child";
 import { Message } from "../models/Message";
+import { User } from "../models/User";
 import { AuthRequest } from "../middleware/auth";
 import { getAIResponse, transcribeAudioWithWhisper, ChatHistoryMessage } from "../services/aiService";
 import { generateSpeechFromText } from "../services/elevenlabsService";
@@ -12,6 +13,7 @@ import { getIO } from "../socket";
 const toyRepository = AppDataSource.getRepository(Toy);
 const childRepository = AppDataSource.getRepository(Child);
 const messageRepository = AppDataSource.getRepository(Message);
+const userRepository = AppDataSource.getRepository(User);
 
 // ✅ Generar avatar con Pollinations.ai (gratuito, sin clave)
 const generateAvatar = (toyName: string): string => {
@@ -30,10 +32,30 @@ export const getToys = async (req: AuthRequest, res: Response): Promise<void> =>
       res.status(401).json({ success: false, message: "Usuario no autenticado" });
       return;
     }
-    const toys = await toyRepository.find({
+    let toys = await toyRepository.find({
       where: { user: { id: userId } },
       relations: ["child"],
     });
+
+    // Si el usuario no tiene ningún juguete aún, crear Panda por defecto
+    if (toys.length === 0) {
+      const user = await userRepository.findOne({ where: { id: userId } });
+      if (user) {
+        const defaultToy = toyRepository.create({
+          name: "Panda",
+          serialNumber: `PANDA-${userId}`,
+          avatarUrl: "https://image.pollinations.ai/prompt/Panda%20toy%20cute%20cartoon%20character%2C%20colorful%2C%20friendly%20face%2C%20kawaii%20style?width=300&height=300&seed=Panda",
+          user: user,
+          isConnected: true,
+          batteryLevel: 100,
+          batteryMah: 6600,
+          batteryHours: 41.2,
+        });
+        await toyRepository.save(defaultToy);
+        toys = [defaultToy];
+      }
+    }
+
     res.status(200).json({ success: true, data: toys });
   } catch (error) {
     console.error("Error al obtener juguetes:", error);
@@ -197,38 +219,69 @@ export const chatWithToy = async (req: AuthRequest, res: Response): Promise<void
   try {
     const userId = req.user?.userId;
     const toyId = Number(req.params.id);
-    if (!userId) {
-      res.status(401).json({ success: false, message: "Usuario no autenticado" });
-      return;
-    }
-
     const { message } = req.body;
+
     if (!message) {
       res.status(400).json({ success: false, message: "Mensaje requerido" });
       return;
     }
 
-    const toy = await toyRepository.findOne({ where: { id: toyId, user: { id: userId } } });
-    if (!toy) {
-      res.status(404).json({ success: false, message: "Juguete no encontrado" });
-      return;
+    let toyName = "Panda";
+    let toyPersonality = "amable, divertido, cariñoso y siempre ayuda a los niños";
+    let toyContext = "un adorable oso panda de peluche inteligente";
+    let history: ChatHistoryMessage[] = [];
+    let toyEntity: any = null;
+
+    if (userId) {
+      let toy = await toyRepository.findOne({ where: { id: toyId, user: { id: userId } } });
+      if (!toy) {
+        toy = await toyRepository.findOne({ where: { user: { id: userId } } });
+      }
+      if (!toy) {
+        const user = await userRepository.findOne({ where: { id: userId } });
+        if (user) {
+          toy = toyRepository.create({
+            name: "Panda",
+            serialNumber: `PANDA-${userId}`,
+            user: user,
+            isConnected: true,
+          });
+          await toyRepository.save(toy);
+        }
+      }
+      if (toy) {
+        toyEntity = toy;
+        toyName = toy.name || toyName;
+        toyPersonality = toy.personality || toyPersonality;
+        toyContext = toy.context || toyContext;
+
+        const pastMessages = await messageRepository.find({
+          where: { toy: { id: toy.id } },
+          order: { createdAt: "DESC" },
+          take: 15,
+        });
+
+        history = pastMessages
+          .reverse()
+          .map((msg) => ({
+            role: msg.isUser ? "user" : "assistant",
+            content: msg.content,
+          }));
+      }
     }
 
-    // Obtener los últimos 15 mensajes para proporcionar contexto a la IA
-    const pastMessages = await messageRepository.find({
-      where: { toy: { id: toyId } },
-      order: { createdAt: "DESC" },
-      take: 15,
-    });
+    const reply = await getAIResponse(message, toyName, toyPersonality, toyContext, history);
 
-    const history: ChatHistoryMessage[] = pastMessages
-      .reverse()
-      .map((msg) => ({
-        role: msg.isUser ? "user" : "assistant",
-        content: msg.content,
-      }));
+    if (toyEntity) {
+      try {
+        const userMsg = messageRepository.create({ toy: toyEntity, content: message, isUser: true });
+        const botMsg = messageRepository.create({ toy: toyEntity, content: reply, isUser: false });
+        await messageRepository.save([userMsg, botMsg]);
+      } catch (saveErr) {
+        console.warn("No se pudo guardar historial:", saveErr);
+      }
+    }
 
-    const reply = await getAIResponse(message, toy.name, toy.personality, toy.context, history);
     res.status(200).json({ success: true, data: { reply } });
   } catch (error) {
     console.error("Error en chat:", error);
@@ -242,16 +295,10 @@ export const voiceChatWithToy = async (req: AuthRequest, res: Response): Promise
     const userId = req.user?.userId;
     const toyId = Number(req.params.id);
     const { voiceId } = req.body;
-    let message = req.body.message;
-
-    if (!userId) {
-      res.status(401).json({ success: false, message: "Usuario no autenticado" });
-      return;
-    }
+    let message = req.body?.message;
 
     // Si el usuario grabó audio desde el micrófono, transcribirlo con Groq Whisper
     if (req.file) {
-      // VULN-006 fix: usando import estático en lugar de require() dinámico
       const transcribedText = await transcribeAudioWithWhisper(req.file.path);
       if (transcribedText) {
         message = transcribedText;
@@ -266,36 +313,65 @@ export const voiceChatWithToy = async (req: AuthRequest, res: Response): Promise
       message = "¡Hola Panda!";
     }
 
-    const toy = await toyRepository.findOne({ where: { id: toyId, user: { id: userId } } });
-    if (!toy) {
-      res.status(404).json({ success: false, message: "Juguete no encontrado" });
-      return;
+    let toyName = "Panda";
+    let toyPersonality = "amable, divertido, cariñoso y siempre ayuda a los niños";
+    let toyContext = "un adorable oso panda de peluche inteligente";
+    let history: ChatHistoryMessage[] = [];
+    let toyEntity: any = null;
+
+    if (userId) {
+      let toy = await toyRepository.findOne({ where: { id: toyId, user: { id: userId } } });
+      if (!toy) {
+        toy = await toyRepository.findOne({ where: { user: { id: userId } } });
+      }
+      if (!toy) {
+        const user = await userRepository.findOne({ where: { id: userId } });
+        if (user) {
+          toy = toyRepository.create({
+            name: "Panda",
+            serialNumber: `PANDA-${userId}`,
+            user: user,
+            isConnected: true,
+          });
+          await toyRepository.save(toy);
+        }
+      }
+      if (toy) {
+        toyEntity = toy;
+        toyName = toy.name || toyName;
+        toyPersonality = toy.personality || toyPersonality;
+        toyContext = toy.context || toyContext;
+
+        const pastMessages = await messageRepository.find({
+          where: { toy: { id: toy.id } },
+          order: { createdAt: "DESC" },
+          take: 15,
+        });
+
+        history = pastMessages
+          .reverse()
+          .map((msg) => ({
+            role: msg.isUser ? "user" : "assistant",
+            content: msg.content,
+          }));
+      }
     }
 
-    // Historial para contexto
-    const pastMessages = await messageRepository.find({
-      where: { toy: { id: toyId } },
-      order: { createdAt: "DESC" },
-      take: 15,
-    });
-
-    const history: ChatHistoryMessage[] = pastMessages
-      .reverse()
-      .map((msg) => ({
-        role: msg.isUser ? "user" : "assistant",
-        content: msg.content,
-      }));
-
-    const replyText = await getAIResponse(message, toy.name, toy.personality, toy.context, history);
+    const replyText = await getAIResponse(message, toyName, toyPersonality, toyContext, history);
     
     // Convertir respuesta de texto a voz con ElevenLabs
-    // VULN-006 fix: usando import estático en lugar de require() dinámico
     const audioDataUrl = await generateSpeechFromText(replyText, voiceId);
 
-    // Guardar historial en la base de datos
-    const userMsg = messageRepository.create({ toy, content: message, isUser: true });
-    const botMsg = messageRepository.create({ toy, content: replyText, isUser: false });
-    await messageRepository.save([userMsg, botMsg]);
+    // Guardar historial en la base de datos si hay juguete asociado
+    if (toyEntity) {
+      try {
+        const userMsg = messageRepository.create({ toy: toyEntity, content: message, isUser: true });
+        const botMsg = messageRepository.create({ toy: toyEntity, content: replyText, isUser: false });
+        await messageRepository.save([userMsg, botMsg]);
+      } catch (saveErr) {
+        console.warn("No se pudo guardar historial:", saveErr);
+      }
+    }
 
     res.status(200).json({
       success: true,

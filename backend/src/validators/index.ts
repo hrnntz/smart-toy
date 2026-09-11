@@ -4,7 +4,11 @@ export const registerSchema = z.object({
   body: z.object({
     email: z.string().email("Correo electrónico inválido"),
     password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
-    nombre: z.string().min(2, "El nombre debe tener al menos 2 caracteres"),
+    nombre: z.string().min(2, "El nombre debe tener al menos 2 caracteres").optional(),
+    name: z.string().min(2, "El nombre debe tener al menos 2 caracteres").optional(),
+  }).refine((data) => Boolean(data.nombre || data.name), {
+    message: "El nombre es requerido",
+    path: ["nombre"],
   }),
 });
 

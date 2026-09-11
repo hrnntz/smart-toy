@@ -3,9 +3,11 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { AppDataSource } from "../config/database";
 import { User } from "../models/User";
+import { Toy } from "../models/Toy";
 import { AuthRequest } from "../middleware/auth";
 
 const userRepository = AppDataSource.getRepository(User);
+const toyRepository = AppDataSource.getRepository(Toy);
 
 export const authStatus = (_req: Request, res: Response): void => {
   res.json({
@@ -19,7 +21,8 @@ export const register = async (
   res: Response
 ): Promise<void> => {
   try {
-    const { name, email, password } = req.body;
+    const name = req.body.name || req.body.nombre;
+    const { email, password } = req.body;
 
     if (!name || !email || !password) {
       res.status(400).json({
@@ -59,6 +62,23 @@ export const register = async (
 
     const savedUser = await userRepository.save(user);
 
+    // Crear automáticamente juguete Panda por defecto para que pueda chatear y jugar de inmediato
+    try {
+      const defaultToy = toyRepository.create({
+        name: "Panda",
+        serialNumber: `PANDA-${savedUser.id}`,
+        avatarUrl: "https://image.pollinations.ai/prompt/Panda%20toy%20cute%20cartoon%20character%2C%20colorful%2C%20friendly%20face%2C%20kawaii%20style?width=300&height=300&seed=Panda",
+        user: savedUser,
+        isConnected: true,
+        batteryLevel: 100,
+        batteryMah: 6600,
+        batteryHours: 41.2,
+      });
+      await toyRepository.save(defaultToy);
+    } catch (toyErr) {
+      console.warn("No se pudo crear juguete por defecto:", toyErr);
+    }
+
     const secret = process.env.JWT_SECRET;
 
     if (!secret) {
@@ -76,7 +96,7 @@ export const register = async (
       },
       secret,
       {
-        expiresIn: "1h" // VULN-005 fix: reducido de 7d a 1h. TODO: implementar refresh tokens
+        expiresIn: "30d"
       }
     );
 
@@ -158,7 +178,7 @@ export const login = async (
       },
       secret,
       {
-        expiresIn: "1h" // VULN-005 fix: reducido de 7d a 1h. TODO: implementar refresh tokens
+        expiresIn: "30d"
       }
     );
 

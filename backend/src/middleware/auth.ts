@@ -63,3 +63,27 @@ export const authenticateToken = (
     });
   }
 };
+
+export const optionalAuth = (
+  req: AuthRequest,
+  _res: Response,
+  next: NextFunction
+): void => {
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    const token = authHeader.split(" ")[1];
+    const secret = process.env.JWT_SECRET;
+    if (secret) {
+      try {
+        const decoded: any = jwt.verify(token, secret, { algorithms: ['HS256'] });
+        if (decoded && typeof decoded.userId === "number") {
+          req.user = {
+            userId: decoded.userId,
+            email: decoded.email
+          };
+        }
+      } catch {}
+    }
+  }
+  next();
+};

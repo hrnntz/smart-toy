@@ -16,7 +16,6 @@
     "migration:revert": "typeorm-ts-node-commonjs migration:revert -d src/config/database.ts"
   },
   "dependencies": {
-    "@google/generative-ai": "^0.24.1",
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
