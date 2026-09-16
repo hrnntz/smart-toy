@@ -35,7 +35,11 @@ export const pandaBluetooth = {
   },
 
   getAppFlavor: (): string => {
-    return (PandaBluetooth as any)?.appFlavor || 'parent';
+    const native = PandaBluetooth as any;
+    if (native?.appFlavor) return native.appFlavor;
+    if (native?.applicationId === 'com.anonymous.smarttoydevice') return 'toy';
+    if (native?.getConstants?.()?.appFlavor) return native.getConstants().appFlavor;
+    return 'parent';
   },
 
   isConnected: async (): Promise<boolean> => {

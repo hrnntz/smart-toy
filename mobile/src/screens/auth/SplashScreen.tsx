@@ -27,11 +27,16 @@ export default function SplashScreen({ navigation }: any) {
     const timer = setTimeout(async () => {
       try {
         const flavor = pandaBluetooth.getAppFlavor();
-        const deviceRole = await storage.getItem('device_role');
-        if (flavor === 'toy' || deviceRole === 'toy_device') {
+        // Si esta APK es la compilada específicamente para el juguete (toy):
+        if (flavor === 'toy') {
           navigation.replace('PandaDevice');
           return;
         }
+
+        // Si es la aplicación de padres (parent):
+        // NUNCA debe abrir Panda Inside al iniciar.
+        // Limpiamos cualquier residuo de device_role para desatascar la app.
+        await storage.removeItem('device_role');
 
         const token = await storage.getItem('token');
         if (token) {

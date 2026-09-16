@@ -194,7 +194,12 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
           }
         } catch (_) {}
 
-        await storage.setItem('device_role', 'toy_device');
+        const flavor = pandaBluetooth.getAppFlavor();
+        if (flavor === 'toy') {
+          await storage.setItem('device_role', 'toy_device');
+        } else {
+          await storage.removeItem('device_role');
+        }
       } catch (err) {
         console.error('Error inicializando dispositivo Panda:', err);
       }
@@ -808,12 +813,22 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
           className="justify-between items-center py-10 px-6"
           onPress={() => setDisplayMode('face')}
         >
-          {/* Faint status indicator */}
-          <View className="flex-row items-center gap-2 opacity-40">
-            <View className={`w-2 h-2 rounded-full ${isParentWatching ? 'bg-red-500' : 'bg-emerald-500'}`} />
-            <Label className="text-gray-400 text-xs font-semibold">
-              Panda Inside • Fam #{effectiveFamilyId} • {isParentWatching ? 'Padres Mirando en Vivo' : 'En Espera (Reposo)'}
-            </Label>
+          {/* Barra superior con botón de salida */}
+          <View className="flex-row items-center justify-between w-full z-20 pt-2">
+            <View className="flex-row items-center gap-2 opacity-50">
+              <View className={`w-2 h-2 rounded-full ${isParentWatching ? 'bg-red-500' : 'bg-emerald-500'}`} />
+              <Label className="text-gray-400 text-xs font-semibold">
+                Panda Inside • Fam #{effectiveFamilyId}
+              </Label>
+            </View>
+
+            <Pressable
+              className="bg-white/20 px-3 py-1.5 rounded-full flex-row items-center gap-1.5"
+              onPress={exitToyMode}
+            >
+              <Ionicons name="arrow-back" size={14} color="white" />
+              <Label className="text-white text-xs font-bold">Salir a Padres</Label>
+            </Pressable>
           </View>
 
           {/* Icono central de bajo consumo */}
@@ -923,6 +938,14 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
                   </Pressable>
                 </>
               )}
+
+              <Pressable
+                className="bg-white/20 px-3 py-1.5 rounded-full flex-row items-center gap-1.5"
+                onPress={exitToyMode}
+              >
+                <Ionicons name="arrow-back" size={14} color="white" />
+                <Label className="text-white text-xs font-bold">Salir a Padres</Label>
+              </Pressable>
 
               <Pressable
                 className={`w-9 h-9 rounded-full items-center justify-center ${
