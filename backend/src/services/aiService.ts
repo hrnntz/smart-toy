@@ -11,15 +11,78 @@ export interface ChatHistoryMessage {
   content: string;
 }
 
-const CANDIDATE_MODELS = [
-  process.env.GROQ_TEXT_MODEL,
-  'llama-3.1-8b-instant',
-  'llama3-8b-8192',
-  'gemma2-9b-it',
-  'mixtral-8x7b-32768',
-  'openai/gpt-oss-20b',
-  'llama-3.3-70b-versatile',
-].filter(Boolean) as string[];
+// Cache dinámico de modelos de Groq para evitar llamar a modelos dados de baja
+let cachedGroqModels: string[] = [];
+let lastGroqModelsFetch = 0;
+
+export const getGroqTextModels = async (): Promise<string[]> => {
+  const now = Date.now();
+  if (cachedGroqModels.length > 0 && now - lastGroqModelsFetch < 15 * 60 * 1000) {
+    return cachedGroqModels;
+  }
+
+  // Modelos preferidos activos en Groq (2026)
+  const preferred = [
+    process.env.GROQ_TEXT_MODEL,
+    'openai/gpt-oss-20b',
+    'openai/gpt-oss-120b',
+    'qwen/qwen3.6-27b',
+    'meta-llama/llama-4-maverick-17b-128e-instruct',
+    'meta-llama/llama-4-scout-17b-16e-instruct',
+  ].filter(Boolean) as string[];
+
+  try {
+    const listRes = await groq.models.list();
+    const activeIds = (listRes.data || [])
+      .map((m: any) => m.id)
+      .filter(
+        (id: string) =>
+          id &&
+          !id.includes('whisper') &&
+          !id.includes('guard') &&
+          !id.includes('vision') &&
+          !id.includes('tts') &&
+          !id.includes('playai')
+      );
+
+    if (activeIds.length > 0) {
+      // Priorizar los preferidos que coincidan con la cuenta
+      const matched = preferred.filter((m) => activeIds.includes(m));
+      const others = activeIds.filter((id: string) => !matched.includes(id));
+      cachedGroqModels = [...matched, ...others];
+      lastGroqModelsFetch = now;
+      console.log(`🤖 Modelos de texto activos en Groq detectados (${cachedGroqModels.length}):`, cachedGroqModels);
+      return cachedGroqModels;
+    }
+  } catch (err: any) {
+    console.warn(`⚠️ No se pudo consultar groq.models.list(): ${err?.message || err}. Usando lista preferida.`);
+  }
+
+  cachedGroqModels = preferred;
+  return cachedGroqModels;
+};
+
+// Motor de respaldo inteligente (Pollinations AI) si Groq falla o agota cuota
+const callBackupAI = async (systemPrompt: string, userMessage: string): Promise<string | null> => {
+  try {
+    const prompt = `${systemPrompt}\n\nNiño: ${userMessage}\nPanda:`;
+    const encoded = encodeURIComponent(prompt);
+    const res = await fetch(`https://text.pollinations.ai/${encoded}?model=openai&seed=42`, {
+      method: 'GET',
+      headers: { 'User-Agent': 'SmartToy/1.0' },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (res.ok) {
+      const text = await res.text();
+      if (text && text.trim().length > 0) {
+        return text.trim();
+      }
+    }
+  } catch (err: any) {
+    console.warn('⚠️ Backup AI (Pollinations) no disponible:', err?.message || err);
+  }
+  return null;
+};
 
 // ============================================
 // 1. CHAT CON JUGUETES CON HISTORIAL (toyController)
@@ -46,7 +109,9 @@ Nunca uses lenguaje técnico ni complejo. Siempre responde en español.
       content: msg.content,
     }));
 
-    for (const model of CANDIDATE_MODELS) {
+    const candidateModels = await getGroqTextModels();
+
+    for (const model of candidateModels) {
       try {
         const chatCompletion = await groq.chat.completions.create({
           messages: [
@@ -68,7 +133,14 @@ Nunca uses lenguaje técnico ni complejo. Siempre responde en español.
       }
     }
 
-    // Fallback inteligente y cariñoso si Groq está saturado o sin conexión
+    // Si todos los modelos de Groq fallan, intentar con la IA de respaldo libre
+    const backupReply = await callBackupAI(systemPrompt, message);
+    if (backupReply) {
+      console.log('✨ Respuesta generada exitosamente por IA de respaldo libre.');
+      return backupReply;
+    }
+
+    // Fallback inteligente y cariñoso si no hay ninguna conexión a IA disponible
     const lower = message.toLowerCase();
     if (lower.includes('hola') || lower.includes('cómo estás') || lower.includes('buenos')) {
       return `¡Hola, amiguito! Qué lindo escucharte. Soy ${toyName}, ¡estoy muy feliz de hablar contigo hoy! 🐼✨`;
@@ -81,7 +153,7 @@ Nunca uses lenguaje técnico ni complejo. Siempre responde en español.
     }
     return `¡Qué divertido lo que me dices! Me encanta ser tu compañero y aprender juntos todos los días. 🐼`;
   } catch (error) {
-    console.error('❌ Error en Groq chat con historial:', error);
+    console.error('❌ Error en chat con historial:', error);
     return `¡Hola! Soy ${toyName}, tu amigo inteligente. ¡Qué lindo jugar contigo hoy! 🐼`;
   }
 };
@@ -96,7 +168,7 @@ export const transcribeAudioWithWhisper = async (filePath: string): Promise<stri
       throw new Error('El archivo de audio no existe');
     }
 
-    // Si el archivo no tiene extensión .m4a, renombrarlo para que Groq valide el tipo
+    // Si el archivo no tiene extensión de audio válida, asegurar que termine en .m4a
     if (!path.extname(filePath)) {
       targetPath = `${filePath}.m4a`;
       fs.renameSync(filePath, targetPath);
@@ -104,12 +176,16 @@ export const transcribeAudioWithWhisper = async (filePath: string): Promise<stri
 
     const transcription = await groq.audio.transcriptions.create({
       file: fs.createReadStream(targetPath),
-      model: 'whisper-large-v3-turbo',
+      model: 'whisper-large-v3',
       language: 'es',
       response_format: 'json',
+      temperature: 0.0,
+      prompt: 'Voz de un niño pequeño hablando en español con su peluche inteligente Panda. Frases comunes: Hola Panda, cuéntame un cuento, cómo estás, vamos a jugar, tengo una pregunta, quiero aprender inglés, qué haces, te quiero mucho.',
     });
 
-    return transcription.text || '';
+    const recognizedText = transcription.text?.trim() || '';
+    console.log(`🎤 Whisper STT reconoció: "${recognizedText}"`);
+    return recognizedText;
   } catch (error) {
     console.error('❌ Error en Groq Whisper STT:', error);
     return '';
@@ -150,7 +226,8 @@ Estructura exacta por objeto:
 Donde "answer" es el índice numérico (0, 1 o 2) de la opción correcta.
 `;
 
-    for (const model of CANDIDATE_MODELS) {
+    const candidateModels = await getGroqTextModels();
+    for (const model of candidateModels) {
       try {
         const response = await groq.chat.completions.create({
           messages: [{ role: 'user', content: prompt }],
@@ -264,7 +341,8 @@ Genera una nana de cuna muy dulce de 4 versos rítmicos basada en el tema: "${pr
 Solo responde con la letra de la canción de cuna en español, poética, tierna y con rima para niños. Sin introducciones.`;
 
     let songLyrics = `Duérmete mi niño, duérmete mi amor, las estrellas brillan con su resplandor. ${prompt}`;
-    for (const model of CANDIDATE_MODELS) {
+    const musicModels = await getGroqTextModels();
+    for (const model of musicModels) {
       try {
         const chatCompletion = await groq.chat.completions.create({
           messages: [{ role: 'system', content: systemPrompt }],
@@ -324,7 +402,8 @@ Estructura exacta por objeto:
 }
 `;
 
-    for (const model of CANDIDATE_MODELS) {
+    const englishModels = await getGroqTextModels();
+    for (const model of englishModels) {
       try {
         const response = await groq.chat.completions.create({
           messages: [{ role: 'user', content: prompt }],
@@ -382,7 +461,8 @@ TÍTULO: <título>
 `;
 
     let fullText = '';
-    for (const model of CANDIDATE_MODELS) {
+    const storyModels = await getGroqTextModels();
+    for (const model of storyModels) {
       try {
         const response = await groq.chat.completions.create({
           messages: [{ role: 'user', content: prompt }],

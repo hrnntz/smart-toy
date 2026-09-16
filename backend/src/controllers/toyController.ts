@@ -300,13 +300,28 @@ export const voiceChatWithToy = async (req: AuthRequest, res: Response): Promise
     // Si el usuario grabó audio desde el micrófono, transcribirlo con Groq Whisper
     if (req.file) {
       const transcribedText = await transcribeAudioWithWhisper(req.file.path);
-      if (transcribedText) {
-        message = transcribedText;
-      }
       try {
         const fs = await import("fs");
         if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
       } catch (err) {}
+
+      if (transcribedText && transcribedText.trim().length > 0) {
+        message = transcribedText.trim();
+        console.log(`🧒 Audio del niño reconocido con éxito: "${message}"`);
+      } else {
+        console.log("⚠️ Audio recibido pero no se distinguieron palabras claras.");
+        const unclearReply = "¡Hola amiguito! No alcancé a escucharte bien, ¿me lo repites un poquito más fuerte o más cerquita? 🐼👂";
+        const audioDataUrl = await generateSpeechFromText(unclearReply, voiceId);
+        res.status(200).json({
+          success: true,
+          data: {
+            userText: "",
+            replyText: unclearReply,
+            audioUrl: audioDataUrl,
+          },
+        });
+        return;
+      }
     }
 
     if (!message) {
