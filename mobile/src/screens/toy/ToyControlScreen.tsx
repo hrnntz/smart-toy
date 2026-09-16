@@ -6,6 +6,7 @@ import {
   Alert,
   RefreshControl,
   Animated,
+  Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { io, Socket } from 'socket.io-client';
@@ -27,6 +28,19 @@ export default function ToyControlScreen({ route, navigation }: any) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [sendingAction, setSendingAction] = useState(false);
+  const [showPairingModal, setShowPairingModal] = useState(false);
+  const [familyCode, setFamilyCode] = useState('1');
+
+  useEffect(() => {
+    storage.getItem('user').then((userStr) => {
+      if (userStr) {
+        try {
+          const u = JSON.parse(userStr);
+          if (u?.id) setFamilyCode(String(u.id));
+        } catch (_) {}
+      }
+    });
+  }, []);
 
   // Modo de conexión: 'bluetooth' (Escuela / Directo) o 'cloud' (Producción)
   const [connectionMode, setConnectionMode] = useState<'bluetooth' | 'cloud'>('bluetooth');
@@ -371,6 +385,28 @@ export default function ToyControlScreen({ route, navigation }: any) {
           </Pressable>
         </View>
 
+        {/* Banner de Vinculación con el Teléfono Secundario (Panda Inside) */}
+        <Pressable
+          className="bg-[#10B981]/15 border border-[#10B981]/40 p-3.5 rounded-2xl mb-5 flex-row items-center justify-between"
+          onPress={() => setShowPairingModal(true)}
+        >
+          <View className="flex-row items-center gap-3 flex-1">
+            <View className="w-10 h-10 rounded-full bg-[#10B981]/20 items-center justify-center">
+              <Ionicons name="phone-portrait" size={20} color="#059669" />
+            </View>
+            <View className="flex-1">
+              <View className="flex-row items-center gap-2">
+                <Label className="text-foreground font-bold text-sm">Teléfono dentro de Panda</Label>
+                <View className="bg-emerald-500/20 px-2 py-0.5 rounded-md">
+                  <Label className="text-emerald-400 font-extrabold text-[10px]">CÓDIGO #{familyCode}</Label>
+                </View>
+              </View>
+              <Label className="text-muted text-xs">Toca aquí para ver los pasos de conexión y vincularlo</Label>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color="#059669" />
+        </Pressable>
+
         {/* Panel Bluetooth */}
         {connectionMode === 'bluetooth' && (
           <View className="bg-surface p-4 rounded-2xl mb-5 border border-accent/40 bg-accent/5">
@@ -529,6 +565,117 @@ export default function ToyControlScreen({ route, navigation }: any) {
           </Card.Body>
         </Card>
       </ScrollView>
+
+      {/* Modal Guía de Vinculación con el Teléfono Secundario */}
+      <Modal
+        visible={showPairingModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowPairingModal(false)}
+      >
+        <View className="flex-1 justify-end bg-black/75">
+          <View className="bg-[#161922] rounded-t-3xl p-6 border-t border-white/10 max-h-[85%]">
+            <View className="flex-row items-center justify-between pb-4 border-b border-white/10">
+              <View className="flex-row items-center gap-2">
+                <Ionicons name="phone-portrait-outline" size={24} color="#10B981" />
+                <Label className="text-lg font-extrabold text-white">Vincular Teléfono del Juguete</Label>
+              </View>
+              <Pressable
+                onPress={() => setShowPairingModal(false)}
+                className="w-8 h-8 rounded-full bg-white/10 items-center justify-center"
+              >
+                <Ionicons name="close" size={18} color="white" />
+              </Pressable>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} className="mt-4">
+              {/* Código de Familia Destacado */}
+              <View className="bg-[#1E2230] p-4 rounded-2xl items-center mb-5 border border-emerald-500/30">
+                <Label className="text-xs text-gray-400 uppercase tracking-wider font-semibold">Tu Código de Familia</Label>
+                <Label className="text-3xl font-extrabold text-emerald-400 mt-1 tracking-widest">{familyCode}</Label>
+                <Label className="text-[11px] text-gray-400 text-center mt-1">
+                  Introduce este número en el teléfono que va dentro de Panda para que se conecten de inmediato.
+                </Label>
+              </View>
+
+              {/* Pasos ordenados */}
+              <View className="gap-4 mb-6">
+                <View className="flex-row items-start gap-3">
+                  <View className="w-7 h-7 rounded-full bg-blue-500/20 items-center justify-center mt-0.5">
+                    <Label className="text-blue-400 font-bold text-xs">1</Label>
+                  </View>
+                  <View className="flex-1">
+                    <Label className="text-white font-bold text-sm">Instala la App del Juguete</Label>
+                    <Label className="text-gray-400 text-xs mt-0.5 leading-4">
+                      En el teléfono secundario que meterás al peluche, instala el APK <Label className="text-emerald-400 font-bold text-xs">PandaAI-Juguete.apk</Label>.
+                    </Label>
+                  </View>
+                </View>
+
+                <View className="flex-row items-start gap-3">
+                  <View className="w-7 h-7 rounded-full bg-blue-500/20 items-center justify-center mt-0.5">
+                    <Label className="text-blue-400 font-bold text-xs">2</Label>
+                  </View>
+                  <View className="flex-1">
+                    <Label className="text-white font-bold text-sm">Introduce el Código de Familia</Label>
+                    <Label className="text-gray-400 text-xs mt-0.5 leading-4">
+                      Al abrir la app en el teléfono secundario, pon el Código de Familia <Label className="text-white font-bold text-xs">{familyCode}</Label> y presiona Conectar.
+                    </Label>
+                  </View>
+                </View>
+
+                <View className="flex-row items-start gap-3">
+                  <View className="w-7 h-7 rounded-full bg-blue-500/20 items-center justify-center mt-0.5">
+                    <Label className="text-blue-400 font-bold text-xs">3</Label>
+                  </View>
+                  <View className="flex-1">
+                    <Label className="text-white font-bold text-sm">Coloca el Teléfono dentro del Peluche</Label>
+                    <Label className="text-gray-400 text-xs mt-0.5 leading-4">
+                      Introduce el teléfono en el bolsillo del peluche alineando la <Label className="text-white font-bold text-xs">cámara frontal</Label> con el orificio del ojo o nariz de Panda.
+                    </Label>
+                  </View>
+                </View>
+
+                <View className="flex-row items-start gap-3">
+                  <View className="w-7 h-7 rounded-full bg-blue-500/20 items-center justify-center mt-0.5">
+                    <Label className="text-blue-400 font-bold text-xs">4</Label>
+                  </View>
+                  <View className="flex-1">
+                    <Label className="text-white font-bold text-sm">Cero Calor y Pantalla en Sigilo</Label>
+                    <Label className="text-gray-400 text-xs mt-0.5 leading-4">
+                      La pantalla del teléfono dentro de Panda se mantendrá apagada para ahorrar batería y no sobrecalentar el peluche. La cámara solo se encenderá cuando abras Supervisión.
+                    </Label>
+                  </View>
+                </View>
+              </View>
+
+              <Button
+                variant="primary"
+                onPress={() => setShowPairingModal(false)}
+                className="w-full bg-emerald-600 rounded-2xl py-3"
+              >
+                <Button.Label className="text-white font-bold">¡Entendido, listo!</Button.Label>
+              </Button>
+
+              <Pressable
+                onPress={() => {
+                  setShowPairingModal(false);
+                  navigation.navigate('PandaDevice', {
+                    toyId: toy?.id,
+                    toyName: toy?.name,
+                    serialNumber: toy?.serialNumber,
+                  });
+                }}
+                className="py-3 items-center mt-2"
+              >
+                <Label className="text-xs text-gray-500 underline">
+                  🛠️ Probar Modo Panda en este dispositivo (Dev)
+                </Label>
+              </Pressable>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

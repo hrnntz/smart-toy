@@ -29,6 +29,7 @@ import MusicaScreen from '../screens/dashboard/MusicaScreen';
 // Pantallas de supervisión por cámara
 import SupervisionScreen from '../screens/dashboard/SupervisionScreen';
 import CameraBroadcasterScreen from '../screens/dashboard/CameraBroadcasterScreen';
+import PandaDeviceScreen from '../screens/toy/PandaDeviceScreen';
 
 // ✅ Pantallas de historias (nuevas)
 import HistoriasScreen from '../screens/dashboard/HistoriasScreen';
@@ -77,6 +78,8 @@ export default function RootNavigator() {
         <Stack.Screen name="Supervision" component={SupervisionScreen} />
         <Stack.Screen name="Supervisión" component={SupervisionScreen} />
         <Stack.Screen name="CameraBroadcaster" component={CameraBroadcasterScreen} />
+        <Stack.Screen name="PandaDevice" component={PandaDeviceScreen} />
+        <Stack.Screen name="PandaInside" component={PandaDeviceScreen} />
 
         {/* ✅ Pantallas de historias */}
         <Stack.Screen name="Historias" component={HistoriasScreen} />

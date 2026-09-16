@@ -3,6 +3,7 @@ import { View, Image, Animated } from 'react-native';
 import { Label, Spinner } from 'heroui-native';
 import { storage } from '../../services/storage';
 import { authService } from '../../services/api';
+import { pandaBluetooth } from '../../services/pandaBluetooth';
 
 export default function SplashScreen({ navigation }: any) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -25,6 +26,13 @@ export default function SplashScreen({ navigation }: any) {
 
     const timer = setTimeout(async () => {
       try {
+        const flavor = pandaBluetooth.getAppFlavor();
+        const deviceRole = await storage.getItem('device_role');
+        if (flavor === 'toy' || deviceRole === 'toy_device') {
+          navigation.replace('PandaDevice');
+          return;
+        }
+
         const token = await storage.getItem('token');
         if (token) {
           try {

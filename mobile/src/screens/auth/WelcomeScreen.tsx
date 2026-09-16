@@ -105,6 +105,16 @@ export default function WelcomeScreen() {
               🎮 Control Rápido del Panda (Sin Cuenta)
             </Button.Label>
           </Button>
+
+          <Button
+            variant="outline"
+            onPress={() => navigation.navigate('PandaDevice')}
+            className="w-full border-[#10B981]/50 bg-[#10B981]/15"
+          >
+            <Button.Label className="text-[#059669] font-extrabold">
+              🐼 Modo Juguete (Teléfono dentro de Panda)
+            </Button.Label>
+          </Button>
         </View>
 
         <Label className="text-xs text-muted text-center opacity-80">

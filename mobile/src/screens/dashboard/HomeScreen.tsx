@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, Alert, Pressable } from 'react-native';
+import { View, ScrollView, Alert, Pressable, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { storage } from '../../services/storage';
 import { authService } from '../../services/auth';
@@ -27,6 +27,9 @@ export default function HomeScreen({ navigation }: any) {
   const [deviceName, setDeviceName] = useState('Panda');
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
   const [toyData, setToyData] = useState<any>(null);
+  const [showPairingModal, setShowPairingModal] = useState(false);
+
+  const familyCode = String(user?.id || 1);
 
   useEffect(() => {
     let socket: Socket | null = null;
@@ -207,13 +210,15 @@ export default function HomeScreen({ navigation }: any) {
 
   const shortcuts = [
     { id: 'cam', title: 'Cámara en Vivo', icon: 'camera', color: '#3B82F6', route: 'Supervision' },
+    { id: 'panda_inside', title: 'Panda Inside', icon: 'phone-portrait-outline', color: '#10B981', route: 'PandaDevice' },
     { id: 'games', title: 'Minijuegos', icon: 'game-controller', color: '#7C3AED', route: 'Juegos' },
-    { id: 'music', title: 'Música & Nanas', icon: 'musical-notes', color: '#10B981', route: 'Musica' },
+    { id: 'music', title: 'Música & Nanas', icon: 'musical-notes', color: '#EC4899', route: 'Musica' },
     { id: 'chat', title: 'Historial', icon: 'chatbubbles', color: accent, route: 'Conversaciones' },
     { id: 'routines', title: 'Rutinas', icon: 'calendar', color: '#6366F1', route: 'Rutinas' },
     { id: 'stories', title: 'Cuentos IA', icon: 'book', color: '#F59E0B', route: 'Historias' },
     { id: 'english', title: 'Aprender Inglés', icon: 'language', color: '#EF4444', route: 'Ingles' },
     { id: 'settings', title: 'Configuración', icon: 'settings', color: '#6B7280', route: 'Configuracion' },
+    { id: 'toy_control', title: 'Control Panda', icon: 'hardware-chip-outline', color: '#8B5CF6', route: 'ToyControl' },
   ];
 
   return (
@@ -238,6 +243,36 @@ export default function HomeScreen({ navigation }: any) {
             </Avatar>
           </View>
         </View>
+
+        {/* 📱 BANNER DESTACADO: VINCULAR TELÉFONO QUE VA ADENTRO DEL PELUCHE */}
+        <Pressable
+          className="bg-emerald-500/15 border-2 border-emerald-500/40 rounded-3xl p-4 mb-5 shadow-sm"
+          onPress={() => setShowPairingModal(true)}
+        >
+          <View className="flex-row items-center justify-between">
+            <View className="flex-row items-center flex-1">
+              <View className="w-12 h-12 rounded-2xl bg-emerald-500/25 items-center justify-center mr-3">
+                <Ionicons name="phone-portrait" size={24} color="#10B981" />
+              </View>
+              <View className="flex-1">
+                <View className="flex-row items-center gap-2">
+                  <Label className="text-foreground font-extrabold text-base">
+                    Teléfono dentro de Panda
+                  </Label>
+                  <View className="bg-emerald-500/30 px-2 py-0.5 rounded-full">
+                    <Label className="text-[#059669] dark:text-[#34D399] font-bold text-[10px]">
+                      {connectedToys > 0 ? '🟢 CONECTADO' : '🔗 VINCULAR'}
+                    </Label>
+                  </View>
+                </View>
+                <Label className="text-muted text-xs mt-0.5">
+                  Código de Familia: <Label className="text-emerald-500 font-extrabold text-xs">{familyCode}</Label> • Toca aquí para ver cómo conectarlo
+                </Label>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#10B981" />
+          </View>
+        </Pressable>
 
         {/* Panda Status Card con Batería y Abrazos en Vivo */}
         <Pressable
@@ -336,7 +371,13 @@ export default function HomeScreen({ navigation }: any) {
             <View key={item.id} className="w-[48%] mb-4">
               <Pressable 
                 className="w-full"
-                onPress={() => item.route && navigation.navigate(item.route)}
+                onPress={() => {
+                  if (item.id === 'panda_inside') {
+                    setShowPairingModal(true);
+                  } else if (item.route) {
+                    navigation.navigate(item.route);
+                  }
+                }}
               >
                 <Card variant="default" className="rounded-3xl py-5 items-center">
                   <Card.Body className="items-center p-0">
@@ -383,6 +424,118 @@ export default function HomeScreen({ navigation }: any) {
         
         <View className="h-8" />
       </ScrollView>
+
+      {/* MODAL GUÍA DE VINCULACIÓN DEL TELÉFONO INTERIOR */}
+      <Modal
+        visible={showPairingModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowPairingModal(false)}
+      >
+        <View className="flex-1 justify-end bg-black/75">
+          <View className="bg-[#161922] rounded-t-3xl p-6 border-t border-white/10 max-h-[85%]">
+            <View className="flex-row items-center justify-between pb-4 border-b border-white/10">
+              <View className="flex-row items-center gap-2">
+                <Ionicons name="phone-portrait-outline" size={24} color="#10B981" />
+                <Label className="text-lg font-extrabold text-white">Conectar Teléfono al Peluche</Label>
+              </View>
+              <Pressable
+                onPress={() => setShowPairingModal(false)}
+                className="w-8 h-8 rounded-full bg-white/10 items-center justify-center"
+              >
+                <Ionicons name="close" size={18} color="white" />
+              </Pressable>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} className="mt-4">
+              {/* Código de Familia Destacado */}
+              <View className="bg-[#1E2230] p-4 rounded-2xl items-center mb-5 border border-emerald-500/30">
+                <Label className="text-xs text-gray-400 uppercase tracking-wider font-semibold">Tu Código de Familia</Label>
+                <Label className="text-4xl font-extrabold text-emerald-400 mt-1 tracking-widest">{familyCode}</Label>
+                <Label className="text-[11px] text-gray-400 text-center mt-1">
+                  Introduce este número en el teléfono secundario que meterás dentro de Panda.
+                </Label>
+              </View>
+
+              {/* Pasos ordenados */}
+              <View className="gap-4 mb-6">
+                <View className="flex-row items-start gap-3">
+                  <View className="w-7 h-7 rounded-full bg-emerald-500/20 items-center justify-center mt-0.5">
+                    <Label className="text-emerald-400 font-bold text-xs">1</Label>
+                  </View>
+                  <View className="flex-1">
+                    <Label className="text-white font-bold text-sm">Instala la App en el Teléfono Secundario</Label>
+                    <Label className="text-gray-400 text-xs mt-0.5 leading-4">
+                      En el teléfono que meterás al peluche, instala el APK <Label className="text-emerald-400 font-bold text-xs">PandaAI-Juguete.apk</Label>.
+                    </Label>
+                  </View>
+                </View>
+
+                <View className="flex-row items-start gap-3">
+                  <View className="w-7 h-7 rounded-full bg-emerald-500/20 items-center justify-center mt-0.5">
+                    <Label className="text-emerald-400 font-bold text-xs">2</Label>
+                  </View>
+                  <View className="flex-1">
+                    <Label className="text-white font-bold text-sm">Introduce el Código de Familia</Label>
+                    <Label className="text-gray-400 text-xs mt-0.5 leading-4">
+                      Abre la app en ese teléfono secundario. Si te pide el código, escribe <Label className="text-white font-bold text-xs">{familyCode}</Label> y pulsa Vincular (o inicia sesión con esta cuenta).
+                    </Label>
+                  </View>
+                </View>
+
+                <View className="flex-row items-start gap-3">
+                  <View className="w-7 h-7 rounded-full bg-emerald-500/20 items-center justify-center mt-0.5">
+                    <Label className="text-emerald-400 font-bold text-xs">3</Label>
+                  </View>
+                  <View className="flex-1">
+                    <Label className="text-white font-bold text-sm">Introduce el Teléfono en Panda</Label>
+                    <Label className="text-gray-400 text-xs mt-0.5 leading-4">
+                      Mete el celular en el bolsillo de Panda con la <Label className="text-white font-bold text-xs">cámara frontal</Label> asomando por el orificio del ojo o nariz.
+                    </Label>
+                  </View>
+                </View>
+
+                <View className="flex-row items-start gap-3">
+                  <View className="w-7 h-7 rounded-full bg-emerald-500/20 items-center justify-center mt-0.5">
+                    <Label className="text-emerald-400 font-bold text-xs">4</Label>
+                  </View>
+                  <View className="flex-1">
+                    <Label className="text-white font-bold text-sm">¡Listo! Funcionamiento Automático</Label>
+                    <Label className="text-gray-400 text-xs mt-0.5 leading-4">
+                      La pantalla del peluche permanecerá apagada (modo sigilo sin calor ni gasto de batería). El peluche escuchará al niño, responderá por su altavoz y podrás ver video en vivo desde el botón "Cámara en Vivo".
+                    </Label>
+                  </View>
+                </View>
+              </View>
+
+              <View className="gap-3 mb-4">
+                <Button
+                  variant="primary"
+                  className="w-full bg-blue-600 rounded-2xl py-3"
+                  onPress={() => {
+                    setShowPairingModal(false);
+                    navigation.navigate('Supervision');
+                  }}
+                >
+                  <Button.Label className="text-white font-bold">📹 Ir a Cámara en Vivo</Button.Label>
+                </Button>
+
+                <Button
+                  variant="tertiary"
+                  onPress={() => {
+                    setShowPairingModal(false);
+                    navigation.navigate('PandaDevice');
+                  }}
+                >
+                  <Button.Label className="text-gray-400 text-xs">
+                    (Opcional) Probar Modo Juguete en este teléfono
+                  </Button.Label>
+                </Button>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

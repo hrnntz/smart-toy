@@ -10,6 +10,7 @@ import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
 import com.facebook.react.bridge.WritableArray
 import com.facebook.react.bridge.WritableMap
+import com.facebook.react.modules.core.DeviceEventManagerModule
 import java.io.InputStream
 import java.io.OutputStream
 import java.util.UUID
@@ -20,8 +21,29 @@ class PandaBluetoothModule(reactContext: ReactApplicationContext) : ReactContext
     private var bluetoothSocket: BluetoothSocket? = null
     private var outputStream: OutputStream? = null
     private var inputStream: InputStream? = null
+    private var readerThread: Thread? = null
+
+    private fun sendEvent(eventName: String, params: Any?) {
+        try {
+            reactApplicationContext
+                .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+                .emit(eventName, params)
+        } catch (_: Exception) {}
+    }
 
     override fun getName(): String = "PandaBluetooth"
+
+    override fun getConstants(): MutableMap<String, Any> {
+        val constants = HashMap<String, Any>()
+        constants["appFlavor"] = BuildConfig.APP_FLAVOR
+        constants["applicationId"] = reactApplicationContext.packageName
+        return constants
+    }
+
+    @ReactMethod
+    fun getAppFlavor(promise: Promise) {
+        promise.resolve(BuildConfig.APP_FLAVOR)
+    }
 
     @ReactMethod
     fun isConnected(promise: Promise) {
@@ -95,6 +117,8 @@ class PandaBluetoothModule(reactContext: ReactApplicationContext) : ReactContext
                 outputStream = socket.outputStream
                 inputStream = socket.inputStream
 
+                startReaderThread()
+
                 promise.resolve(true)
             } catch (e: Exception) {
                 disconnectInternal()
@@ -102,6 +126,46 @@ class PandaBluetoothModule(reactContext: ReactApplicationContext) : ReactContext
             }
         }.start()
     }
+
+    private fun startReaderThread() {
+        readerThread?.interrupt()
+        readerThread = Thread {
+            val buffer = ByteArray(1024)
+            val stringBuilder = StringBuilder()
+            sendEvent("onPandaConnectionChanged", true)
+            while (!Thread.currentThread().isInterrupted && bluetoothSocket?.isConnected == true) {
+                try {
+                    val bytes = inputStream?.read(buffer) ?: -1
+                    if (bytes > 0) {
+                        val chunk = String(buffer, 0, bytes, Charsets.UTF_8)
+                        stringBuilder.append(chunk)
+                        while (stringBuilder.contains("\n")) {
+                            val lineEnd = stringBuilder.indexOf("\n")
+                            val line = stringBuilder.substring(0, lineEnd).trim()
+                            stringBuilder.delete(0, lineEnd + 1)
+                            if (line.isNotEmpty()) {
+                                sendEvent("onPandaDataReceived", line)
+                            }
+                        }
+                    } else if (bytes == -1) {
+                        break
+                    }
+                } catch (_: Exception) {
+                    break
+                }
+            }
+            sendEvent("onPandaConnectionChanged", false)
+        }.apply {
+            isDaemon = true
+            start()
+        }
+    }
+
+    @ReactMethod
+    fun addListener(eventName: String) {}
+
+    @ReactMethod
+    fun removeListeners(count: Int) {}
 
     @ReactMethod
     fun sendHug(promise: Promise) {
@@ -145,6 +209,11 @@ class PandaBluetoothModule(reactContext: ReactApplicationContext) : ReactContext
     }
 
     private fun disconnectInternal() {
+        try {
+            readerThread?.interrupt()
+        } catch (_: Exception) {}
+        readerThread = null
+
         try {
             outputStream?.close()
         } catch (_: Exception) {}

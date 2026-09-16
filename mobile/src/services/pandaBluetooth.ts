@@ -1,6 +1,7 @@
-import { NativeModules, Platform, PermissionsAndroid } from 'react-native';
+import { NativeModules, NativeEventEmitter, Platform, PermissionsAndroid, EmitterSubscription } from 'react-native';
 
 const { PandaBluetooth } = NativeModules;
+const pandaEventEmitter = PandaBluetooth ? new NativeEventEmitter(PandaBluetooth) : null;
 
 export interface PairedDevice {
   name: string;
@@ -31,6 +32,10 @@ export const requestBluetoothPermissions = async (): Promise<boolean> => {
 export const pandaBluetooth = {
   isAvailable: (): boolean => {
     return !!PandaBluetooth;
+  },
+
+  getAppFlavor: (): string => {
+    return (PandaBluetooth as any)?.appFlavor || 'parent';
   },
 
   isConnected: async (): Promise<boolean> => {
@@ -76,5 +81,15 @@ export const pandaBluetooth = {
     } catch {
       return false;
     }
+  },
+
+  onData: (callback: (line: string) => void): EmitterSubscription | null => {
+    if (!pandaEventEmitter) return null;
+    return pandaEventEmitter.addListener('onPandaDataReceived', callback);
+  },
+
+  onConnectionChange: (callback: (connected: boolean) => void): EmitterSubscription | null => {
+    if (!pandaEventEmitter) return null;
+    return pandaEventEmitter.addListener('onPandaConnectionChanged', callback);
   },
 };
