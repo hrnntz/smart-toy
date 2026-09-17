@@ -20,7 +20,21 @@ export default function SupervisionScreen({ navigation }: any) {
   const [isConnected, setIsConnected] = useState(false);
   const [isReceivingVideo, setIsReceivingVideo] = useState(false);
   const [isToyOnline, setIsToyOnline] = useState(false);
-  const [frameData, setFrameData] = useState<string | null>(null);
+  
+  // 🖼️ Doble Buffering de Video (CERO parpadeo en React Native)
+  const [bufferA, setBufferA] = useState<string | null>(null);
+  const [bufferB, setBufferB] = useState<string | null>(null);
+  const [activeBuffer, setActiveBuffer] = useState<'A' | 'B'>('A');
+  const activeBufferRef = useRef<'A' | 'B'>('A');
+  useEffect(() => {
+    activeBufferRef.current = activeBuffer;
+  }, [activeBuffer]);
+
+  // ⚙️ Estados de Control Remoto del Juguete
+  const [remoteCameraFacing, setRemoteCameraFacing] = useState<'front' | 'back'>('front');
+  const [remoteDisplayMode, setRemoteDisplayMode] = useState<'face' | 'stealth'>('stealth');
+  const [remoteSensitivity, setRemoteSensitivity] = useState<-52 | -45 | -38>(-45);
+
   const [statusText, setStatusText] = useState('Esperando transmisión...');
   const [socket, setSocket] = useState<Socket | null>(null);
   const [showPairingModal, setShowPairingModal] = useState(false);
@@ -84,7 +98,14 @@ export default function SupervisionScreen({ navigation }: any) {
 
         newSocket.on('camera:receive_frame', (data: { frame: string }) => {
           if (offlineTimer) clearTimeout(offlineTimer);
-          setFrameData(data.frame);
+          if (!data?.frame) return;
+
+          // Swap buffers offscreen to eliminate 100% of screen flickering
+          if (activeBufferRef.current === 'A') {
+            setBufferB(data.frame);
+          } else {
+            setBufferA(data.frame);
+          }
           setIsReceivingVideo(true);
           setIsToyOnline(true);
           setStatusText('Recibiendo video en vivo');
@@ -108,16 +129,8 @@ export default function SupervisionScreen({ navigation }: any) {
 
     connectSocket();
 
-    // Reintentar periódicamente la señalización de visualización en caso de que el juguete conecte unos segundos después
-    const pingInterval = setInterval(() => {
-      if (newSocket && newSocket.connected) {
-        newSocket.emit('camera:watch_start', { roomId });
-      }
-    }, 2500);
-
     return () => {
       if (offlineTimer) clearTimeout(offlineTimer);
-      clearInterval(pingInterval);
       if (newSocket) {
         newSocket.emit('camera:watch_stop', { roomId });
         newSocket.disconnect();
@@ -130,7 +143,8 @@ export default function SupervisionScreen({ navigation }: any) {
       socket.emit('camera:watch_stop', { roomId });
       socket.disconnect();
       setIsConnected(false);
-      setFrameData(null);
+      setBufferA(null);
+      setBufferB(null);
       setIsReceivingVideo(false);
       setStatusText('Supervisión detenida');
     } else if (socket) {
@@ -140,6 +154,43 @@ export default function SupervisionScreen({ navigation }: any) {
       setIsConnected(true);
       setStatusText('Reconectando...');
     }
+  };
+
+  // Comandos de configuración remota del teléfono dentro del peluche
+  const sendRemoteCommand = (command: string, payload: any) => {
+    if (!socket || !isConnected) {
+      Alert.alert('Sin conexión', 'Inicia la conexión de supervisión para enviar comandos al juguete.');
+      return;
+    }
+    socket.emit('parent:send_command', {
+      toyId: String(user?.id || 1),
+      command,
+      payload,
+    });
+  };
+
+  const handleToggleCameraFacing = (nextFacing: 'front' | 'back') => {
+    setRemoteCameraFacing(nextFacing);
+    sendRemoteCommand('SET_CAMERA_FACING', { facing: nextFacing });
+    Alert.alert('📷 Lente Cambiada', `Se cambió la cámara a: ${nextFacing === 'front' ? 'Frontal (Pantalla)' : 'Trasera'}`);
+  };
+
+  const handleToggleDisplayMode = (nextMode: 'face' | 'stealth') => {
+    setRemoteDisplayMode(nextMode);
+    sendRemoteCommand('SET_DISPLAY_MODE', { mode: nextMode });
+    Alert.alert(
+      '📱 Modo de Pantalla Cambiado',
+      nextMode === 'stealth'
+        ? 'Pantalla del peluche apagada (ahorro de batería y cero calor).'
+        : 'Mostrando cara animada de Panda en la pantalla del peluche.'
+    );
+  };
+
+  const handleSetSensitivity = (threshold: -52 | -45 | -38) => {
+    setRemoteSensitivity(threshold);
+    sendRemoteCommand('SET_VAD_SENSITIVITY', { threshold });
+    const label = threshold === -52 ? 'Alta (Tela gruesa)' : threshold === -45 ? 'Normal (Recomendado)' : 'Baja (Con ruido)';
+    Alert.alert('🎙️ Sensibilidad de Micrófono Calibrada', `Sensibilidad ajustada a: ${label} (${threshold} dB)`);
   };
 
   const handleSendHug = async () => {
@@ -247,7 +298,7 @@ export default function SupervisionScreen({ navigation }: any) {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}>
-        {/* Visor de Video - Fondo 100% negro y fadeDuration={0} para CERO parpadeo */}
+        {/* Visor de Video - Double Buffering para CERO parpadeo */}
         <View 
           className="w-full h-64 rounded-3xl overflow-hidden mb-4 mt-2 relative justify-center items-center shadow-lg" 
           style={{ 
@@ -256,14 +307,33 @@ export default function SupervisionScreen({ navigation }: any) {
             borderColor: isReceivingVideo ? '#EF4444' : isConnected ? cameraBlue : 'rgba(255,255,255,0.1)'
           }}
         >
-          {frameData ? (
+          {bufferA && (
             <Image
-              source={{ uri: frameData }}
-              style={{ width: '100%', height: '100%', backgroundColor: '#000000' }}
+              source={{ uri: bufferA }}
+              style={[
+                StyleSheet.absoluteFillObject,
+                { opacity: activeBuffer === 'A' ? 1 : 0, backgroundColor: '#000000' }
+              ]}
               resizeMode="cover"
               fadeDuration={0}
+              onLoad={() => setActiveBuffer('A')}
             />
-          ) : (
+          )}
+
+          {bufferB && (
+            <Image
+              source={{ uri: bufferB }}
+              style={[
+                StyleSheet.absoluteFillObject,
+                { opacity: activeBuffer === 'B' ? 1 : 0, backgroundColor: '#000000' }
+              ]}
+              resizeMode="cover"
+              fadeDuration={0}
+              onLoad={() => setActiveBuffer('B')}
+            />
+          )}
+
+          {(!bufferA && !bufferB) && (
             <View className="items-center justify-center w-full h-full px-6" style={{ backgroundColor: '#000000' }}>
               <Ionicons name="videocam-outline" size={56} color={cameraBlue} />
               <Label className="text-sm font-semibold text-white mt-3 text-center">
@@ -284,21 +354,21 @@ export default function SupervisionScreen({ navigation }: any) {
           )}
 
           {/* Badge En Vivo */}
-          {frameData && isReceivingVideo && (
+          {(bufferA || bufferB) && isReceivingVideo && (
             <View className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-red-600/80 flex-row items-center gap-1.5">
               <View className="w-2 h-2 rounded-full bg-white" />
               <Label className="text-white text-[10px] font-extrabold tracking-wider">EN VIVO</Label>
             </View>
           )}
 
-          {frameData && isReceivingVideo && (
+          {(bufferA || bufferB) && isReceivingVideo && (
             <View className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-black/60">
               <Label className="text-white/80 text-[10px] font-bold">Familia #{familyCode}</Label>
             </View>
           )}
 
           {/* Overlay suave si hay micro-desconexión sin parpadear en blanco */}
-          {frameData && !isToyOnline && (
+          {(bufferA || bufferB) && !isToyOnline && (
             <View className="absolute inset-0 bg-black/60 items-center justify-center">
               <Ionicons name="cloud-offline-outline" size={32} color="#FBBF24" />
               <Label className="text-xs font-semibold text-amber-300 mt-1">Reconectando señal del juguete...</Label>
@@ -443,6 +513,120 @@ export default function SupervisionScreen({ navigation }: any) {
               {isRecordingVoice ? '🔴 Grabando tu voz... Suelta para enviar' : '🎙️ Mantén presionado para hablar por Panda'}
             </Label>
           </Pressable>
+        </Card>
+
+        {/* ⚙️ PANEL DE CONTROL REMOTO DEL JUGUETE */}
+        <Card variant="default" className="mb-4 rounded-3xl bg-surface border-0 p-4">
+          <View className="flex-row items-center justify-between mb-3">
+            <View className="flex-row items-center gap-2">
+              <View className="w-8 h-8 rounded-xl bg-blue-500/20 items-center justify-center">
+                <Ionicons name="settings-outline" size={18} color="#60A5FA" />
+              </View>
+              <View>
+                <Label className="text-white font-extrabold text-sm">Control Remoto del Peluche 🐼</Label>
+                <Label className="text-[11px] text-gray-400">Configura el teléfono dentro de Panda sin tocarlo</Label>
+              </View>
+            </View>
+            <View className="bg-blue-500/20 px-2.5 py-0.5 rounded-full">
+              <Label className="text-blue-300 text-[10px] font-bold">Remoto</Label>
+            </View>
+          </View>
+
+          {/* 1. Lente de Cámara */}
+          <View className="mb-3">
+            <Label className="text-xs text-gray-300 font-semibold mb-1.5">📷 Lente de la Cámara:</Label>
+            <View className="flex-row gap-2">
+              <Pressable
+                onPress={() => handleToggleCameraFacing('front')}
+                className={`flex-1 py-2 px-3 rounded-2xl border flex-row items-center justify-center gap-1.5 ${
+                  remoteCameraFacing === 'front'
+                    ? 'bg-blue-600/30 border-blue-400'
+                    : 'bg-white/5 border-white/10'
+                }`}
+              >
+                <Ionicons name="camera-reverse" size={14} color={remoteCameraFacing === 'front' ? '#60A5FA' : '#94A3B8'} />
+                <Label className={`text-xs font-bold ${remoteCameraFacing === 'front' ? 'text-blue-300' : 'text-gray-400'}`}>
+                  Frontal (Pantalla)
+                </Label>
+              </Pressable>
+
+              <Pressable
+                onPress={() => handleToggleCameraFacing('back')}
+                className={`flex-1 py-2 px-3 rounded-2xl border flex-row items-center justify-center gap-1.5 ${
+                  remoteCameraFacing === 'back'
+                    ? 'bg-blue-600/30 border-blue-400'
+                    : 'bg-white/5 border-white/10'
+                }`}
+              >
+                <Ionicons name="camera" size={14} color={remoteCameraFacing === 'back' ? '#60A5FA' : '#94A3B8'} />
+                <Label className={`text-xs font-bold ${remoteCameraFacing === 'back' ? 'text-blue-300' : 'text-gray-400'}`}>
+                  Trasera
+                </Label>
+              </Pressable>
+            </View>
+          </View>
+
+          {/* 2. Modo de Pantalla del Juguete */}
+          <View className="mb-3">
+            <Label className="text-xs text-gray-300 font-semibold mb-1.5">📱 Pantalla del Teléfono Secundario:</Label>
+            <View className="flex-row gap-2">
+              <Pressable
+                onPress={() => handleToggleDisplayMode('stealth')}
+                className={`flex-1 py-2 px-3 rounded-2xl border flex-row items-center justify-center gap-1.5 ${
+                  remoteDisplayMode === 'stealth'
+                    ? 'bg-emerald-600/30 border-emerald-400'
+                    : 'bg-white/5 border-white/10'
+                }`}
+              >
+                <Ionicons name="moon" size={14} color={remoteDisplayMode === 'stealth' ? '#34D399' : '#94A3B8'} />
+                <Label className={`text-xs font-bold ${remoteDisplayMode === 'stealth' ? 'text-emerald-300' : 'text-gray-400'}`}>
+                  Apagada (Sigilo / Fría)
+                </Label>
+              </Pressable>
+
+              <Pressable
+                onPress={() => handleToggleDisplayMode('face')}
+                className={`flex-1 py-2 px-3 rounded-2xl border flex-row items-center justify-center gap-1.5 ${
+                  remoteDisplayMode === 'face'
+                    ? 'bg-amber-600/30 border-amber-400'
+                    : 'bg-white/5 border-white/10'
+                }`}
+              >
+                <Ionicons name="happy" size={14} color={remoteDisplayMode === 'face' ? '#FBBF24' : '#94A3B8'} />
+                <Label className={`text-xs font-bold ${remoteDisplayMode === 'face' ? 'text-amber-300' : 'text-gray-400'}`}>
+                  Cara Animada
+                </Label>
+              </Pressable>
+            </View>
+          </View>
+
+          {/* 3. Sensibilidad del Micrófono (VAD para tela de peluche) */}
+          <View>
+            <Label className="text-xs text-gray-300 font-semibold mb-1.5">🎙️ Sensibilidad de Detección de Voz (VAD):</Label>
+            <View className="flex-row gap-2">
+              {[
+                { label: 'Alta (Tela gruesa)', threshold: -52 as const },
+                { label: 'Normal (Recomendado)', threshold: -45 as const },
+                { label: 'Baja (Con ruido)', threshold: -38 as const },
+              ].map((item, idx) => (
+                <Pressable
+                  key={idx}
+                  onPress={() => handleSetSensitivity(item.threshold)}
+                  className={`flex-1 py-2 px-1 rounded-2xl border items-center justify-center ${
+                    remoteSensitivity === item.threshold
+                      ? 'bg-purple-600/30 border-purple-400'
+                      : 'bg-white/5 border-white/10'
+                  }`}
+                >
+                  <Label className={`text-[11px] font-bold text-center ${
+                    remoteSensitivity === item.threshold ? 'text-purple-300' : 'text-gray-400'
+                  }`}>
+                    {item.label}
+                  </Label>
+                </Pressable>
+              ))}
+            </View>
+          </View>
         </Card>
 
         {/* Botones de Acción */}

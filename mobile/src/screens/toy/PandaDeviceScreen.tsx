@@ -24,11 +24,11 @@ import { Button, Label, Chip, Spinner, useThemeColor } from 'heroui-native';
 
 const { width, height } = Dimensions.get('window');
 
-type DeviceDisplayMode = 'stealth' | 'face' | 'camera';
+type DeviceDisplayMode = 'stealth' | 'face';
 type PandaExpression = 'idle' | 'listening' | 'thinking' | 'speaking' | 'hugging' | 'sleeping';
 
 // Umbrales de detección de voz por decibelios (VAD calibrado para tela de peluche)
-const VOICE_THRESHOLD_DB = -45; // Captar la voz natural del niño a través del peluche
+const DEFAULT_VOICE_THRESHOLD_DB = -45; // Captar la voz natural del niño a través del peluche
 const SILENCE_TIMEOUT_MS = 1000; // 1.0s de silencio tras hablar indica fin de frase
 const MAX_RECORDING_DURATION_MS = 8000; // Máximo 8 segundos por mensaje
 const BUFFER_RESET_MS = 2500; // Si nadie habla en 2.5s, reiniciar buffer para no acumular silencios previos
@@ -92,10 +92,15 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
   const lastAudioLevelRef = useRef<number>(-160);
   const lastAudioUpdateTimestampRef = useRef<number>(0);
 
-  // Control de escucha (Manos libres vs Tocar para Hablar)
-  const [isHandsFreeActive, setIsHandsFreeActive] = useState<boolean>(false);
-  const isHandsFreeActiveRef = useRef<boolean>(false);
-  const [isPushToTalkRecording, setIsPushToTalkRecording] = useState<boolean>(false);
+  // Control de escucha continua manos libres (VAD automático)
+  const [isHandsFreeActive, setIsHandsFreeActive] = useState<boolean>(true);
+  const isHandsFreeActiveRef = useRef<boolean>(true);
+  const [voiceThresholdDb, setVoiceThresholdDb] = useState<number>(DEFAULT_VOICE_THRESHOLD_DB);
+  const voiceThresholdDbRef = useRef<number>(DEFAULT_VOICE_THRESHOLD_DB);
+  useEffect(() => {
+    voiceThresholdDbRef.current = voiceThresholdDb;
+  }, [voiceThresholdDb]);
+
   const lastScreenTouchTimestampRef = useRef<number>(0);
   const voiceStartTimestampRef = useRef<number>(0);
   const [showStealthWakeMenu, setShowStealthWakeMenu] = useState<boolean>(false);
@@ -218,7 +223,7 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
     isCapturingFrameRef.current = true;
     try {
       const photo = await cameraRef.current.takePictureAsync({
-        quality: 0.18,
+        quality: 0.35,
         base64: true,
         shutterSound: false,
       });
@@ -238,7 +243,7 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
         if (captureLoopTimerRef.current) clearTimeout(captureLoopTimerRef.current);
         captureLoopTimerRef.current = setTimeout(() => {
           captureFrameStepRef.current();
-        }, 320);
+        }, 280);
       }
     }
   }, [roomId]);
@@ -520,7 +525,7 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
     const duration = status.durationMillis || 0;
 
     // Detectar si hay voz continua
-    if (metering > VOICE_THRESHOLD_DB) {
+    if (metering > voiceThresholdDbRef.current) {
       if (!voiceDetectedRef.current) {
         voiceDetectedRef.current = true;
         voiceStartTimestampRef.current = now;
@@ -683,54 +688,6 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
     }
   };
 
-  // 🎙️ Función Tocar para Hablar (Push to Talk)
-  const togglePushToTalk = async () => {
-    lastScreenTouchTimestampRef.current = Date.now();
-    if (isSpeakingRef.current || isProcessingRef.current) return;
-
-    if (isPushToTalkRecording) {
-      setIsPushToTalkRecording(false);
-      await stopAndProcessSpeech();
-    } else {
-      try {
-        if (recordingRef.current) {
-          try {
-            await recordingRef.current.stopAndUnloadAsync();
-          } catch (_) {}
-          recordingRef.current = null;
-        }
-        await Audio.requestPermissionsAsync();
-        await Audio.setAudioModeAsync({
-          allowsRecordingIOS: true,
-          playsInSilentModeIOS: true,
-          staysActiveInBackground: true,
-          shouldDuckAndroid: false,
-        });
-
-        const { recording } = await Audio.Recording.createAsync(
-          RECORDING_OPTIONS,
-          (status) => {
-            const metering = status.metering ?? -160;
-            const now = Date.now();
-            if (now - lastAudioUpdateTimestampRef.current > 400) {
-              lastAudioUpdateTimestampRef.current = now;
-              setAudioLevel(metering);
-            }
-          },
-          150
-        );
-
-        recordingRef.current = recording;
-        setIsPushToTalkRecording(true);
-        setExpression('listening');
-        setDialogueText('Te estoy escuchando... Toca de nuevo para responder 🎙️');
-      } catch (e) {
-        console.warn('Error al iniciar grabación manual:', e);
-        setIsPushToTalkRecording(false);
-      }
-    }
-  };
-
   const toggleHandsFree = async () => {
     lastScreenTouchTimestampRef.current = Date.now();
     if (isHandsFreeActive) {
@@ -770,16 +727,16 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
     }
   };
 
-  // Iniciar el bucle de escucha manos libres solo cuando esté activado
+  // Iniciar el bucle de escucha manos libres continuo (activo en todo momento para detectar voz del niño)
   useEffect(() => {
-    if (isHandsFreeActive && displayMode === 'stealth') {
+    if (isHandsFreeActive) {
       isHandsFreeActiveRef.current = true;
       const startTimer = setTimeout(() => {
         startHandsFreeRecording();
       }, 1000);
       return () => clearTimeout(startTimer);
     }
-  }, [isHandsFreeActive, displayMode]);
+  }, [isHandsFreeActive]);
 
   // ══════════════════════════════════════════════════════════════════════
   // 7. INTERCOMUNICADOR Y COMANDOS PARENTALES REMOTOS
@@ -815,8 +772,35 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
         setBatteryLevel(100);
         break;
 
+      case 'SET_CAMERA_FACING':
+        if (payload?.facing === 'front' || payload?.facing === 'back') {
+          console.log('🔄 Cambiando lente de cámara por orden remota a:', payload.facing);
+          setFacing(payload.facing);
+          storage.setItem('toy_camera_facing', payload.facing).catch(() => {});
+        }
+        if (isHandsFreeActiveRef.current) startHandsFreeRecording();
+        break;
+
+      case 'SET_DISPLAY_MODE':
+        if (payload?.mode === 'face' || payload?.mode === 'stealth') {
+          console.log('📺 Cambiando modo de pantalla por orden remota a:', payload.mode);
+          setDisplayMode(payload.mode);
+        }
+        if (isHandsFreeActiveRef.current) startHandsFreeRecording();
+        break;
+
+      case 'SET_VAD_SENSITIVITY':
+        if (typeof payload?.threshold === 'number') {
+          console.log('🎙️ Calibrando sensibilidad de micrófono por orden remota a:', payload.threshold, 'dB');
+          setVoiceThresholdDb(payload.threshold);
+          voiceThresholdDbRef.current = payload.threshold;
+        }
+        if (isHandsFreeActiveRef.current) startHandsFreeRecording();
+        break;
+
       default:
         console.log('Comando remoto no manejado:', action);
+        if (isHandsFreeActiveRef.current) startHandsFreeRecording();
     }
   };
 
@@ -1126,10 +1110,12 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
                   className="flex-1 border-blue-400 py-2.5 rounded-xl"
                   onPress={() => {
                     lastScreenTouchTimestampRef.current = Date.now();
-                    setDisplayMode('camera');
+                    toggleCameraFacing();
                   }}
                 >
-                  <Button.Label className="text-blue-300 font-bold text-xs">📷 Cámara</Button.Label>
+                  <Button.Label className="text-blue-300 font-bold text-xs">
+                    📷 {facing === 'front' ? 'Lente Frontal' : 'Lente Trasera'}
+                  </Button.Label>
                 </Button>
               </View>
             </View>
@@ -1147,12 +1133,12 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
           <View className="flex-row items-center justify-between w-full px-4 py-2.5 bg-white/5 rounded-2xl border border-white/5">
             <View className="flex-row items-center gap-2">
               <Ionicons
-                name={audioLevel > VOICE_THRESHOLD_DB ? 'mic' : 'mic-outline'}
+                name={audioLevel > voiceThresholdDb ? 'mic' : 'mic-outline'}
                 size={14}
-                color={audioLevel > VOICE_THRESHOLD_DB ? '#10B981' : '#94A3B8'}
+                color={audioLevel > voiceThresholdDb ? '#10B981' : '#94A3B8'}
               />
               <Label className="text-gray-400 text-xs font-medium">
-                {audioLevel > VOICE_THRESHOLD_DB ? '🎙️ Voz activa' : 'Escuchando'} ({audioLevel.toFixed(0)} dB)
+                {audioLevel > voiceThresholdDb ? '🎙️ Voz activa' : 'Escuchando'} ({audioLevel.toFixed(0)} dB)
               </Label>
             </View>
             <View className="flex-row items-center gap-3">
@@ -1166,83 +1152,7 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
       )}
 
       {/* ══════════════════════════════════════════════════════════════════ */}
-      {/* 2. MODO CALIBRACIÓN DE CÁMARA (ENFOCAR EL ORIFICIO DEL PELUCHE)  */}
-      {/* ══════════════════════════════════════════════════════════════════ */}
-      {displayMode === 'camera' && (
-        <View
-          style={[StyleSheet.absoluteFillObject, { backgroundColor: 'transparent', zIndex: 10 }]}
-          className="justify-between p-5 pt-8"
-        >
-          {/* Barra superior de configuración de cámara */}
-          <View className="flex-row items-center justify-between">
-            <View className="bg-black/75 px-3.5 py-1.5 rounded-full flex-row items-center gap-2 border border-white/20">
-              <View className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
-              <Label className="text-white text-xs font-bold">
-                {facing === 'front' ? 'Cámara Delantera' : 'Cámara Trasera'}
-              </Label>
-            </View>
-
-            <Pressable
-              className="bg-black/75 px-3.5 py-2 rounded-full flex-row items-center gap-1.5 border border-white/20"
-              onPress={toggleCameraFacing}
-            >
-              <Ionicons name="camera-reverse-outline" size={18} color="#60A5FA" />
-              <Label className="text-blue-300 text-xs font-bold">
-                Cambiar a {facing === 'front' ? 'Trasera' : 'Delantera'}
-              </Label>
-            </Pressable>
-          </View>
-
-          {/* Mira de alineación para el agujero del peluche */}
-          <View className="items-center justify-center">
-            <View className="w-64 h-64 border-4 border-emerald-400 border-dashed rounded-full items-center justify-center bg-black/25">
-              <View className="w-16 h-16 border-2 border-emerald-300 rounded-full items-center justify-center bg-emerald-500/20">
-                <View className="w-3 h-3 rounded-full bg-emerald-400" />
-              </View>
-              <Label className="text-white font-extrabold text-xs text-center px-6 mt-4 shadow-lg">
-                Centra aquí el orificio del ojo o nariz del peluche
-              </Label>
-              <Label className="text-emerald-300 text-[11px] text-center font-semibold mt-1">
-                Lente activa: {facing === 'front' ? 'Frontal (Pantalla)' : 'Trasera'}
-              </Label>
-            </View>
-          </View>
-
-          {/* Botones de acción inferior */}
-          <View className="gap-2.5">
-            <Button
-              variant="outline"
-              className="w-full rounded-2xl py-3 bg-black/75 border-blue-500/50"
-              onPress={sendTestSnapshot}
-            >
-              <Button.Label className="text-blue-300 font-bold">
-                ⚡ Enviar Foto de Prueba a Padres (Sala #{effectiveFamilyId})
-              </Button.Label>
-            </Button>
-
-            <View className="flex-row gap-2">
-              <Button
-                variant="outline"
-                className="flex-1 rounded-2xl py-3 bg-white/10 border-white/20"
-                onPress={() => setDisplayMode('face')}
-              >
-                <Button.Label className="text-white font-bold">🎭 Ver Cara</Button.Label>
-              </Button>
-
-              <Button
-                variant="primary"
-                className="flex-1 rounded-2xl py-3 bg-emerald-600"
-                onPress={enterPlushMode}
-              >
-                <Button.Label className="text-white font-bold">🌙 Modo Peluche</Button.Label>
-              </Button>
-            </View>
-          </View>
-        </View>
-      )}
-
-      {/* ══════════════════════════════════════════════════════════════════ */}
-      {/* 3. MODO CARA ANIMADA DE PANDA (INTERACTIVO)                       */}
+      {/* 2. MODO CARA ANIMADA DE PANDA (INTERACTIVO Y UNIFICADO)           */}
       {/* ══════════════════════════════════════════════════════════════════ */}
       {displayMode === 'face' && (
         <View
@@ -1272,13 +1182,12 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
             <View className="flex-row items-center gap-2">
               <Pressable
                 className="bg-blue-500/20 border border-blue-500/40 px-3 py-1.5 rounded-full flex-row items-center gap-1"
-                onPress={() => {
-                  lastScreenTouchTimestampRef.current = Date.now();
-                  setDisplayMode('camera');
-                }}
+                onPress={toggleCameraFacing}
               >
-                <Ionicons name="camera-outline" size={14} color="#60A5FA" />
-                <Label className="text-blue-300 text-xs font-bold">Alinear</Label>
+                <Ionicons name="camera-reverse-outline" size={14} color="#60A5FA" />
+                <Label className="text-blue-300 text-xs font-bold">
+                  {facing === 'front' ? 'Frontal' : 'Trasera'}
+                </Label>
               </Pressable>
 
               <Pressable
@@ -1388,11 +1297,9 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
               <Label className="text-emerald-400 text-[11px] mt-1 font-bold">
                 {expression === 'speaking'
                   ? '🔊 Hablando con voz infantil (Gigi)'
-                  : isPushToTalkRecording
-                  ? '🎙️ Grabando tu voz... Toca para enviar'
-                  : isHandsFreeActive
-                  ? '🎙️ Escucha manos libres activa'
-                  : '👆 Toca el micrófono para hablar o un botón'}
+                  : audioLevel > voiceThresholdDb
+                  ? '🎙️ ¡Escuchando al niño! (Detección por voz activa)'
+                  : '🎙️ Detección continua de voz activa (Manos libres)'}
               </Label>
             </View>
           </View>
@@ -1428,53 +1335,39 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
             </Pressable>
           </View>
 
-          {/* Botones de Control Principal */}
+          {/* Panel Integrado de Escucha Continua Manos Libres y Control */}
           <View className="px-5 gap-2">
-            {/* Botón Tocar para Hablar */}
-            <Pressable
-              onPress={togglePushToTalk}
-              className={`py-3 px-4 rounded-2xl flex-row items-center justify-center gap-2.5 ${
-                isPushToTalkRecording
-                  ? 'bg-red-600 border-2 border-red-400'
-                  : 'bg-emerald-600 border border-emerald-400/50'
-              }`}
-            >
-              <Ionicons
-                name={isPushToTalkRecording ? 'stop-circle' : 'mic'}
-                size={22}
-                color="white"
-              />
-              <Label className="text-white font-extrabold text-sm">
-                {isPushToTalkRecording ? '⏹️ Enviar a Panda' : '🎙️ Tocar para Hablar'}
+            {/* Medidor de audio en vivo VAD */}
+            <View className="py-2.5 px-4 rounded-2xl bg-white/10 border border-white/10 flex-row items-center justify-between">
+              <View className="flex-row items-center gap-2">
+                <View className={`w-2.5 h-2.5 rounded-full ${audioLevel > voiceThresholdDb ? 'bg-emerald-400 animate-pulse' : 'bg-blue-400'}`} />
+                <Label className="text-white text-xs font-bold">
+                  {audioLevel > voiceThresholdDb ? '🎙️ Voz Detectada (Hablando)' : '🎙️ Micrófono Abierto (VAD Manos Libres)'}
+                </Label>
+              </View>
+              <Label className="text-gray-400 text-xs font-semibold">
+                {audioLevel.toFixed(0)} dB (Sens: {voiceThresholdDb} dB)
               </Label>
-            </Pressable>
+            </View>
 
-            {/* Fila de opciones: Toggle Manos Libres y Botón Modo Peluche */}
+            {/* Acciones Rápidas del Dispositivo */}
             <View className="flex-row gap-2">
               <Pressable
-                onPress={toggleHandsFree}
-                className={`flex-1 py-2 px-3 rounded-2xl border flex-row items-center justify-center gap-1.5 ${
-                  isHandsFreeActive
-                    ? 'bg-blue-600/30 border-blue-500'
-                    : 'bg-white/10 border-white/10'
-                }`}
+                onPress={enterPlushMode}
+                className="flex-1 py-2.5 px-3 rounded-2xl bg-indigo-600/30 border border-indigo-500/40 flex-row items-center justify-center gap-1.5"
               >
-                <Ionicons
-                  name={isHandsFreeActive ? 'radio' : 'radio-outline'}
-                  size={16}
-                  color={isHandsFreeActive ? '#60A5FA' : '#94A3B8'}
-                />
-                <Label className={`text-xs font-bold ${isHandsFreeActive ? 'text-blue-300' : 'text-gray-400'}`}>
-                  {isHandsFreeActive ? 'Manos Libres: ON' : 'Manos Libres: OFF'}
-                </Label>
+                <Ionicons name="moon" size={16} color="#818CF8" />
+                <Label className="text-indigo-300 text-xs font-bold">Modo Peluche (Pantalla Negra) 🌙</Label>
               </Pressable>
 
               <Pressable
-                onPress={enterPlushMode}
-                className="flex-1 py-2 px-3 rounded-2xl bg-indigo-600/30 border border-indigo-500/40 flex-row items-center justify-center gap-1.5"
+                onPress={toggleCameraFacing}
+                className="py-2.5 px-3 rounded-2xl bg-blue-600/30 border border-blue-500/40 flex-row items-center justify-center gap-1.5"
               >
-                <Ionicons name="moon" size={16} color="#818CF8" />
-                <Label className="text-indigo-300 text-xs font-bold">Modo Peluche 🌙</Label>
+                <Ionicons name="camera-reverse" size={16} color="#60A5FA" />
+                <Label className="text-blue-300 text-xs font-bold">
+                  {facing === 'front' ? 'Lente Frontal' : 'Lente Trasera'}
+                </Label>
               </Pressable>
             </View>
           </View>
