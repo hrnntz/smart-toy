@@ -111,17 +111,25 @@ export const initSocketServer = (httpServer: HTTPServer): SocketIOServer => {
     // Enviar comando directo desde la app de padres hacia el teléfono dentro del juguete
     socket.on("parent:send_command", (data: { toyId: string; command: string; payload?: any }) => {
       console.log(`📡 Comando del padre (userId:${authSocket.userId}) para toy:${data.toyId}: ${data.command}`);
-      io?.to(`toy:${data.toyId}`).emit("toy:command", {
+      const payload = {
         action: data.command,
         payload: data.payload,
         senderId: authSocket.userId,
         timestamp: Date.now(),
-      });
+      };
+      io?.to(`toy:${data.toyId}`).emit("toy:command", payload);
+      if (authSocket.userId && String(authSocket.userId) !== String(data.toyId)) {
+        io?.to(`toy:${authSocket.userId}`).emit("toy:command", payload);
+      }
     });
 
-    // Eventos de chat en tiempo real
+    // Eventos de chat en tiempo real / intercomunicador
     socket.on("chat:send_message", (message: { toyId: string; text: string; sender: string }) => {
+      console.log(`💬 Mensaje para Panda (toy:${message.toyId}): "${message.text}" de ${message.sender}`);
       io?.to(`toy:${message.toyId}`).emit("chat:receive_message", message);
+      if (authSocket.userId && String(authSocket.userId) !== String(message.toyId)) {
+        io?.to(`toy:${authSocket.userId}`).emit("chat:receive_message", message);
+      }
     });
 
     // 📹 Transmisión de Cámara por Nube en Tiempo Real

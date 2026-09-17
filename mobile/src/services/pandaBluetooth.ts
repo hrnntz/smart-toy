@@ -35,10 +35,14 @@ export const pandaBluetooth = {
   },
 
   getAppFlavor: (): string => {
-    const native = PandaBluetooth as any;
-    if (native?.appFlavor) return native.appFlavor;
-    if (native?.applicationId === 'com.anonymous.smarttoydevice') return 'toy';
-    if (native?.getConstants?.()?.appFlavor) return native.getConstants().appFlavor;
+    try {
+      const native = PandaBluetooth as any;
+      if (native?.appFlavor) return String(native.appFlavor);
+      if (native?.applicationId === 'com.anonymous.smarttoydevice') return 'toy';
+      const constants = native?.getConstants?.();
+      if (constants?.appFlavor) return String(constants.appFlavor);
+      if (constants?.applicationId === 'com.anonymous.smarttoydevice') return 'toy';
+    } catch (_) {}
     return 'parent';
   },
 

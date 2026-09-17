@@ -36,9 +36,30 @@ import HistoriasScreen from '../screens/dashboard/HistoriasScreen';
 import GenerarHistoriaScreen from '../screens/dashboard/GenerarHistoriaScreen';
 import HistoriaDetalleScreen from '../screens/dashboard/HistoriaDetalleScreen';
 
+import { pandaBluetooth } from '../services/pandaBluetooth';
+
 const Stack = createStackNavigator();
 
 export default function RootNavigator() {
+  const isToyFlavor = pandaBluetooth.getAppFlavor() === 'toy';
+
+  // 🐼 APLICACIÓN DEDICADA DEL JUGUETE (CERO BLOAT)
+  // Carga instantáneamente solo PandaDeviceScreen, sin login, sin splash delay ni pantallas de padres
+  if (isToyFlavor) {
+    return (
+      <NavigationContainer>
+        <Stack.Navigator
+          id="ToyRoot"
+          initialRouteName="PandaDevice"
+          screenOptions={{ headerShown: false }}
+        >
+          <Stack.Screen name="PandaDevice" component={PandaDeviceScreen} />
+        </Stack.Navigator>
+      </NavigationContainer>
+    );
+  }
+
+  // 👨‍👩‍👧 APLICACIÓN COMPLETA DE PADRES (SUPERVISIÓN, RUTINAS Y CONTROL)
   return (
     <NavigationContainer>
       <Stack.Navigator

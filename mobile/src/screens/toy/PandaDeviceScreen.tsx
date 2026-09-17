@@ -145,6 +145,37 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
   const effectiveFamilyId = familyId || (user?.id ? String(user.id) : '1');
   const roomId = `${effectiveFamilyId}_PANDA_01`;
 
+  // 🚀 OPTIMIZACIÓN DE RESOLUCIÓN DE CÁMARA (ELIMINA LAG DEL SENSOR DE 12-48MP)
+  const [cameraPictureSize, setCameraPictureSize] = useState<string>('640x480');
+
+  const handleCameraReady = async () => {
+    try {
+      if (cameraRef.current?.getAvailablePictureSizesAsync) {
+        const sizes: string[] = await cameraRef.current.getAvailablePictureSizesAsync();
+        console.log('📷 Tamaños de captura soportados por el hardware:', sizes);
+        // Priorizar resoluciones ligeras de streaming: 640x480, 480x360, 352x288
+        const preferred = ['640x480', '480x360', '800x600', '352x288', '320x240'];
+        const match = preferred.find((p) => sizes.includes(p));
+        if (match) {
+          setCameraPictureSize(match);
+        } else if (sizes.length > 0) {
+          const sorted = [...sizes].sort((a, b) => {
+            const [wA, hA] = a.split('x').map(Number);
+            const [wB, hB] = b.split('x').map(Number);
+            return (wA * hA) - (wB * hB);
+          });
+          const target = sorted.find((s) => {
+            const [w, h] = s.split('x').map(Number);
+            return w * h >= 300 * 200 && w * h <= 800 * 600;
+          }) || sorted[0];
+          setCameraPictureSize(target);
+        }
+      }
+    } catch (e) {
+      console.warn('Error obteniendo tamaños de cámara:', e);
+    }
+  };
+
   const toggleCameraFacing = async () => {
     const nextFacing = facing === 'front' ? 'back' : 'front';
     setFacing(nextFacing);
@@ -179,8 +210,7 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
     }
   };
 
-  // Captura asíncrona secuencial suave bajo demanda (solo cuando el padre está viendo)
-  // Calidad 0.15 y SIN skipProcessing para comprimir JPEG a ~40KB y no saturar WebSockets
+  // Captura asíncrona fluida a 640x480 (0.3MP en ~25ms en vez de 12MP en 600ms)
   const captureFrameStep = useCallback(async () => {
     if (!isParentWatchingRef.current || !isBroadcastingRef.current || isCapturingFrameRef.current) return;
     if (!cameraRef.current || !socketRef.current?.connected) return;
@@ -188,7 +218,7 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
     isCapturingFrameRef.current = true;
     try {
       const photo = await cameraRef.current.takePictureAsync({
-        quality: 0.15,
+        quality: 0.18,
         base64: true,
         shutterSound: false,
       });
@@ -208,7 +238,7 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
         if (captureLoopTimerRef.current) clearTimeout(captureLoopTimerRef.current);
         captureLoopTimerRef.current = setTimeout(() => {
           captureFrameStepRef.current();
-        }, 500);
+        }, 320);
       }
     }
   }, [roomId]);
@@ -230,9 +260,22 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
           setFacing(savedFacing);
         }
 
+        const flavor = pandaBluetooth.getAppFlavor();
+        if (flavor === 'toy') {
+          await storage.setItem('device_role', 'toy_device');
+        } else {
+          await storage.removeItem('device_role');
+        }
+
         if (savedFamId) {
           setFamilyId(savedFamId);
           setNewFamilyCodeInput(savedFamId);
+          // Si ya tiene código familiar configurado y es la APK de juguete, arrancar directamente en Modo Peluche con manos libres
+          if (flavor === 'toy') {
+            setDisplayMode('stealth');
+            setIsHandsFreeActive(true);
+            isHandsFreeActiveRef.current = true;
+          }
         } else if (savedUserStr) {
           const u = JSON.parse(savedUserStr);
           setUser(u);
@@ -267,13 +310,6 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
             setHugCount(t.hugCount || 0);
           }
         } catch (_) {}
-
-        const flavor = pandaBluetooth.getAppFlavor();
-        if (flavor === 'toy') {
-          await storage.setItem('device_role', 'toy_device');
-        } else {
-          await storage.removeItem('device_role');
-        }
       } catch (err) {
         console.error('Error inicializando dispositivo Panda:', err);
       }
@@ -303,6 +339,7 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
           setIsSocketConnected(true);
           console.log(`🐼 Teléfono Secundario (Juguete) conectado a Socket.io (Familia #${effectiveFamilyId}):`, socket?.id);
           socket?.emit('join:toy', String(toyId));
+          socket?.emit('join:toy', String(effectiveFamilyId));
           socket?.emit('camera:join_stream', roomId);
           socket?.emit('toy:status_update', {
             toyId: String(toyId),
@@ -946,6 +983,25 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
   };
 
   const exitToyMode = async () => {
+    const isToy = pandaBluetooth.getAppFlavor() === 'toy';
+    if (isToy) {
+      Alert.alert('Opciones de Panda 🐼', 'Configuración del teléfono dentro del peluche', [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Vincular Familia 🔗',
+          onPress: () => {
+            setNewFamilyCodeInput(effectiveFamilyId);
+            setShowFamilyModal(true);
+          },
+        },
+        {
+          text: 'Modo Peluche 🌙',
+          onPress: enterPlushMode,
+        },
+      ]);
+      return;
+    }
+
     Alert.alert('Salir de Modo Juguete', '¿Deseas volver al Panel de Padres?', [
       { text: 'Cancelar', style: 'cancel' },
       {
@@ -982,9 +1038,15 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
     <View className="flex-1 bg-black">
       <StatusBar hidden />
 
-      {/* 📹 Cámara nativa: SIEMPRE fija a pantalla completa en el fondo para evitar parpadeos de SurfaceView */}
+      {/* 📹 Cámara nativa: fija en 640x480 (0.3MP) para eliminar 100% el lag del sensor */}
       <View style={StyleSheet.absoluteFillObject}>
-        <CameraView style={StyleSheet.absoluteFillObject} facing={facing} ref={cameraRef} />
+        <CameraView
+          style={StyleSheet.absoluteFillObject}
+          facing={facing}
+          ref={cameraRef}
+          pictureSize={cameraPictureSize}
+          onCameraReady={handleCameraReady}
+        />
       </View>
 
       {/* ══════════════════════════════════════════════════════════════════ */}

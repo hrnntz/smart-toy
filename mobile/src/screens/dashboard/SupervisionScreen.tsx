@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Alert, Pressable, Image, Dimensions, ScrollView, Modal } from 'react-native';
+import { View, Text, StyleSheet, Alert, Pressable, Image, Dimensions, ScrollView, Modal, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { io, Socket } from 'socket.io-client';
+import { Audio } from 'expo-av';
 import { API_URL } from '../../config/env';
 import { Card, Button, Label, Spinner, useThemeColor } from 'heroui-native';
 import { IconButton } from '../../components/ui/IconButton';
 import { useUser } from '../../hooks/useUser';
 import { storage } from '../../services/storage';
+import { toyService } from '../../services/api';
 
 const { width } = Dimensions.get('window');
 
@@ -22,6 +24,12 @@ export default function SupervisionScreen({ navigation }: any) {
   const [statusText, setStatusText] = useState('Esperando transmisión...');
   const [socket, setSocket] = useState<Socket | null>(null);
   const [showPairingModal, setShowPairingModal] = useState(false);
+
+  // 🎙️ Intercomunicador Walkie-Talkie
+  const [customSpeechText, setCustomSpeechText] = useState('');
+  const [isSendingSpeech, setIsSendingSpeech] = useState(false);
+  const [isRecordingVoice, setIsRecordingVoice] = useState(false);
+  const recordingRef = useRef<Audio.Recording | null>(null);
 
   const [primary, success, danger, muted, surface, background] = useThemeColor([
     'accent', 'success', 'danger', 'muted', 'surface', 'background'
@@ -138,13 +146,83 @@ export default function SupervisionScreen({ navigation }: any) {
     try {
       if (socket && user) {
         socket.emit('parent:send_command', {
-          toyId: '1',
+          toyId: String(user.id || 1),
           command: 'HUG',
         });
       }
       Alert.alert('🤗 ¡Abrazo Enviado!', 'Panda está mostrando la animación de abrazo y hablando con tu hijo en vivo.');
     } catch (e) {
       console.warn('Error enviando abrazo en supervisión:', e);
+    }
+  };
+
+  const sendSpeechToToy = (textToSend: string) => {
+    const text = textToSend.trim();
+    if (!text) return;
+    if (!socket || !isConnected) {
+      Alert.alert('Sin conexión', 'Conecta la supervisión para hablar con Panda.');
+      return;
+    }
+
+    setIsSendingSpeech(true);
+    try {
+      socket.emit('parent:send_command', {
+        toyId: String(user?.id || 1),
+        command: 'SPEAK',
+        payload: { text },
+      });
+      socket.emit('chat:send_message', {
+        toyId: String(user?.id || 1),
+        text,
+        sender: user?.name || 'Padres',
+      });
+      setCustomSpeechText('');
+      Alert.alert('📢 Mensaje Transmitido a Panda', `Panda está diciendo en voz alta:\n\n"${text}"`);
+    } catch (err: any) {
+      Alert.alert('Error', 'No se pudo enviar el mensaje a Panda');
+    } finally {
+      setIsSendingSpeech(false);
+    }
+  };
+
+  const startVoiceRecording = async () => {
+    try {
+      const perm = await Audio.requestPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert('Permiso requerido', 'Se necesita acceso al micrófono para el intercomunicador.');
+        return;
+      }
+      await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
+      const { recording } = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
+      recordingRef.current = recording;
+      setIsRecordingVoice(true);
+    } catch (err) {
+      console.warn('Error iniciando grabación:', err);
+      setIsRecordingVoice(false);
+    }
+  };
+
+  const stopAndSendVoice = async () => {
+    if (!recordingRef.current) return;
+    setIsRecordingVoice(false);
+    try {
+      await recordingRef.current.stopAndUnloadAsync();
+      const uri = recordingRef.current.getURI();
+      recordingRef.current = null;
+      if (uri) {
+        Alert.alert('🎙️ Procesando voz...', 'Transcribiendo y enviando tu voz a Panda...');
+        const res = await toyService.voiceChatWithAudio(1, uri);
+        if (res.data?.success && res.data?.data) {
+          const userSaid = res.data.data.userText;
+          if (userSaid && userSaid.trim()) {
+            sendSpeechToToy(userSaid);
+          } else {
+            Alert.alert('Audio no reconocido', 'No se detectó voz con claridad. Prueba de nuevo o escribe un mensaje.');
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Error procesando voz walkie-talkie:', err);
     }
   };
 
@@ -286,6 +364,86 @@ export default function SupervisionScreen({ navigation }: any) {
           </View>
           <Ionicons name="chevron-forward" size={20} color="#10B981" />
         </Pressable>
+
+        {/* 🎙️ INTERCOMUNICADOR / HABLAR POR EL JUGUETE (WALKIE-TALKIE) */}
+        <Card variant="default" className="mb-4 rounded-3xl bg-surface border-0 p-4">
+          <View className="flex-row items-center justify-between mb-3">
+            <View className="flex-row items-center gap-2">
+              <View className="w-8 h-8 rounded-xl bg-purple-500/20 items-center justify-center">
+                <Ionicons name="megaphone-outline" size={18} color="#C084FC" />
+              </View>
+              <View>
+                <Label className="text-white font-extrabold text-sm">Hablar por Panda 🐼</Label>
+                <Label className="text-[11px] text-gray-400">Panda lo dirá en voz alta con su voz infantil</Label>
+              </View>
+            </View>
+            <View className="bg-purple-500/20 px-2.5 py-0.5 rounded-full">
+              <Label className="text-purple-300 text-[10px] font-bold">Intercomunicador</Label>
+            </View>
+          </View>
+
+          {/* Frases Rápidas de 1 Toque */}
+          <Label className="text-xs text-gray-400 font-semibold mb-2">Frases Rápidas:</Label>
+          <View className="flex-row flex-wrap gap-2 mb-3">
+            {[
+              { icon: 'hand-left', text: '¡Hola mi amor! 🐼' },
+              { icon: 'cube-outline', text: '¡Hora de guardar los juguetes! 🧸' },
+              { icon: 'restaurant-outline', text: '¡A cenar, lávate las manos! 🍽️' },
+              { icon: 'bed-outline', text: '¡A dormir, que descanses! 🌙' },
+              { icon: 'heart', text: '¡Papis te mandan un beso grande! ❤️' },
+            ].map((phrase, idx) => (
+              <Pressable
+                key={idx}
+                onPress={() => sendSpeechToToy(phrase.text)}
+                className="bg-white/10 active:bg-purple-600/30 border border-white/10 px-3 py-1.5 rounded-full flex-row items-center gap-1.5"
+              >
+                <Ionicons name={phrase.icon as any} size={12} color="#C084FC" />
+                <Label className="text-white text-xs font-medium">{phrase.text}</Label>
+              </Pressable>
+            ))}
+          </View>
+
+          {/* Campo de texto personalizado */}
+          <View className="flex-row items-center gap-2 mt-1">
+            <TextInput
+              className="flex-1 bg-black/40 text-white text-xs px-3.5 py-2.5 rounded-2xl border border-white/15"
+              placeholder="Escribe lo que quieres que Panda diga..."
+              placeholderTextColor="#94A3B8"
+              value={customSpeechText}
+              onChangeText={setCustomSpeechText}
+            />
+            <Pressable
+              onPress={() => sendSpeechToToy(customSpeechText)}
+              disabled={isSendingSpeech || !customSpeechText.trim()}
+              className={`px-4 py-2.5 rounded-2xl flex-row items-center gap-1 ${
+                customSpeechText.trim() ? 'bg-purple-600' : 'bg-white/10 opacity-50'
+              }`}
+            >
+              <Ionicons name="send" size={14} color="white" />
+              <Label className="text-white text-xs font-bold">Enviar</Label>
+            </Pressable>
+          </View>
+
+          {/* Botón Walkie-Talkie por Voz */}
+          <Pressable
+            onPressIn={startVoiceRecording}
+            onPressOut={stopAndSendVoice}
+            className={`mt-3 py-2.5 px-4 rounded-2xl border flex-row items-center justify-center gap-2 ${
+              isRecordingVoice
+                ? 'bg-red-600/80 border-red-400'
+                : 'bg-white/5 border-purple-500/30 active:bg-purple-500/20'
+            }`}
+          >
+            <Ionicons
+              name={isRecordingVoice ? 'mic' : 'mic-outline'}
+              size={18}
+              color={isRecordingVoice ? '#FFFFFF' : '#C084FC'}
+            />
+            <Label className="text-xs font-bold text-white">
+              {isRecordingVoice ? '🔴 Grabando tu voz... Suelta para enviar' : '🎙️ Mantén presionado para hablar por Panda'}
+            </Label>
+          </Pressable>
+        </Card>
 
         {/* Botones de Acción */}
         <View className="gap-3 mb-5">
