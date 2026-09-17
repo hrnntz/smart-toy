@@ -119,8 +119,44 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
   const [hugCount, setHugCount] = useState(0);
 
   const [accent] = useThemeColor(['accent']);
-  const effectiveFamilyId = user?.id ? String(user.id) : (familyId || '1');
+  const [isSocketConnected, setIsSocketConnected] = useState(false);
+  const effectiveFamilyId = familyId || (user?.id ? String(user.id) : '1');
   const roomId = `${effectiveFamilyId}_PANDA_01`;
+
+  const toggleCameraFacing = async () => {
+    const nextFacing = facing === 'front' ? 'back' : 'front';
+    setFacing(nextFacing);
+    await storage.setItem('toy_camera_facing', nextFacing);
+  };
+
+  const sendTestSnapshot = async () => {
+    if (!cameraRef.current) {
+      Alert.alert('Cámara no lista', 'Espera un momento a que la cámara termine de inicializar.');
+      return;
+    }
+    if (!socketRef.current?.connected) {
+      Alert.alert('Sin conexión', 'Conectando con el servidor... Revisa tu conexión Wi-Fi o datos.');
+      return;
+    }
+    try {
+      const photo = await cameraRef.current.takePictureAsync({
+        quality: 0.25,
+        base64: true,
+        skipProcessing: true,
+        shutterSound: false,
+      });
+      if (photo?.base64) {
+        socketRef.current.emit('camera:stream_frame', {
+          roomId,
+          frame: `data:image/jpeg;base64,${photo.base64}`,
+          timestamp: Date.now(),
+        });
+        Alert.alert('¡Foto Enviada! 📸', `Fotograma transmitido a la app de Padres (Familia #${effectiveFamilyId}).`);
+      }
+    } catch (err: any) {
+      Alert.alert('Error al capturar', err?.message || 'No se pudo tomar la foto de prueba');
+    }
+  };
 
   // Captura asíncrona secuencial suave bajo demanda (solo cuando el padre está viendo)
   const captureFrameStep = useCallback(async () => {
@@ -160,13 +196,20 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
         const token = await storage.getItem('token');
         const savedUserStr = await storage.getItem('user');
         const savedFamId = await storage.getItem('toy_family_id');
+        const savedFacing = await storage.getItem('toy_camera_facing');
 
-        if (savedUserStr) {
+        if (savedFacing === 'front' || savedFacing === 'back') {
+          setFacing(savedFacing);
+        }
+
+        if (savedFamId) {
+          setFamilyId(savedFamId);
+          setNewFamilyCodeInput(savedFamId);
+        } else if (savedUserStr) {
           const u = JSON.parse(savedUserStr);
           setUser(u);
           setFamilyId(String(u.id));
-        } else if (savedFamId) {
-          setFamilyId(savedFamId);
+          setNewFamilyCodeInput(String(u.id));
         } else if (token) {
           try {
             const res = await authService.getProfile();
@@ -174,13 +217,16 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
             if (profile && profile.id) {
               setUser(profile);
               setFamilyId(String(profile.id));
+              setNewFamilyCodeInput(String(profile.id));
               await storage.setItem('user', JSON.stringify(profile));
             }
           } catch (_) {}
         } else {
           const defaultId = route.params?.familyId || '1';
           setFamilyId(String(defaultId));
-          await storage.setItem('toy_family_id', String(defaultId));
+          setNewFamilyCodeInput(String(defaultId));
+          // Primer inicio: mostrar modal para que el usuario vincule con el código de padres
+          setShowFamilyModal(true);
         }
 
         try {
@@ -226,6 +272,7 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
         });
 
         socket.on('connect', () => {
+          setIsSocketConnected(true);
           console.log(`🐼 Teléfono Secundario (Juguete) conectado a Socket.io (Familia #${effectiveFamilyId}):`, socket?.id);
           socket?.emit('join:toy', String(toyId));
           socket?.emit('camera:join_stream', roomId);
@@ -236,6 +283,10 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
             isHugging: false,
             hugCount,
           });
+        });
+
+        socket.on('disconnect', () => {
+          setIsSocketConnected(false);
         });
 
         // 👁️ Escuchar cuando el padre abre o cierra la vista de supervisión
@@ -808,45 +859,93 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
       {/* 1. MODO SIGILO (PREDETERMINADO: PANTALLA NEGRA / CERO CALOR)      */}
       {/* ══════════════════════════════════════════════════════════════════ */}
       {displayMode === 'stealth' && (
-        <Pressable
+        <View
           style={[StyleSheet.absoluteFillObject, { backgroundColor: '#000000', zIndex: 10 }]}
-          className="justify-between items-center py-10 px-6"
-          onPress={() => setDisplayMode('face')}
+          className="justify-between items-center py-6 px-4"
         >
-          {/* Barra superior con botón de salida */}
-          <View className="flex-row items-center justify-between w-full z-20 pt-2">
-            <View className="flex-row items-center gap-2 opacity-50">
-              <View className={`w-2 h-2 rounded-full ${isParentWatching ? 'bg-red-500' : 'bg-emerald-500'}`} />
-              <Label className="text-gray-400 text-xs font-semibold">
-                Panda Inside • Fam #{effectiveFamilyId}
+          {/* Barra superior de control rápido */}
+          <View className="flex-row items-center justify-between w-full z-20 pt-2 px-1">
+            <Pressable
+              onPress={() => {
+                setNewFamilyCodeInput(effectiveFamilyId);
+                setShowFamilyModal(true);
+              }}
+              className="flex-row items-center gap-2 bg-white/10 px-3 py-1.5 rounded-full border border-white/10"
+            >
+              <View className={`w-2 h-2 rounded-full ${isSocketConnected ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+              <Label className="text-white text-xs font-bold">
+                Fam #{effectiveFamilyId}
+              </Label>
+              <Ionicons name="settings-outline" size={12} color="#94A3B8" />
+            </Pressable>
+
+            <View className="flex-row items-center gap-2">
+              <Pressable
+                className="bg-blue-500/20 border border-blue-500/40 px-3 py-1.5 rounded-full flex-row items-center gap-1"
+                onPress={() => setDisplayMode('camera')}
+              >
+                <Ionicons name="camera-outline" size={14} color="#60A5FA" />
+                <Label className="text-blue-300 text-xs font-bold">Alinear</Label>
+              </Pressable>
+
+              <Pressable
+                className="bg-white/10 px-3 py-1.5 rounded-full flex-row items-center gap-1"
+                onPress={() => setDisplayMode('face')}
+              >
+                <Ionicons name="happy-outline" size={14} color="#FBBF24" />
+                <Label className="text-amber-300 text-xs font-bold">Cara</Label>
+              </Pressable>
+
+              <Pressable
+                className="bg-white/15 px-3 py-1.5 rounded-full flex-row items-center gap-1"
+                onPress={exitToyMode}
+              >
+                <Ionicons name="arrow-back" size={13} color="white" />
+                <Label className="text-white text-xs font-bold">Salir</Label>
+              </Pressable>
+            </View>
+          </View>
+
+          {/* Área táctil central para cambiar a cara interactiva */}
+          <Pressable
+            className="items-center justify-center flex-1 w-full"
+            onPress={() => setDisplayMode('face')}
+          >
+            <View className="items-center opacity-30">
+              <Ionicons name="radio-outline" size={56} color="#60A5FA" />
+              <Label className="text-gray-300 text-sm font-semibold mt-3 text-center">
+                Panda Dentro del Peluche
+              </Label>
+              <Label className="text-gray-500 text-xs mt-1 text-center leading-5">
+                Pantalla negra para cero calentamiento dentro del peluche{'\n'}
+                Micrófono y altavoces activos • Cámara lista para transmitir
+              </Label>
+              <Label className="text-blue-400 text-[11px] mt-3 font-medium">
+                (Toca la pantalla para abrir la cara animada)
               </Label>
             </View>
+          </Pressable>
 
-            <Pressable
-              className="bg-white/20 px-3 py-1.5 rounded-full flex-row items-center gap-1.5"
-              onPress={exitToyMode}
-            >
-              <Ionicons name="arrow-back" size={14} color="white" />
-              <Label className="text-white text-xs font-bold">Salir a Padres</Label>
-            </Pressable>
+          {/* Barra inferior: VAD, batería y estado del padre */}
+          <View className="flex-row items-center justify-between w-full px-4 py-2.5 bg-white/5 rounded-2xl border border-white/5">
+            <View className="flex-row items-center gap-2">
+              <Ionicons
+                name={audioLevel > VOICE_THRESHOLD_DB ? 'mic' : 'mic-outline'}
+                size={14}
+                color={audioLevel > VOICE_THRESHOLD_DB ? '#10B981' : '#94A3B8'}
+              />
+              <Label className="text-gray-400 text-xs font-medium">
+                {audioLevel > VOICE_THRESHOLD_DB ? '🎙️ Voz activa' : 'Escuchando'} ({audioLevel.toFixed(0)} dB)
+              </Label>
+            </View>
+            <View className="flex-row items-center gap-3">
+              <Label className={`text-xs font-semibold ${isParentWatching ? 'text-red-500' : 'text-emerald-400'}`}>
+                {isParentWatching ? '🔴 Padres Mirando' : '🟢 Listo'}
+              </Label>
+              <Label className="text-gray-400 text-xs font-bold">🔋 {batteryLevel}%</Label>
+            </View>
           </View>
-
-          {/* Icono central de bajo consumo */}
-          <View className="items-center opacity-30">
-            <Ionicons name="radio-outline" size={44} color="#60A5FA" />
-            <Label className="text-gray-400 text-xs mt-3 text-center leading-5">
-              Cámara lista por el orificio{'\n'}Micrófono escuchando • Altavoces activos
-            </Label>
-          </View>
-
-          {/* Nivel de audio en vivo / batería */}
-          <View className="flex-row items-center justify-between w-full opacity-40 px-4">
-            <Label className="text-gray-500 text-[11px]">
-              Mic: {audioLevel > VOICE_THRESHOLD_DB ? '🎙️ Voz activa' : 'Silencio'} ({audioLevel.toFixed(0)} dB)
-            </Label>
-            <Label className="text-gray-500 text-[11px]">Batería: {batteryLevel}%</Label>
-          </View>
-        </Pressable>
+        </View>
       )}
 
       {/* ══════════════════════════════════════════════════════════════════ */}
@@ -855,35 +954,65 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
       {displayMode === 'camera' && (
         <View
           style={[StyleSheet.absoluteFillObject, { backgroundColor: 'transparent', zIndex: 10 }]}
-          className="justify-between p-6"
+          className="justify-between p-5 pt-8"
         >
-          <View className="flex-row items-center justify-between pt-6">
-            <View className="bg-black/70 px-3 py-1.5 rounded-full flex-row items-center gap-2">
-              <View className="w-2.5 h-2.5 rounded-full bg-red-500" />
-              <Label className="text-white text-xs font-bold">ALINEAR ORIFICIO</Label>
+          {/* Barra superior de configuración de cámara */}
+          <View className="flex-row items-center justify-between">
+            <View className="bg-black/75 px-3.5 py-1.5 rounded-full flex-row items-center gap-2 border border-white/20">
+              <View className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+              <Label className="text-white text-xs font-bold">
+                {facing === 'front' ? 'Cámara Delantera' : 'Cámara Trasera'}
+              </Label>
             </View>
 
             <Pressable
-              className="bg-black/70 p-2.5 rounded-full"
-              onPress={() => setFacing(facing === 'back' ? 'front' : 'back')}
+              className="bg-black/75 px-3.5 py-2 rounded-full flex-row items-center gap-1.5 border border-white/20"
+              onPress={toggleCameraFacing}
             >
-              <Ionicons name="camera-reverse-outline" size={22} color="white" />
+              <Ionicons name="camera-reverse-outline" size={18} color="#60A5FA" />
+              <Label className="text-blue-300 text-xs font-bold">
+                Cambiar a {facing === 'front' ? 'Trasera' : 'Delantera'}
+              </Label>
             </Pressable>
           </View>
 
-          <View className="self-center w-56 h-56 border-2 border-white/70 border-dashed rounded-full items-center justify-center bg-black/25">
-            <Label className="text-white font-bold text-xs text-center px-4">
-              Alinea la lente con el orificio del ojo/nariz de Panda
-            </Label>
+          {/* Mira de alineación para el agujero del peluche */}
+          <View className="items-center justify-center">
+            <View className="w-64 h-64 border-4 border-emerald-400 border-dashed rounded-full items-center justify-center bg-black/25">
+              <View className="w-16 h-16 border-2 border-emerald-300 rounded-full items-center justify-center bg-emerald-500/20">
+                <View className="w-3 h-3 rounded-full bg-emerald-400" />
+              </View>
+              <Label className="text-white font-extrabold text-xs text-center px-6 mt-4 shadow-lg">
+                Centra aquí el orificio del ojo o nariz del peluche
+              </Label>
+              <Label className="text-emerald-300 text-[11px] text-center font-semibold mt-1">
+                Lente activa: {facing === 'front' ? 'Frontal (Pantalla)' : 'Trasera'}
+              </Label>
+            </View>
           </View>
 
-          <Button
-            variant="primary"
-            className="w-full rounded-2xl py-3.5 bg-emerald-600"
-            onPress={() => setDisplayMode('stealth')}
-          >
-            <Button.Label className="text-white font-bold">Listo (Volver a Pantalla Negra)</Button.Label>
-          </Button>
+          {/* Botones de acción inferior */}
+          <View className="gap-2.5">
+            <Button
+              variant="outline"
+              className="w-full rounded-2xl py-3 bg-black/75 border-blue-500/50"
+              onPress={sendTestSnapshot}
+            >
+              <Button.Label className="text-blue-300 font-bold">
+                ⚡ Enviar Foto de Prueba a Padres (Sala #{effectiveFamilyId})
+              </Button.Label>
+            </Button>
+
+            <Button
+              variant="primary"
+              className="w-full rounded-2xl py-3.5 bg-emerald-600"
+              onPress={() => setDisplayMode('stealth')}
+            >
+              <Button.Label className="text-white font-bold">
+                ✅ Listo (Guardar y volver a Pantalla Negra)
+              </Button.Label>
+            </Button>
+          </View>
         </View>
       )}
 
@@ -1069,26 +1198,34 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
         transparent={true}
         onRequestClose={() => setShowFamilyModal(false)}
       >
-        <View className="flex-1 justify-center items-center bg-black/80 px-6">
+        <View className="flex-1 justify-center items-center bg-black/85 px-6">
           <View className="w-full bg-[#181B26] p-6 rounded-3xl border border-white/10 max-w-sm">
             <View className="items-center mb-3">
-              <View className="w-12 h-12 rounded-2xl bg-emerald-500/20 items-center justify-center mb-2">
-                <Ionicons name="link-outline" size={24} color="#10B981" />
+              <View className="w-14 h-14 rounded-2xl bg-emerald-500/20 items-center justify-center mb-3">
+                <Ionicons name="link-outline" size={28} color="#10B981" />
               </View>
-              <Label className="text-xl font-extrabold text-white text-center">Vincular a Familia</Label>
-              <Label className="text-xs text-gray-400 text-center mt-1">
-                Ingresa el Código de Familia que aparece en la app de los padres (ejemplo: 1).
+              <Label className="text-xl font-extrabold text-white text-center">
+                Vincular Teléfono a Padres
+              </Label>
+              <Label className="text-xs text-gray-300 text-center mt-1.5 leading-4">
+                Abre la app de Padres en el otro teléfono, entra a <Label className="text-emerald-400 font-bold">Supervisión</Label> y copia el <Label className="text-emerald-400 font-bold">Código de Familia</Label> que ves allí.
               </Label>
             </View>
 
-            <TextInput
-              className="bg-white/10 text-white text-xl font-bold text-center py-3.5 px-4 rounded-2xl border border-white/20 mb-5"
-              value={newFamilyCodeInput}
-              onChangeText={setNewFamilyCodeInput}
-              placeholder="Código de Familia"
-              placeholderTextColor="#94A3B8"
-              keyboardType="number-pad"
-            />
+            <View className="my-2">
+              <Label className="text-gray-400 text-xs font-semibold mb-1 text-center">
+                Código de Familia (ej: 1, 2, 3...)
+              </Label>
+              <TextInput
+                className="bg-white/10 text-white text-2xl font-black text-center py-3.5 px-4 rounded-2xl border border-emerald-500/40 mb-3"
+                value={newFamilyCodeInput}
+                onChangeText={setNewFamilyCodeInput}
+                placeholder="1"
+                placeholderTextColor="#94A3B8"
+                keyboardType="number-pad"
+                autoFocus
+              />
+            </View>
 
             <View className="flex-row gap-3">
               <Button
@@ -1096,23 +1233,26 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
                 className="flex-1"
                 onPress={() => setShowFamilyModal(false)}
               >
-                <Button.Label className="text-gray-400 font-semibold">Cancelar</Button.Label>
+                <Button.Label className="text-gray-400 font-semibold">Cerrar</Button.Label>
               </Button>
 
               <Button
                 variant="primary"
                 className="flex-1 bg-emerald-600"
                 onPress={async () => {
-                  if (newFamilyCodeInput.trim()) {
-                    const code = newFamilyCodeInput.trim();
+                  const code = newFamilyCodeInput.trim();
+                  if (code) {
                     setFamilyId(code);
                     await storage.setItem('toy_family_id', code);
                     setShowFamilyModal(false);
-                    Alert.alert('¡Vinculado con Éxito!', `Panda está ahora enlazado a la Familia #${code}`);
+                    Alert.alert(
+                      '¡Vinculado con Éxito! 🐼🎉',
+                      `Panda está conectado a la Familia #${code}. En la app de padres verás el juguete en línea.`
+                    );
                   }
                 }}
               >
-                <Button.Label className="text-white font-bold">Vincular</Button.Label>
+                <Button.Label className="text-white font-bold">Conectar</Button.Label>
               </Button>
             </View>
           </View>

@@ -58,6 +58,11 @@ export default function SupervisionScreen({ navigation }: any) {
           }
         });
 
+        newSocket.on('toy:camera_ready', () => {
+          setIsToyOnline(true);
+          newSocket.emit('camera:watch_start', { roomId });
+        });
+
         newSocket.on('camera:receive_frame', (data: { frame: string }) => {
           setFrameData(data.frame);
           setIsReceivingVideo(true);
@@ -85,7 +90,15 @@ export default function SupervisionScreen({ navigation }: any) {
 
     connectSocket();
 
+    // Reintentar periódicamente la señalización de visualización en caso de que el juguete conecte unos segundos después
+    const pingInterval = setInterval(() => {
+      if (newSocket && newSocket.connected) {
+        newSocket.emit('camera:watch_start', { roomId });
+      }
+    }, 3000);
+
     return () => {
+      clearInterval(pingInterval);
       if (newSocket) {
         newSocket.emit('camera:watch_stop', { roomId });
         newSocket.disconnect();

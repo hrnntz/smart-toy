@@ -132,8 +132,32 @@ export const initSocketServer = (httpServer: HTTPServer): SocketIOServer => {
         socket.emit("camera:error", { message: "Acceso denegado a la sala de cámara" });
         return;
       }
-      socket.join(`camera_room:${roomId}`);
-      console.log(`📹 Socket ${socket.id} (userId:${authSocket.userId}) se unió a camera_room:${roomId}`);
+      socket.join(`camera_room:${rId}`);
+      console.log(`📹 Socket ${socket.id} (userId:${authSocket.userId}, isToy:${!!authSocket.isToyDevice}) se unió a camera_room:${rId}`);
+
+      const room = io?.sockets.adapter.rooms.get(`camera_room:${rId}`);
+      const memberCount = room ? room.size : 0;
+      console.log(`📹 Miembros en camera_room:${rId}: ${memberCount}`);
+
+      if (authSocket.isToyDevice) {
+        // Notificar a la sala y al padre que el juguete está en línea
+        socket.to(`camera_room:${rId}`).emit("toy:camera_ready", { isReady: true });
+        io?.to(`parent:${uId}`).emit("toy:status_changed", {
+          isConnected: true,
+          status: "ONLINE",
+          timestamp: Date.now(),
+        });
+        // Si ya hay alguien (padre) esperando en la sala, activar captura en el juguete
+        if (memberCount > 1) {
+          socket.emit("camera:viewer_active", { active: true });
+        }
+      } else {
+        // Es un padre conectándose. Si el juguete ya está en la sala, activar transmisión
+        if (memberCount > 1) {
+          socket.to(`camera_room:${rId}`).emit("camera:viewer_active", { active: true });
+          socket.emit("toy:status_changed", { isConnected: true, status: "ONLINE" });
+        }
+      }
     });
 
     // 👁️ Señales de espectador bajo demanda (el padre entra o sale de la pantalla de supervisión)
