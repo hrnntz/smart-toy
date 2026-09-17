@@ -73,10 +73,16 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
   const [displayMode, setDisplayMode] = useState<DeviceDisplayMode>('face');
   const [facing, setFacing] = useState<'front' | 'back'>('front'); // Cámara frontal predeterminada para el orificio
   const [isBroadcasting, setIsBroadcasting] = useState(true);
+  const isBroadcastingRef = useRef<boolean>(true);
+  useEffect(() => {
+    isBroadcastingRef.current = isBroadcasting;
+  }, [isBroadcasting]);
+
   const [isParentWatching, setIsParentWatching] = useState(false);
   const isParentWatchingRef = useRef<boolean>(false);
   const isCapturingFrameRef = useRef<boolean>(false);
   const captureLoopTimerRef = useRef<any>(null);
+  const captureFrameStepRef = useRef<() => void>(() => {});
   const [isBtConnected, setIsBtConnected] = useState(false);
 
   // Estado y expresión
@@ -123,7 +129,16 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
 
   // Telemetría
   const [batteryLevel, setBatteryLevel] = useState(100);
+  const batteryLevelRef = useRef<number>(100);
+  useEffect(() => {
+    batteryLevelRef.current = batteryLevel;
+  }, [batteryLevel]);
+
   const [hugCount, setHugCount] = useState(0);
+  const hugCountRef = useRef<number>(0);
+  useEffect(() => {
+    hugCountRef.current = hugCount;
+  }, [hugCount]);
 
   const [accent] = useThemeColor(['accent']);
   const [isSocketConnected, setIsSocketConnected] = useState(false);
@@ -147,9 +162,8 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
     }
     try {
       const photo = await cameraRef.current.takePictureAsync({
-        quality: 0.25,
+        quality: 0.2,
         base64: true,
-        skipProcessing: true,
         shutterSound: false,
       });
       if (photo?.base64) {
@@ -166,16 +180,16 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
   };
 
   // Captura asíncrona secuencial suave bajo demanda (solo cuando el padre está viendo)
+  // Calidad 0.15 y SIN skipProcessing para comprimir JPEG a ~40KB y no saturar WebSockets
   const captureFrameStep = useCallback(async () => {
-    if (!isParentWatchingRef.current || isCapturingFrameRef.current) return;
+    if (!isParentWatchingRef.current || !isBroadcastingRef.current || isCapturingFrameRef.current) return;
     if (!cameraRef.current || !socketRef.current?.connected) return;
 
     isCapturingFrameRef.current = true;
     try {
       const photo = await cameraRef.current.takePictureAsync({
-        quality: 0.22,
+        quality: 0.15,
         base64: true,
-        skipProcessing: true,
         shutterSound: false,
       });
 
@@ -190,11 +204,18 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
       // Ignorar errores transitorios de fotograma para no congelar la app
     } finally {
       isCapturingFrameRef.current = false;
-      if (isParentWatchingRef.current && isBroadcasting) {
-        captureLoopTimerRef.current = setTimeout(captureFrameStep, 800);
+      if (isParentWatchingRef.current && isBroadcastingRef.current) {
+        if (captureLoopTimerRef.current) clearTimeout(captureLoopTimerRef.current);
+        captureLoopTimerRef.current = setTimeout(() => {
+          captureFrameStepRef.current();
+        }, 500);
       }
     }
-  }, [roomId, isBroadcasting]);
+  }, [roomId]);
+
+  useEffect(() => {
+    captureFrameStepRef.current = captureFrameStep;
+  }, [captureFrameStep]);
 
   // 1. Inicializar credenciales y rol
   useEffect(() => {
@@ -286,9 +307,9 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
           socket?.emit('toy:status_update', {
             toyId: String(toyId),
             status: 'ONLINE',
-            battery: batteryLevel,
+            battery: batteryLevelRef.current,
             isHugging: false,
-            hugCount,
+            hugCount: hugCountRef.current,
           });
         });
 
@@ -304,7 +325,7 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
           isParentWatchingRef.current = active;
           if (active) {
             if (captureLoopTimerRef.current) clearTimeout(captureLoopTimerRef.current);
-            captureFrameStep();
+            captureFrameStepRef.current();
           } else {
             if (captureLoopTimerRef.current) clearTimeout(captureLoopTimerRef.current);
           }
@@ -334,7 +355,7 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
       if (captureLoopTimerRef.current) clearTimeout(captureLoopTimerRef.current);
       if (socket) socket.disconnect();
     };
-  }, [toyId, roomId, effectiveFamilyId, batteryLevel, hugCount, captureFrameStep]);
+  }, [toyId, roomId, effectiveFamilyId]);
 
   // 3. Heartbeat de telemetría (cada 30s)
   useEffect(() => {

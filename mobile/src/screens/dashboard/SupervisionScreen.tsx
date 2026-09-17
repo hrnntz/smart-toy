@@ -31,6 +31,7 @@ export default function SupervisionScreen({ navigation }: any) {
   useEffect(() => {
     if (!user) return;
     let newSocket: Socket;
+    let offlineTimer: any = null;
 
     const connectSocket = async () => {
       try {
@@ -52,18 +53,29 @@ export default function SupervisionScreen({ navigation }: any) {
 
         newSocket.on('toy:status_changed', (data: any) => {
           if (data.isConnected !== undefined) {
-            setIsToyOnline(data.isConnected);
+            if (data.isConnected) {
+              if (offlineTimer) clearTimeout(offlineTimer);
+              setIsToyOnline(true);
+            } else {
+              // Filtro anti-rebote para evitar parpadeo si el socket reconecta rápidamente
+              if (offlineTimer) clearTimeout(offlineTimer);
+              offlineTimer = setTimeout(() => {
+                setIsToyOnline(false);
+              }, 3500);
+            }
           } else {
             setIsToyOnline(true);
           }
         });
 
         newSocket.on('toy:camera_ready', () => {
+          if (offlineTimer) clearTimeout(offlineTimer);
           setIsToyOnline(true);
           newSocket.emit('camera:watch_start', { roomId });
         });
 
         newSocket.on('camera:receive_frame', (data: { frame: string }) => {
+          if (offlineTimer) clearTimeout(offlineTimer);
           setFrameData(data.frame);
           setIsReceivingVideo(true);
           setIsToyOnline(true);
@@ -71,10 +83,8 @@ export default function SupervisionScreen({ navigation }: any) {
         });
 
         newSocket.on('camera:stream_ended', () => {
-          setFrameData(null);
           setIsReceivingVideo(false);
           setStatusText('Transmisión finalizada');
-          Alert.alert('Transmisión pausada', 'La cámara del juguete se ha detenido.');
         });
 
         newSocket.on('connect_error', (err) => {
@@ -95,9 +105,10 @@ export default function SupervisionScreen({ navigation }: any) {
       if (newSocket && newSocket.connected) {
         newSocket.emit('camera:watch_start', { roomId });
       }
-    }, 3000);
+    }, 2500);
 
     return () => {
+      if (offlineTimer) clearTimeout(offlineTimer);
       clearInterval(pingInterval);
       if (newSocket) {
         newSocket.emit('camera:watch_stop', { roomId });
@@ -158,30 +169,30 @@ export default function SupervisionScreen({ navigation }: any) {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}>
-        {/* Visor de Video - fadeDuration={0} elimina el parpadeo de imagen */}
+        {/* Visor de Video - Fondo 100% negro y fadeDuration={0} para CERO parpadeo */}
         <View 
           className="w-full h-64 rounded-3xl overflow-hidden mb-4 mt-2 relative justify-center items-center shadow-lg" 
           style={{ 
-            backgroundColor: '#0F121C',
+            backgroundColor: '#000000',
             borderWidth: isConnected ? 2 : 1,
             borderColor: isReceivingVideo ? '#EF4444' : isConnected ? cameraBlue : 'rgba(255,255,255,0.1)'
           }}
         >
-          {isReceivingVideo && frameData ? (
+          {frameData ? (
             <Image
               source={{ uri: frameData }}
-              className="w-full h-full"
+              style={{ width: '100%', height: '100%', backgroundColor: '#000000' }}
               resizeMode="cover"
               fadeDuration={0}
             />
           ) : (
-            <View className="items-center justify-center w-full h-full px-6" style={{ backgroundColor: 'rgba(59, 130, 246, 0.04)' }}>
+            <View className="items-center justify-center w-full h-full px-6" style={{ backgroundColor: '#000000' }}>
               <Ionicons name="videocam-outline" size={56} color={cameraBlue} />
               <Label className="text-sm font-semibold text-white mt-3 text-center">
                 {statusText}
               </Label>
               <Label className="text-xs mt-1 text-center" style={{ color: muted } as any}>
-                {isToyOnline ? 'El juguete está listo. Iniciando video...' : 'Asegúrate de que el teléfono en el peluche tenga abierta la app Panda Juguete.'}
+                {isToyOnline ? 'El juguete está listo. Iniciando transmisión...' : 'Asegúrate de que el teléfono en el peluche tenga abierta la app Panda Juguete.'}
               </Label>
 
               <Pressable
@@ -194,16 +205,25 @@ export default function SupervisionScreen({ navigation }: any) {
             </View>
           )}
 
-          {isReceivingVideo && (
+          {/* Badge En Vivo */}
+          {frameData && isReceivingVideo && (
             <View className="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-red-600/80 flex-row items-center gap-1.5">
               <View className="w-2 h-2 rounded-full bg-white" />
-              <Label className="text-white text-[10px] font-extrabold tracking-wider">REC</Label>
+              <Label className="text-white text-[10px] font-extrabold tracking-wider">EN VIVO</Label>
             </View>
           )}
 
-          {isReceivingVideo && (
+          {frameData && isReceivingVideo && (
             <View className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-black/60">
               <Label className="text-white/80 text-[10px] font-bold">Familia #{familyCode}</Label>
+            </View>
+          )}
+
+          {/* Overlay suave si hay micro-desconexión sin parpadear en blanco */}
+          {frameData && !isToyOnline && (
+            <View className="absolute inset-0 bg-black/60 items-center justify-center">
+              <Ionicons name="cloud-offline-outline" size={32} color="#FBBF24" />
+              <Label className="text-xs font-semibold text-amber-300 mt-1">Reconectando señal del juguete...</Label>
             </View>
           )}
         </View>

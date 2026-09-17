@@ -14,6 +14,7 @@ let io: SocketIOServer | null = null;
 
 export const initSocketServer = (httpServer: HTTPServer): SocketIOServer => {
   io = new SocketIOServer(httpServer, {
+    maxHttpBufferSize: 1e7, // 10MB: Evita desconexión por tamaño de paquete al transmitir fotogramas de cámara
     cors: {
       // VULN-002 / VULN-003 fix: CORS restringido en Socket.io
       // Los clientes móviles nativos no envían Origin, por lo que se permiten.
@@ -127,7 +128,7 @@ export const initSocketServer = (httpServer: HTTPServer): SocketIOServer => {
     // Convención: roomId = "<userId>-<toyId>" o "<userId>_<toyId>"
     socket.on("camera:join_stream", (roomId: string) => {
       const rId = String(roomId || "");
-      const uId = String(authSocket.userId);
+      const uId = String(authSocket.userId || authSocket.familyId || "");
       if (!rId || (!rId.startsWith(uId + "-") && !rId.startsWith(uId + "_") && rId !== uId)) {
         socket.emit("camera:error", { message: "Acceso denegado a la sala de cámara" });
         return;
@@ -163,7 +164,7 @@ export const initSocketServer = (httpServer: HTTPServer): SocketIOServer => {
     // 👁️ Señales de espectador bajo demanda (el padre entra o sale de la pantalla de supervisión)
     socket.on("camera:watch_start", (data: { roomId: string }) => {
       const rId = String(data?.roomId || "");
-      const uId = String(authSocket.userId);
+      const uId = String(authSocket.userId || authSocket.familyId || "");
       if (!rId || (!rId.startsWith(uId + "-") && !rId.startsWith(uId + "_") && rId !== uId)) {
         return;
       }
@@ -173,7 +174,7 @@ export const initSocketServer = (httpServer: HTTPServer): SocketIOServer => {
 
     socket.on("camera:watch_stop", (data: { roomId: string }) => {
       const rId = String(data?.roomId || "");
-      const uId = String(authSocket.userId);
+      const uId = String(authSocket.userId || authSocket.familyId || "");
       if (!rId || (!rId.startsWith(uId + "-") && !rId.startsWith(uId + "_") && rId !== uId)) {
         return;
       }
@@ -183,7 +184,7 @@ export const initSocketServer = (httpServer: HTTPServer): SocketIOServer => {
 
     socket.on("camera:stream_frame", (data: { roomId: string; frame: string; timestamp: number }) => {
       const rId = String(data?.roomId || "");
-      const uId = String(authSocket.userId);
+      const uId = String(authSocket.userId || authSocket.familyId || "");
       if (!rId || (!rId.startsWith(uId + "-") && !rId.startsWith(uId + "_") && rId !== uId)) {
         socket.emit("camera:error", { message: "No autorizado para transmitir en esta sala" });
         return;
@@ -193,7 +194,7 @@ export const initSocketServer = (httpServer: HTTPServer): SocketIOServer => {
 
     socket.on("camera:stop_stream", (roomId: string) => {
       const rId = String(roomId || "");
-      const uId = String(authSocket.userId);
+      const uId = String(authSocket.userId || authSocket.familyId || "");
       if (!rId || (!rId.startsWith(uId + "-") && !rId.startsWith(uId + "_") && rId !== uId)) {
         socket.emit("camera:error", { message: "No autorizado" });
         return;
