@@ -69,8 +69,8 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
   const [toyName, setToyName] = useState<string>(route.params?.toyName || 'Panda');
   const [serialNumber, setSerialNumber] = useState<string>(route.params?.serialNumber || 'TOY-001');
 
-  // MODO PREDETERMINADO: 'stealth' (Pantalla negra para que el teléfono no se caliente dentro del peluche)
-  const [displayMode, setDisplayMode] = useState<DeviceDisplayMode>('stealth');
+  // MODO PREDETERMINADO: 'face' para interactuar y configurar en pantalla
+  const [displayMode, setDisplayMode] = useState<DeviceDisplayMode>('face');
   const [facing, setFacing] = useState<'front' | 'back'>('front'); // Cámara frontal predeterminada para el orificio
   const [isBroadcasting, setIsBroadcasting] = useState(true);
   const [isParentWatching, setIsParentWatching] = useState(false);
@@ -81,13 +81,20 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
 
   // Estado y expresión
   const [expression, setExpression] = useState<PandaExpression>('idle');
-  const [dialogueText, setDialogueText] = useState<string>('Panda listo y escuchando en el juguete 🐼');
+  const [dialogueText, setDialogueText] = useState<string>('¡Hola! Soy Panda 🐼 Tócame o háblame');
   const [audioLevel, setAudioLevel] = useState<number>(-160);
   const lastAudioLevelRef = useRef<number>(-160);
   const lastAudioUpdateTimestampRef = useRef<number>(0);
 
-  // Control del bucle continuo manos libres
-  const isHandsFreeActiveRef = useRef<boolean>(true);
+  // Control de escucha (Manos libres vs Tocar para Hablar)
+  const [isHandsFreeActive, setIsHandsFreeActive] = useState<boolean>(false);
+  const isHandsFreeActiveRef = useRef<boolean>(false);
+  const [isPushToTalkRecording, setIsPushToTalkRecording] = useState<boolean>(false);
+  const lastScreenTouchTimestampRef = useRef<number>(0);
+  const voiceStartTimestampRef = useRef<number>(0);
+  const [showStealthWakeMenu, setShowStealthWakeMenu] = useState<boolean>(false);
+  const stealthWakeTimerRef = useRef<any>(null);
+
   const isSpeakingRef = useRef<boolean>(false);
   const isProcessingRef = useRef<boolean>(false);
   const recordingRef = useRef<Audio.Recording | null>(null);
@@ -375,7 +382,7 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
   }, [expression]);
 
   // ══════════════════════════════════════════════════════════════════════
-  // 6. MOTOR MANOS LIBRES: ESCUCHA CONTINUA Y DETECCIÓN DE VOZ (VAD)
+  // 6. CONTROL DE VOZ: MANOS LIBRES VAD & TOCAR PARA HABLAR
   // ══════════════════════════════════════════════════════════════════════
   const startHandsFreeRecording = async () => {
     if (!isHandsFreeActiveRef.current || isSpeakingRef.current || isProcessingRef.current) {
@@ -383,7 +390,6 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
     }
 
     try {
-      // Limpiar grabación previa si existe
       if (recordingRef.current) {
         try {
           await recordingRef.current.stopAndUnloadAsync();
@@ -402,23 +408,37 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
       const { recording } = await Audio.Recording.createAsync(
         RECORDING_OPTIONS,
         onRecordingStatusUpdate,
-        150 // Chequeo cada 150ms para respuesta inmediata
+        150
       );
 
       recordingRef.current = recording;
       voiceDetectedRef.current = false;
       lastVoiceTimestampRef.current = 0;
+      voiceStartTimestampRef.current = 0;
       recordingStartTimestampRef.current = Date.now();
       setExpression('listening');
       setDialogueText('Panda escuchando con atención... 🎙️');
     } catch (err) {
       console.warn('Reintentando inicio de escucha manos libres:', err);
       setTimeout(() => {
-        if (!isSpeakingRef.current && !isProcessingRef.current) {
+        if (!isSpeakingRef.current && !isProcessingRef.current && isHandsFreeActiveRef.current) {
           startHandsFreeRecording();
         }
       }, 1500);
     }
+  };
+
+  const stopHandsFreeRecording = async () => {
+    isHandsFreeActiveRef.current = false;
+    setIsHandsFreeActive(false);
+    if (recordingRef.current) {
+      try {
+        await recordingRef.current.stopAndUnloadAsync();
+      } catch (_) {}
+      recordingRef.current = null;
+    }
+    setExpression('idle');
+    setDialogueText('Panda listo y en reposo 🐼✨');
   };
 
   // Callback de estado del micrófono en tiempo real (análisis de decibelios)
@@ -428,7 +448,11 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
     const metering = status.metering ?? -160;
     const now = Date.now();
 
-    // Throttling: solo actualizar el estado de React cada 600ms o si hay cambio notable (>10dB)
+    // 🛡️ Inmunidad contra toques en pantalla: ignorar cualquier sonido dentro de los 900ms posteriores a un toque
+    if (now - lastScreenTouchTimestampRef.current < 900) {
+      return;
+    }
+
     if (now - lastAudioUpdateTimestampRef.current > 600 || Math.abs(metering - lastAudioLevelRef.current) > 10) {
       lastAudioLevelRef.current = metering;
       lastAudioUpdateTimestampRef.current = now;
@@ -437,30 +461,37 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
 
     const duration = status.durationMillis || 0;
 
-    // Detectar si el niño comenzó a hablar
+    // Detectar si hay voz continua
     if (metering > VOICE_THRESHOLD_DB) {
       if (!voiceDetectedRef.current) {
-        console.log(`🎙️ Voz detectada por el micrófono (${metering.toFixed(1)} dB)`);
+        voiceDetectedRef.current = true;
+        voiceStartTimestampRef.current = now;
       }
-      voiceDetectedRef.current = true;
       lastVoiceTimestampRef.current = now;
       setExpression('listening');
       setDialogueText('¡Te escucho, amiguito! 🐼');
     }
 
-    // Caso A: El niño habló y ahora guardó silencio por más de SILENCE_TIMEOUT_MS
+    // Comprobar fin de frase tras silencio
     if (voiceDetectedRef.current) {
       const silenceDuration = now - lastVoiceTimestampRef.current;
-      if (silenceDuration >= SILENCE_TIMEOUT_MS && (now - recordingStartTimestampRef.current) >= 800) {
-        console.log(`✅ Fin de frase detectado tras ${duration}ms de audio. Procesando con IA...`);
+      const speechDuration = lastVoiceTimestampRef.current - voiceStartTimestampRef.current;
+
+      // Si fue un ruido seco < 400ms (un golpe, clic de pantalla o roce), descartar limpiamente
+      if (silenceDuration >= SILENCE_TIMEOUT_MS) {
+        if (speechDuration < 400) {
+          restartBuffer();
+          return;
+        }
         stopAndProcessSpeech();
         return;
       }
     }
 
-    // Caso B: Límite máximo de grabación alcanzado
+    // Límite máximo de grabación alcanzado
     if (duration >= MAX_RECORDING_DURATION_MS) {
-      if (voiceDetectedRef.current) {
+      const speechDuration = lastVoiceTimestampRef.current - voiceStartTimestampRef.current;
+      if (voiceDetectedRef.current && speechDuration >= 400) {
         stopAndProcessSpeech();
       } else {
         restartBuffer();
@@ -468,7 +499,7 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
       return;
     }
 
-    // Caso C: Silencio prolongado mientras espera (nadie habló en 2.5s): reiniciar buffer limpiamente
+    // Silencio prolongado mientras espera (nadie habló en 2.5s): reiniciar buffer limpiamente
     if (!voiceDetectedRef.current && duration >= BUFFER_RESET_MS) {
       restartBuffer();
     }
@@ -482,7 +513,7 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
         recordingRef.current = null;
       }
     } catch (_) {}
-    if (!isSpeakingRef.current && !isProcessingRef.current) {
+    if (!isSpeakingRef.current && !isProcessingRef.current && isHandsFreeActiveRef.current) {
       startHandsFreeRecording();
     }
   };
@@ -494,7 +525,7 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
 
     try {
       setExpression('thinking');
-      setDialogueText('Panda escuchando y pensando respuesta... 🤔✨');
+      setDialogueText('Panda pensando respuesta... 🤔✨');
 
       let uri: string | null = null;
       if (recordingRef.current) {
@@ -505,27 +536,27 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
 
       if (!uri) {
         isProcessingRef.current = false;
-        startHandsFreeRecording();
+        if (isHandsFreeActiveRef.current) startHandsFreeRecording();
         return;
       }
 
-      console.log('📡 Enviando audio del niño a Groq Whisper STT...');
+      console.log('📡 Enviando audio a Groq Whisper STT...');
       const response = await toyService.voiceChatWithAudio(toyId, uri);
 
       if (response.data?.success && response.data?.data) {
         const { userText, replyText, audioUrl } = response.data.data;
 
-        // Si la transcripción fue vacía o no reconoció palabras:
         if (!userText || userText.trim().length === 0 || userText === '.') {
           if (audioUrl) {
             setDialogueText('No te alcancé a escuchar bien... 🐼👂');
             await playPandaVoiceAloud(audioUrl);
           } else {
             isProcessingRef.current = false;
-            setDialogueText('No te escuché bien, ¿me hablas más fuerte? 🐼');
-            setTimeout(() => {
-              startHandsFreeRecording();
-            }, 1800);
+            setDialogueText('No te escuché bien, ¿me dices de nuevo? 🐼');
+            setExpression('idle');
+            if (isHandsFreeActiveRef.current) {
+              setTimeout(() => startHandsFreeRecording(), 1800);
+            }
           }
           return;
         }
@@ -539,17 +570,20 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
         } else {
           setTimeout(() => {
             isProcessingRef.current = false;
-            startHandsFreeRecording();
+            setExpression('idle');
+            if (isHandsFreeActiveRef.current) startHandsFreeRecording();
           }, 3000);
         }
       } else {
         isProcessingRef.current = false;
-        startHandsFreeRecording();
+        setExpression('idle');
+        if (isHandsFreeActiveRef.current) startHandsFreeRecording();
       }
     } catch (err) {
       console.error('Error en procesamiento de voz:', err);
       isProcessingRef.current = false;
-      startHandsFreeRecording();
+      setExpression('idle');
+      if (isHandsFreeActiveRef.current) startHandsFreeRecording();
     }
   };
 
@@ -559,10 +593,8 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
     isProcessingRef.current = false;
     setExpression('speaking');
 
-    // Notificar al ESP32 para animar los ojos al compás del habla
     pandaBluetooth.sendCommand('LED:TALK\n').catch(() => {});
 
-    // Activar animación rítmica de boca
     Animated.loop(
       Animated.sequence([
         Animated.timing(mouthAnim, { toValue: 0.8, duration: 180, useNativeDriver: true }),
@@ -576,41 +608,120 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
           isSpeakingRef.current = false;
           mouthAnim.setValue(0.1);
           setExpression('idle');
-          setDialogueText('Panda escuchando de nuevo... 🐼');
-          // Restaurar ojos normales en el ESP32
+          setDialogueText('¡Qué divertido! Tócame o háblame cuando quieras 🐼✨');
           pandaBluetooth.sendCommand('LED:NORMAL\n').catch(() => {});
-          // Pequeña pausa antes de reanudar para evitar eco residual
           setTimeout(() => {
-            if (!isSpeakingRef.current) {
+            if (!isSpeakingRef.current && isHandsFreeActiveRef.current) {
               startHandsFreeRecording();
             }
-          }, 400);
+          }, 600);
         }
       });
     } catch (e) {
       console.error('Error en altavoz:', e);
       isSpeakingRef.current = false;
       pandaBluetooth.sendCommand('LED:NORMAL\n').catch(() => {});
+      if (isHandsFreeActiveRef.current) startHandsFreeRecording();
+    }
+  };
+
+  // 🎙️ Función Tocar para Hablar (Push to Talk)
+  const togglePushToTalk = async () => {
+    lastScreenTouchTimestampRef.current = Date.now();
+    if (isSpeakingRef.current || isProcessingRef.current) return;
+
+    if (isPushToTalkRecording) {
+      setIsPushToTalkRecording(false);
+      await stopAndProcessSpeech();
+    } else {
+      try {
+        if (recordingRef.current) {
+          try {
+            await recordingRef.current.stopAndUnloadAsync();
+          } catch (_) {}
+          recordingRef.current = null;
+        }
+        await Audio.requestPermissionsAsync();
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: true,
+          playsInSilentModeIOS: true,
+          staysActiveInBackground: true,
+          shouldDuckAndroid: false,
+        });
+
+        const { recording } = await Audio.Recording.createAsync(
+          RECORDING_OPTIONS,
+          (status) => {
+            const metering = status.metering ?? -160;
+            const now = Date.now();
+            if (now - lastAudioUpdateTimestampRef.current > 400) {
+              lastAudioUpdateTimestampRef.current = now;
+              setAudioLevel(metering);
+            }
+          },
+          150
+        );
+
+        recordingRef.current = recording;
+        setIsPushToTalkRecording(true);
+        setExpression('listening');
+        setDialogueText('Te estoy escuchando... Toca de nuevo para responder 🎙️');
+      } catch (e) {
+        console.warn('Error al iniciar grabación manual:', e);
+        setIsPushToTalkRecording(false);
+      }
+    }
+  };
+
+  const toggleHandsFree = async () => {
+    lastScreenTouchTimestampRef.current = Date.now();
+    if (isHandsFreeActive) {
+      await stopHandsFreeRecording();
+    } else {
+      setIsHandsFreeActive(true);
+      isHandsFreeActiveRef.current = true;
       startHandsFreeRecording();
     }
   };
 
-  // Iniciar el bucle de escucha manos libres al montar la pantalla
-  useEffect(() => {
+  const enterPlushMode = async () => {
+    lastScreenTouchTimestampRef.current = Date.now();
+    setDisplayMode('stealth');
+    setIsHandsFreeActive(true);
     isHandsFreeActiveRef.current = true;
-    const startTimer = setTimeout(() => {
-      startHandsFreeRecording();
-    }, 1000);
+    startHandsFreeRecording();
+  };
 
-    return () => {
-      clearTimeout(startTimer);
-      isHandsFreeActiveRef.current = false;
-      if (recordingRef.current) {
-        recordingRef.current.stopAndUnloadAsync().catch(() => {});
+  const handleQuickAction = async (prompt: string, userFacingText: string) => {
+    lastScreenTouchTimestampRef.current = Date.now();
+    if (isSpeakingRef.current || isProcessingRef.current) return;
+    setDialogueText(userFacingText);
+    setExpression('thinking');
+    try {
+      const res = await toyService.voiceChatWithToy(toyId, prompt);
+      if (res.data?.data?.audioUrl) {
+        if (res.data?.data?.replyText) {
+          setDialogueText(res.data.data.replyText);
+        }
+        await playPandaVoiceAloud(res.data.data.audioUrl);
+      } else {
+        setExpression('idle');
       }
-      stopAudio();
-    };
-  }, [toyId]);
+    } catch (_) {
+      setExpression('idle');
+    }
+  };
+
+  // Iniciar el bucle de escucha manos libres solo cuando esté activado
+  useEffect(() => {
+    if (isHandsFreeActive && displayMode === 'stealth') {
+      isHandsFreeActiveRef.current = true;
+      const startTimer = setTimeout(() => {
+        startHandsFreeRecording();
+      }, 1000);
+      return () => clearTimeout(startTimer);
+    }
+  }, [isHandsFreeActive, displayMode]);
 
   // ══════════════════════════════════════════════════════════════════════
   // 7. INTERCOMUNICADOR Y COMANDOS PARENTALES REMOTOS
@@ -856,49 +967,47 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
       </View>
 
       {/* ══════════════════════════════════════════════════════════════════ */}
-      {/* 1. MODO SIGILO (PREDETERMINADO: PANTALLA NEGRA / CERO CALOR)      */}
+      {/* 1. MODO SIGILO / PELUCHE (PANTALLA NEGRA / CERO CALOR)            */}
       {/* ══════════════════════════════════════════════════════════════════ */}
       {displayMode === 'stealth' && (
-        <View
+        <Pressable
           style={[StyleSheet.absoluteFillObject, { backgroundColor: '#000000', zIndex: 10 }]}
           className="justify-between items-center py-6 px-4"
+          onPress={() => {
+            lastScreenTouchTimestampRef.current = Date.now();
+            setShowStealthWakeMenu((prev) => !prev);
+            if (stealthWakeTimerRef.current) clearTimeout(stealthWakeTimerRef.current);
+            stealthWakeTimerRef.current = setTimeout(() => setShowStealthWakeMenu(false), 5000);
+          }}
         >
-          {/* Barra superior de control rápido */}
+          {/* Barra superior de estado (siempre visible pero tenue) */}
           <View className="flex-row items-center justify-between w-full z-20 pt-2 px-1">
-            <Pressable
-              onPress={() => {
-                setNewFamilyCodeInput(effectiveFamilyId);
-                setShowFamilyModal(true);
-              }}
-              className="flex-row items-center gap-2 bg-white/10 px-3 py-1.5 rounded-full border border-white/10"
-            >
+            <View className="flex-row items-center gap-2 bg-white/10 px-3 py-1.5 rounded-full border border-white/10">
               <View className={`w-2 h-2 rounded-full ${isSocketConnected ? 'bg-emerald-400' : 'bg-amber-400'}`} />
               <Label className="text-white text-xs font-bold">
                 Fam #{effectiveFamilyId}
               </Label>
-              <Ionicons name="settings-outline" size={12} color="#94A3B8" />
-            </Pressable>
+              <Label className="text-emerald-400 text-[10px] font-bold">● Peluche Activo</Label>
+            </View>
 
             <View className="flex-row items-center gap-2">
               <Pressable
-                className="bg-blue-500/20 border border-blue-500/40 px-3 py-1.5 rounded-full flex-row items-center gap-1"
-                onPress={() => setDisplayMode('camera')}
-              >
-                <Ionicons name="camera-outline" size={14} color="#60A5FA" />
-                <Label className="text-blue-300 text-xs font-bold">Alinear</Label>
-              </Pressable>
-
-              <Pressable
-                className="bg-white/10 px-3 py-1.5 rounded-full flex-row items-center gap-1"
-                onPress={() => setDisplayMode('face')}
+                className="bg-white/15 px-3 py-1.5 rounded-full flex-row items-center gap-1"
+                onPress={() => {
+                  lastScreenTouchTimestampRef.current = Date.now();
+                  setDisplayMode('face');
+                }}
               >
                 <Ionicons name="happy-outline" size={14} color="#FBBF24" />
-                <Label className="text-amber-300 text-xs font-bold">Cara</Label>
+                <Label className="text-amber-300 text-xs font-bold">Ver Cara</Label>
               </Pressable>
 
               <Pressable
                 className="bg-white/15 px-3 py-1.5 rounded-full flex-row items-center gap-1"
-                onPress={exitToyMode}
+                onPress={() => {
+                  lastScreenTouchTimestampRef.current = Date.now();
+                  exitToyMode();
+                }}
               >
                 <Ionicons name="arrow-back" size={13} color="white" />
                 <Label className="text-white text-xs font-bold">Salir</Label>
@@ -906,25 +1015,50 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
             </View>
           </View>
 
-          {/* Área táctil central para cambiar a cara interactiva */}
-          <Pressable
-            className="items-center justify-center flex-1 w-full"
-            onPress={() => setDisplayMode('face')}
-          >
-            <View className="items-center opacity-30">
-              <Ionicons name="radio-outline" size={56} color="#60A5FA" />
-              <Label className="text-gray-300 text-sm font-semibold mt-3 text-center">
-                Panda Dentro del Peluche
+          {/* Menú flotante temporal que aparece al dar tap en la pantalla negra (sin activar la IA) */}
+          {showStealthWakeMenu ? (
+            <View className="bg-[#181B26] p-5 rounded-3xl border border-white/20 items-center max-w-xs shadow-2xl">
+              <Ionicons name="moon" size={32} color="#60A5FA" />
+              <Label className="text-white font-extrabold text-sm mt-2 text-center">
+                Panda Dentro del Peluche 🐼
               </Label>
-              <Label className="text-gray-500 text-xs mt-1 text-center leading-5">
-                Pantalla negra para cero calentamiento dentro del peluche{'\n'}
-                Micrófono y altavoces activos • Cámara lista para transmitir
+              <Label className="text-gray-400 text-xs text-center mt-1 mb-4 leading-4">
+                Pantalla negra para no calentar el muñeco. El micrófono escucha al niño con manos libres y la cámara está lista.
               </Label>
-              <Label className="text-blue-400 text-[11px] mt-3 font-medium">
-                (Toca la pantalla para abrir la cara animada)
+
+              <View className="flex-row gap-2 w-full">
+                <Button
+                  variant="primary"
+                  className="flex-1 bg-amber-500 py-2.5 rounded-xl"
+                  onPress={() => {
+                    lastScreenTouchTimestampRef.current = Date.now();
+                    setDisplayMode('face');
+                  }}
+                >
+                  <Button.Label className="text-black font-bold text-xs">🎭 Cara Panda</Button.Label>
+                </Button>
+
+                <Button
+                  variant="outline"
+                  className="flex-1 border-blue-400 py-2.5 rounded-xl"
+                  onPress={() => {
+                    lastScreenTouchTimestampRef.current = Date.now();
+                    setDisplayMode('camera');
+                  }}
+                >
+                  <Button.Label className="text-blue-300 font-bold text-xs">📷 Cámara</Button.Label>
+                </Button>
+              </View>
+            </View>
+          ) : (
+            <View className="items-center opacity-25">
+              <Ionicons name="radio-outline" size={54} color="#60A5FA" />
+              <Label className="text-gray-400 text-xs mt-3 text-center leading-5">
+                Modo Peluche Activo{'\n'}
+                (Toca la pantalla para ver el menú sin hablar)
               </Label>
             </View>
-          </Pressable>
+          )}
 
           {/* Barra inferior: VAD, batería y estado del padre */}
           <View className="flex-row items-center justify-between w-full px-4 py-2.5 bg-white/5 rounded-2xl border border-white/5">
@@ -945,7 +1079,7 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
               <Label className="text-gray-400 text-xs font-bold">🔋 {batteryLevel}%</Label>
             </View>
           </View>
-        </View>
+        </Pressable>
       )}
 
       {/* ══════════════════════════════════════════════════════════════════ */}
@@ -1003,155 +1137,140 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
               </Button.Label>
             </Button>
 
-            <Button
-              variant="primary"
-              className="w-full rounded-2xl py-3.5 bg-emerald-600"
-              onPress={() => setDisplayMode('stealth')}
-            >
-              <Button.Label className="text-white font-bold">
-                ✅ Listo (Guardar y volver a Pantalla Negra)
-              </Button.Label>
-            </Button>
+            <View className="flex-row gap-2">
+              <Button
+                variant="outline"
+                className="flex-1 rounded-2xl py-3 bg-white/10 border-white/20"
+                onPress={() => setDisplayMode('face')}
+              >
+                <Button.Label className="text-white font-bold">🎭 Ver Cara</Button.Label>
+              </Button>
+
+              <Button
+                variant="primary"
+                className="flex-1 rounded-2xl py-3 bg-emerald-600"
+                onPress={enterPlushMode}
+              >
+                <Button.Label className="text-white font-bold">🌙 Modo Peluche</Button.Label>
+              </Button>
+            </View>
           </View>
         </View>
       )}
 
       {/* ══════════════════════════════════════════════════════════════════ */}
-      {/* 3. MODO CARA ANIMADA DE PANDA                                     */}
+      {/* 3. MODO CARA ANIMADA DE PANDA (INTERACTIVO)                       */}
       {/* ══════════════════════════════════════════════════════════════════ */}
       {displayMode === 'face' && (
         <View
           style={[StyleSheet.absoluteFillObject, { backgroundColor: '#12141C', zIndex: 10 }]}
-          className="justify-between"
+          className="justify-between pb-6"
+          onTouchStart={() => {
+            lastScreenTouchTimestampRef.current = Date.now();
+          }}
         >
-          <View className="flex-row items-center justify-between px-6 pt-4 pb-2 z-20">
-            <View className="flex-row items-center gap-2 bg-white/10 px-3 py-1 rounded-full">
-              <View className={`w-2 h-2 rounded-full ${isParentWatching ? 'bg-red-400' : 'bg-emerald-400'}`} />
-              <Label className="text-white/80 text-[11px] font-bold">
-                {toyName} • Fam #{effectiveFamilyId} • {isParentWatching ? 'Padres Mirando' : 'Reposo'}
+          {/* Barra Superior */}
+          <View className="flex-row items-center justify-between px-5 pt-4 pb-2 z-20">
+            <Pressable
+              onPress={() => {
+                lastScreenTouchTimestampRef.current = Date.now();
+                setNewFamilyCodeInput(effectiveFamilyId);
+                setShowFamilyModal(true);
+              }}
+              className="flex-row items-center gap-2 bg-white/10 px-3 py-1.5 rounded-full border border-white/10"
+            >
+              <View className={`w-2 h-2 rounded-full ${isSocketConnected ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+              <Label className="text-white text-xs font-bold">
+                Fam #{effectiveFamilyId}
               </Label>
-            </View>
+              <Ionicons name="settings-outline" size={12} color="#94A3B8" />
+            </Pressable>
 
             <View className="flex-row items-center gap-2">
-              {!isLocked && (
-                <>
-                  <Pressable
-                    className="w-9 h-9 rounded-full bg-emerald-500/25 items-center justify-center"
-                    onPress={() => {
-                      setNewFamilyCodeInput(effectiveFamilyId);
-                      setShowFamilyModal(true);
-                    }}
-                  >
-                    <Ionicons name="link-outline" size={18} color="#10B981" />
-                  </Pressable>
-
-                  <Pressable
-                    className="w-9 h-9 rounded-full bg-white/15 items-center justify-center"
-                    onPress={() => setDisplayMode('camera')}
-                  >
-                    <Ionicons name="camera-outline" size={18} color="white" />
-                  </Pressable>
-
-                  <Pressable
-                    className="w-9 h-9 rounded-full bg-white/15 items-center justify-center"
-                    onPress={() => setDisplayMode('stealth')}
-                  >
-                    <Ionicons name="moon-outline" size={18} color="white" />
-                  </Pressable>
-
-                  <Pressable
-                    className="w-9 h-9 rounded-full bg-red-500/30 items-center justify-center"
-                    onPress={exitToyMode}
-                  >
-                    <Ionicons name="exit-outline" size={18} color="#EF4444" />
-                  </Pressable>
-                </>
-              )}
-
               <Pressable
-                className="bg-white/20 px-3 py-1.5 rounded-full flex-row items-center gap-1.5"
-                onPress={exitToyMode}
+                className="bg-blue-500/20 border border-blue-500/40 px-3 py-1.5 rounded-full flex-row items-center gap-1"
+                onPress={() => {
+                  lastScreenTouchTimestampRef.current = Date.now();
+                  setDisplayMode('camera');
+                }}
               >
-                <Ionicons name="arrow-back" size={14} color="white" />
-                <Label className="text-white text-xs font-bold">Salir a Padres</Label>
+                <Ionicons name="camera-outline" size={14} color="#60A5FA" />
+                <Label className="text-blue-300 text-xs font-bold">Alinear</Label>
               </Pressable>
 
               <Pressable
-                className={`w-9 h-9 rounded-full items-center justify-center ${
-                  isLocked ? 'bg-white/10' : 'bg-accent'
-                }`}
-                onPressIn={handleLockPressIn}
-                onPressOut={handleLockPressOut}
+                className="bg-white/15 px-3 py-1.5 rounded-full flex-row items-center gap-1"
+                onPress={() => {
+                  lastScreenTouchTimestampRef.current = Date.now();
+                  exitToyMode();
+                }}
               >
-                <Ionicons
-                  name={isLocked ? 'lock-closed' : 'lock-open'}
-                  size={16}
-                  color={isLocked ? '#94A3B8' : 'white'}
-                />
+                <Ionicons name="arrow-back" size={13} color="white" />
+                <Label className="text-white text-xs font-bold">Salir</Label>
               </Pressable>
             </View>
           </View>
 
           {/* Cara de Panda con Ojos Animados */}
-          <View className="flex-1 justify-center items-center px-4">
+          <View className="flex-1 justify-center items-center px-4 my-1">
             <Animated.View style={{ transform: [{ scale: breathAnim }], alignItems: 'center', width: '100%' }}>
               <View className="flex-row justify-between w-64 -mb-8 z-0">
                 <View className="w-20 h-20 bg-[#1E222D] rounded-full border-4 border-[#2A2F3D]" />
                 <View className="w-20 h-20 bg-[#1E222D] rounded-full border-4 border-[#2A2F3D]" />
               </View>
 
-              <View className="w-80 h-72 bg-[#F8FAFC] rounded-full border-4 border-[#E2E8F0] shadow-2xl items-center justify-center z-10 overflow-hidden">
-                <View className="flex-row justify-around w-full px-8 mt-4">
-                  <View className="w-20 h-24 bg-[#1E222D] rounded-full items-center justify-center transform -rotate-12">
+              <View className="w-72 h-64 bg-[#F8FAFC] rounded-full border-4 border-[#E2E8F0] shadow-2xl items-center justify-center z-10 overflow-hidden">
+                <View className="flex-row justify-around w-full px-8 mt-2">
+                  <View className="w-16 h-20 bg-[#1E222D] rounded-full items-center justify-center transform -rotate-12">
                     <Animated.View
                       style={{
                         transform: [{ scaleY: blinkAnim }],
-                        width: 24,
-                        height: 24,
-                        borderRadius: 12,
+                        width: 20,
+                        height: 20,
+                        borderRadius: 10,
                         backgroundColor: 'white',
                         alignItems: 'center',
                         justifyContent: 'center',
                       }}
                     >
-                      <View className="w-4 h-4 rounded-full bg-[#0F172A]" />
-                      <View className="w-1.5 h-1.5 rounded-full bg-white absolute top-1 right-1" />
+                      <View className="w-3.5 h-3.5 rounded-full bg-[#0F172A]" />
+                      <View className="w-1 h-1 rounded-full bg-white absolute top-1 right-1" />
                     </Animated.View>
                   </View>
 
-                  <View className="w-20 h-24 bg-[#1E222D] rounded-full items-center justify-center transform rotate-12">
+                  <View className="w-16 h-20 bg-[#1E222D] rounded-full items-center justify-center transform rotate-12">
                     <Animated.View
                       style={{
                         transform: [{ scaleY: blinkAnim }],
-                        width: 24,
-                        height: 24,
-                        borderRadius: 12,
+                        width: 20,
+                        height: 20,
+                        borderRadius: 10,
                         backgroundColor: 'white',
                         alignItems: 'center',
                         justifyContent: 'center',
                       }}
                     >
-                      <View className="w-4 h-4 rounded-full bg-[#0F172A]" />
-                      <View className="w-1.5 h-1.5 rounded-full bg-white absolute top-1 right-1" />
+                      <View className="w-3.5 h-3.5 rounded-full bg-[#0F172A]" />
+                      <View className="w-1 h-1 rounded-full bg-white absolute top-1 right-1" />
                     </Animated.View>
                   </View>
                 </View>
 
-                <View className="flex-row justify-between w-64 px-4 -mt-2">
-                  <View className="w-8 h-4 rounded-full bg-pink-300 opacity-60" />
-                  <View className="w-8 h-4 rounded-full bg-pink-300 opacity-60" />
+                <View className="flex-row justify-between w-56 px-4 -mt-1">
+                  <View className="w-7 h-3 rounded-full bg-pink-300 opacity-60" />
+                  <View className="w-7 h-3 rounded-full bg-pink-300 opacity-60" />
                 </View>
 
-                <View className="w-6 h-4 bg-[#1E222D] rounded-full mt-1" />
+                <View className="w-5 h-3.5 bg-[#1E222D] rounded-full mt-1" />
 
                 <Animated.View
                   style={{
                     transform: [{ scaleY: expression === 'speaking' ? mouthAnim : 1 }],
-                    width: expression === 'speaking' ? 24 : 18,
-                    height: expression === 'speaking' ? 16 : 8,
-                    borderRadius: 10,
+                    width: expression === 'speaking' ? 22 : 16,
+                    height: expression === 'speaking' ? 14 : 7,
+                    borderRadius: 8,
                     backgroundColor: expression === 'speaking' ? '#EF4444' : '#1E222D',
-                    marginTop: 6,
+                    marginTop: 5,
                   }}
                 />
               </View>
@@ -1178,14 +1297,102 @@ export default function PandaDeviceScreen({ navigation, route }: any) {
           </View>
 
           {/* Globo de Diálogo de Panda */}
-          <View className="px-6 pb-8 items-center">
-            <View className="bg-white/10 px-5 py-3 rounded-2xl border border-white/15 w-full items-center">
-              <Label className="text-white text-base font-semibold text-center">
+          <View className="px-5 mb-2">
+            <View className="bg-white/10 px-4 py-2.5 rounded-2xl border border-white/15 w-full items-center">
+              <Label className="text-white text-sm font-semibold text-center leading-5">
                 {dialogueText}
               </Label>
-              <Label className="text-emerald-400 text-xs mt-1 font-bold">
-                {expression === 'speaking' ? '🔊 Altavoz activo' : '🎙️ Manos libres: solo háblale a Panda'}
+              <Label className="text-emerald-400 text-[11px] mt-1 font-bold">
+                {expression === 'speaking'
+                  ? '🔊 Hablando con voz infantil (Gigi)'
+                  : isPushToTalkRecording
+                  ? '🎙️ Grabando tu voz... Toca para enviar'
+                  : isHandsFreeActive
+                  ? '🎙️ Escucha manos libres activa'
+                  : '👆 Toca el micrófono para hablar o un botón'}
               </Label>
+            </View>
+          </View>
+
+          {/* Chips de interacción rápida */}
+          <View className="flex-row justify-center gap-2 px-4 mb-2.5">
+            <Pressable
+              onPress={() => triggerRemoteHug()}
+              className="bg-pink-500/20 border border-pink-500/40 px-3 py-1.5 rounded-full flex-row items-center gap-1"
+            >
+              <Label className="text-pink-300 text-xs font-bold">🤗 Abrazo</Label>
+            </Pressable>
+
+            <Pressable
+              onPress={() => handleQuickAction('¡Cuéntame un cuento cortito de animales!', '¡Cuéntame un cuento! 📖')}
+              className="bg-purple-500/20 border border-purple-500/40 px-3 py-1.5 rounded-full flex-row items-center gap-1"
+            >
+              <Label className="text-purple-300 text-xs font-bold">📖 Cuento</Label>
+            </Pressable>
+
+            <Pressable
+              onPress={() => handleQuickAction('¡Enséñame una palabra en inglés con pronunciación!', '¡Aprender inglés! 🇬🇧')}
+              className="bg-blue-500/20 border border-blue-500/40 px-3 py-1.5 rounded-full flex-row items-center gap-1"
+            >
+              <Label className="text-blue-300 text-xs font-bold">🇬🇧 Inglés</Label>
+            </Pressable>
+
+            <Pressable
+              onPress={() => handleQuickAction('¡Cuéntame un chiste infantil muy gracioso!', '¡Dime un chiste! ⭐')}
+              className="bg-amber-500/20 border border-amber-500/40 px-3 py-1.5 rounded-full flex-row items-center gap-1"
+            >
+              <Label className="text-amber-300 text-xs font-bold">⭐ Chiste</Label>
+            </Pressable>
+          </View>
+
+          {/* Botones de Control Principal */}
+          <View className="px-5 gap-2">
+            {/* Botón Tocar para Hablar */}
+            <Pressable
+              onPress={togglePushToTalk}
+              className={`py-3 px-4 rounded-2xl flex-row items-center justify-center gap-2.5 ${
+                isPushToTalkRecording
+                  ? 'bg-red-600 border-2 border-red-400'
+                  : 'bg-emerald-600 border border-emerald-400/50'
+              }`}
+            >
+              <Ionicons
+                name={isPushToTalkRecording ? 'stop-circle' : 'mic'}
+                size={22}
+                color="white"
+              />
+              <Label className="text-white font-extrabold text-sm">
+                {isPushToTalkRecording ? '⏹️ Enviar a Panda' : '🎙️ Tocar para Hablar'}
+              </Label>
+            </Pressable>
+
+            {/* Fila de opciones: Toggle Manos Libres y Botón Modo Peluche */}
+            <View className="flex-row gap-2">
+              <Pressable
+                onPress={toggleHandsFree}
+                className={`flex-1 py-2 px-3 rounded-2xl border flex-row items-center justify-center gap-1.5 ${
+                  isHandsFreeActive
+                    ? 'bg-blue-600/30 border-blue-500'
+                    : 'bg-white/10 border-white/10'
+                }`}
+              >
+                <Ionicons
+                  name={isHandsFreeActive ? 'radio' : 'radio-outline'}
+                  size={16}
+                  color={isHandsFreeActive ? '#60A5FA' : '#94A3B8'}
+                />
+                <Label className={`text-xs font-bold ${isHandsFreeActive ? 'text-blue-300' : 'text-gray-400'}`}>
+                  {isHandsFreeActive ? 'Manos Libres: ON' : 'Manos Libres: OFF'}
+                </Label>
+              </Pressable>
+
+              <Pressable
+                onPress={enterPlushMode}
+                className="flex-1 py-2 px-3 rounded-2xl bg-indigo-600/30 border border-indigo-500/40 flex-row items-center justify-center gap-1.5"
+              >
+                <Ionicons name="moon" size={16} color="#818CF8" />
+                <Label className="text-indigo-300 text-xs font-bold">Modo Peluche 🌙</Label>
+              </Pressable>
             </View>
           </View>
         </View>

@@ -359,8 +359,8 @@ Solo responde con la letra de la canción de cuna en español, poética, tierna 
       }
     }
     
-    // Sintetizar la nana cantada por la voz dulce de Bella / ElevenLabs / TTS
-    const audioUrl = await generateSpeechFromText(`🎶 ${songLyrics}`, 'EXAVITQu4vr4xnSDxMaL');
+    // Sintetizar la nana cantada por la voz dulce e infantil de Gigi / ElevenLabs / TTS
+    const audioUrl = await generateSpeechFromText(`🎶 ${songLyrics}`, 'jBpfOiLJlfdOoWvoflAa');
 
     return {
       title: `Nana IA: ${prompt.charAt(0).toUpperCase() + prompt.slice(1)}`,

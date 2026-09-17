@@ -41,11 +41,11 @@ export const generateSpeechFromText = async (text: string, voiceId?: string): Pr
     const apiKey = (process.env.ELEVENLABS_API_KEY || '').trim();
 
     // Si se pasa una voz o se configura en .env, verificar que esté en el catálogo premade
-    const defaultVoiceId = CHARACTER_VOICES.BELLA.id; // Bella: la voz más tierna e infantil
+    const defaultVoiceId = CHARACTER_VOICES.GIGI.id; // Gigi: Voz infantil, mágica y divertida de niño (premade gratuito)
     let targetVoiceId = voiceId || process.env.ELEVENLABS_VOICE_ID || defaultVoiceId;
 
     if (!FREE_PREMADE_VOICE_IDS.includes(targetVoiceId)) {
-      console.warn(`⚠️ La voz ${targetVoiceId} no es oficial premade. Cambiando automáticamente a Bella (${defaultVoiceId}) para evitar cobros.`);
+      console.warn(`⚠️ La voz ${targetVoiceId} no es oficial premade. Cambiando automáticamente a Gigi (${defaultVoiceId}) para evitar cobros.`);
       targetVoiceId = defaultVoiceId;
     }
 
