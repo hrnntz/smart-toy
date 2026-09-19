@@ -23,11 +23,15 @@ plugins {
 }
 
 extensions.configure(com.facebook.react.ReactSettingsExtension) { ex ->
-  if (System.getenv('EXPO_USE_COMMUNITY_AUTOLINKING') == '1') {
-    ex.autolinkLibrariesFromCommand()
-  } else {
-    ex.autolinkLibrariesFromCommand(expoAutolinking.rnConfigCommand)
-  }
+  def autolinkingScript = new File(rootDir, "../node_modules/expo-modules-autolinking/bin/expo-modules-autolinking.js").absolutePath
+  def projectRootPath = new File(rootDir, "..").absolutePath
+  ex.autolinkLibrariesFromCommand([
+    "node", autolinkingScript, "react-native-config",
+    "--platform", "android",
+    "--json",
+    "--project-root", projectRootPath,
+    "--source-dir", rootDir.absolutePath
+  ])
 }
 expoAutolinking.useExpoModules()
 
@@ -37,3 +41,5 @@ expoAutolinking.useExpoVersionCatalog()
 
 include ':app'
 includeBuild(expoAutolinking.reactNativeGradlePlugin)
+
+
