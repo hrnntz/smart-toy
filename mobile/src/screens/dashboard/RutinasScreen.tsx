@@ -84,6 +84,8 @@ export default function RutinasScreen({ navigation }: any) {
         <Pressable
           className="w-12 h-12 rounded-full items-center justify-center"
           style={{ backgroundColor: accent }}
+          accessibilityRole="button"
+          aria-label="add-routine"
           onPress={() => navigation.navigate('RutinaForm')}
         >
           <Ionicons name="add" size={24} color="white" />

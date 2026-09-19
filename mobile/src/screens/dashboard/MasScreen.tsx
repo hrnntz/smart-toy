@@ -116,39 +116,42 @@ export default function MasScreen({ navigation }: any) {
             </Label>
             <ListGroup variant="default">
               {section.items.map((item, iIdx) => (
-                <ListGroup.Item
+                <Pressable
                   key={item.label}
                   onPress={item.action}
+                  accessibilityRole="button"
                 >
-                  <ListGroup.ItemPrefix>
-                    <View
-                      className="w-9 h-9 rounded-xl items-center justify-center"
-                      style={{ backgroundColor: item.iconColor + '18' }}
-                    >
-                      <Ionicons name={item.icon as any} size={18} color={item.iconColor} />
-                    </View>
-                  </ListGroup.ItemPrefix>
-                  <ListGroup.ItemContent>
-                    <ListGroup.ItemTitle>
-                      <Label
-                        className="text-sm font-semibold"
-                        style={{ color: item.isDanger ? '#EF4444' : undefined } as any}
+                  <ListGroup.Item>
+                    <ListGroup.ItemPrefix>
+                      <View
+                        className="w-9 h-9 rounded-xl items-center justify-center"
+                        style={{ backgroundColor: item.iconColor + '18' }}
                       >
-                        {item.label}
-                      </Label>
-                    </ListGroup.ItemTitle>
-                    {item.description && (
-                      <ListGroup.ItemDescription>
-                        <Label className="text-xs text-muted">{item.description}</Label>
-                      </ListGroup.ItemDescription>
+                        <Ionicons name={item.icon as any} size={18} color={item.iconColor} />
+                      </View>
+                    </ListGroup.ItemPrefix>
+                    <ListGroup.ItemContent>
+                      <ListGroup.ItemTitle>
+                        <Label
+                          className="text-sm font-semibold"
+                          style={{ color: item.isDanger ? '#EF4444' : undefined } as any}
+                        >
+                          {item.label}
+                        </Label>
+                      </ListGroup.ItemTitle>
+                      {item.description && (
+                        <ListGroup.ItemDescription>
+                          <Label className="text-xs text-muted">{item.description}</Label>
+                        </ListGroup.ItemDescription>
+                      )}
+                    </ListGroup.ItemContent>
+                    {!item.isDanger && item.action.toString() !== '() => {}' && (
+                      <ListGroup.ItemSuffix>
+                        <Ionicons name="chevron-forward" size={16} color={muted} />
+                      </ListGroup.ItemSuffix>
                     )}
-                  </ListGroup.ItemContent>
-                  {!item.isDanger && item.action.toString() !== '() => {}' && (
-                    <ListGroup.ItemSuffix>
-                      <Ionicons name="chevron-forward" size={16} color={muted} />
-                    </ListGroup.ItemSuffix>
-                  )}
-                </ListGroup.Item>
+                  </ListGroup.Item>
+                </Pressable>
               ))}
             </ListGroup>
           </View>

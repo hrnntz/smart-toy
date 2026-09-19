@@ -57,6 +57,7 @@ export default function HistoriasScreen({ navigation }: any) {
         <Pressable
           className="flex-row items-center px-4 py-2 rounded-full gap-1.5"
           style={{ backgroundColor: amber }}
+          accessibilityRole="button"
           onPress={() => navigation.navigate('GenerarHistoria')}
         >
           <Ionicons name="sparkles" size={16} color="white" />

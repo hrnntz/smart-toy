@@ -181,6 +181,7 @@ export default function ToyListScreen({ navigation }: any) {
 
                   <Pressable
                     className="flex-row items-center bg-surface-secondary px-3 py-1.5 rounded-2xl gap-1.5 border border-separator/40"
+                    accessibilityRole="button"
                     onPress={() => Alert.alert(
                       'Conexión Wi-Fi de Panda',
                       `Juguete: ${toy.name} (${toy.serialNumber})\n\nPara sincronizar el Wi-Fi, abre el modo de control directo o empareja el dispositivo vía Bluetooth ("Panda_Fisico_BT").`

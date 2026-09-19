@@ -121,6 +121,7 @@ export default function InglesScreen({ navigation }: any) {
             <Pressable
               key={theme.key}
               disabled={!theme.unlocked}
+              accessibilityRole="button"
               onPress={() =>
                 navigation.navigate('EnglishLesson', { themeKey: theme.key, themeLabel: theme.label })
               }

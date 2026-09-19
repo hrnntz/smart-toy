@@ -48,6 +48,9 @@ export const IconButton = ({
       variant={heroVariant}
       isIconOnly
       size="md"
+      accessibilityRole="button"
+      accessibilityLabel={icon}
+      aria-label={icon}
       className={className}
       {...props}
     >

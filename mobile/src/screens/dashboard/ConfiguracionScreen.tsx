@@ -55,7 +55,12 @@ export default function ConfiguracionScreen({ navigation }: any) {
       <View className="flex-row justify-between items-center px-4 pb-4 border-b border-separator">
         <IconButton icon="arrow-back" onPress={() => navigation.goBack()} />
         <Label className="text-lg font-bold text-foreground flex-1 text-center mr-8">Configuración</Label>
-        <Pressable className="absolute right-4 top-0 h-10 justify-center" onPress={handleSave}>
+        <Pressable
+          className="absolute right-4 top-0 h-10 justify-center"
+          accessibilityRole="button"
+          aria-label="save-config"
+          onPress={handleSave}
+        >
           <Ionicons name="checkmark" size={24} color={accent} />
         </Pressable>
       </View>

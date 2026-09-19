@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, Alert, Pressable, Modal } from 'react-native';
+import { View, ScrollView, Alert, Pressable, Modal, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { storage } from '../../services/storage';
 import { authService } from '../../services/auth';
@@ -265,9 +265,9 @@ export default function HomeScreen({ navigation }: any) {
                     </Label>
                   </View>
                 </View>
-                <Label className="text-muted text-xs mt-0.5">
-                  Código de Familia: <Label className="text-emerald-500 font-extrabold text-xs">{familyCode}</Label> • Toca aquí para ver cómo conectarlo
-                </Label>
+                <Text className="text-muted text-xs mt-0.5">
+                  Código de Familia: <Text className="text-emerald-500 font-extrabold text-xs">{familyCode}</Text> • Toca aquí para ver cómo conectarlo
+                </Text>
               </View>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#10B981" />
