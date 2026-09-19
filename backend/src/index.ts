@@ -33,17 +33,22 @@ initSocketServer(server);
 // Solo permite orígenes explícitamente autorizados.
 // Para la app móvil React Native no se necesita CORS (las peticiones nativas
 // no envían Origin header), pero sí para cualquier dashboard web futuro.
-const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "")
+const configuredOrigins = (process.env.ALLOWED_ORIGINS || "")
   .split(",")
   .map((o) => o.trim())
   .filter(Boolean);
+
+const isLocalOrigin = (origin: string) =>
+  /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
 
 app.use(
   cors({
     origin: (origin, callback) => {
       // Permite peticiones sin Origin (clientes móviles nativos / curl)
       if (!origin) return callback(null, true);
-      if (ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
+      if (configuredOrigins.includes(origin) || isLocalOrigin(origin)) {
+        return callback(null, true);
+      }
       callback(new Error(`CORS: origen no permitido — ${origin}`));
     },
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
