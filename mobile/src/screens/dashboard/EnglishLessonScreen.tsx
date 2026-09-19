@@ -205,7 +205,7 @@ export default function EnglishLessonScreen({ navigation, route }: any) {
 
       <View className="h-2 bg-surface rounded-full overflow-hidden mb-6">
         <View
-          className="h-full bg-primary rounded-full"
+          className="h-full bg-accent rounded-full"
           style={{ width: `${((currentIndex + (feedback?.correct ? 1 : 0)) / words.length) * 100}%` }}
         />
       </View>
@@ -228,7 +228,7 @@ export default function EnglishLessonScreen({ navigation, route }: any) {
             disabled={phase === 'intro'}
           >
             <Ionicons name="volume-high" size={18} color={primary} />
-            <Label className="text-sm font-semibold text-primary">Escuchar de nuevo</Label>
+            <Label className="text-sm font-semibold text-accent">Escuchar de nuevo</Label>
           </Pressable>
         </Card>
       )}

@@ -44,17 +44,17 @@ export default function ConfiguracionScreen({ navigation }: any) {
 
   if (loading) {
     return (
-      <View className="flex-1 justify-center items-center bg-[#0D0F16]">
+      <View className="flex-1 justify-center items-center bg-background">
         <Spinner size="lg" color="primary" />
       </View>
     );
   }
 
   return (
-    <View className="flex-1 bg-[#0D0F16] pt-12">
-      <View className="flex-row justify-between items-center px-4 pb-4 border-b border-white/10">
+    <View className="flex-1 bg-background pt-12">
+      <View className="flex-row justify-between items-center px-4 pb-4 border-b border-separator">
         <IconButton icon="arrow-back" onPress={() => navigation.goBack()} />
-        <Label className="text-lg font-bold text-white flex-1 text-center mr-8">Configuración</Label>
+        <Label className="text-lg font-bold text-foreground flex-1 text-center mr-8">Configuración</Label>
         <Pressable className="absolute right-4 top-0 h-10 justify-center" onPress={handleSave}>
           <Ionicons name="checkmark" size={24} color={accent} />
         </Pressable>
@@ -67,36 +67,36 @@ export default function ConfiguracionScreen({ navigation }: any) {
               <Label className="text-3xl">🐼</Label>
             </View>
             <View className="flex-1">
-              <Label className="text-lg font-extrabold text-white">Personaliza a tu Panda</Label>
+              <Label className="text-lg font-extrabold text-foreground">Personaliza a tu Panda</Label>
               <Label className="text-xs text-muted mt-1 leading-4">Ajusta cómo interactúa y suena el juguete para tu hijo.</Label>
             </View>
           </Card.Body>
         </Card>
 
         <View className="mb-6">
-          <Label className="text-sm font-bold text-white mb-3 uppercase tracking-wider" style={{ color: accent } as any}>Identidad</Label>
+          <Label className="text-sm font-bold mb-3 uppercase tracking-wider" style={{ color: accent } as any}>Identidad</Label>
           <View className="gap-4">
             <View>
-              <Label className="text-sm font-medium text-white mb-1.5 ml-1">Nombre del dispositivo</Label>
+              <Label className="text-sm font-medium text-foreground mb-1.5 ml-1">Nombre del dispositivo</Label>
               <TextField className="w-full">
                 <Input
                   value={deviceName}
                   onChangeText={setDeviceName}
                   placeholder="Ej: Panda Mágico"
-                  className="bg-surface text-white border-0"
+                  className="bg-surface text-foreground border-0"
                   placeholderTextColor={muted}
                 />
               </TextField>
             </View>
             
             <View>
-              <Label className="text-sm font-medium text-white mb-1.5 ml-1">Nombre del niño</Label>
+              <Label className="text-sm font-medium text-foreground mb-1.5 ml-1">Nombre del niño</Label>
               <TextField className="w-full">
                 <Input
                   value={childName}
                   onChangeText={setChildName}
                   placeholder="Ej: Leo"
-                  className="bg-surface text-white border-0"
+                  className="bg-surface text-foreground border-0"
                   placeholderTextColor={muted}
                 />
               </TextField>
@@ -105,15 +105,15 @@ export default function ConfiguracionScreen({ navigation }: any) {
         </View>
 
         <View className="mb-6">
-          <Label className="text-sm font-bold text-white mb-3 uppercase tracking-wider" style={{ color: accent } as any}>Personalidad</Label>
+          <Label className="text-sm font-bold mb-3 uppercase tracking-wider" style={{ color: accent } as any}>Personalidad</Label>
           <View>
-            <Label className="text-sm font-medium text-white mb-1.5 ml-1">Personalidad de la IA</Label>
+            <Label className="text-sm font-medium text-foreground mb-1.5 ml-1">Personalidad de la IA</Label>
             <TextField className="w-full h-24">
               <Input
                 value={personality}
                 onChangeText={setPersonality}
                 placeholder="Alegre, curioso, amable..."
-                className="bg-surface text-white border-0"
+                className="bg-surface text-foreground border-0"
                 placeholderTextColor={muted}
                 multiline
                 textAlignVertical="top"
@@ -123,15 +123,15 @@ export default function ConfiguracionScreen({ navigation }: any) {
         </View>
 
         <View className="mb-8">
-          <Label className="text-sm font-bold text-white mb-3 uppercase tracking-wider" style={{ color: accent } as any}>Voz</Label>
+          <Label className="text-sm font-bold mb-3 uppercase tracking-wider" style={{ color: accent } as any}>Voz</Label>
           <View>
-            <Label className="text-sm font-medium text-white mb-1.5 ml-1">ID de Voz (ElevenLabs)</Label>
+            <Label className="text-sm font-medium text-foreground mb-1.5 ml-1">ID de Voz (ElevenLabs)</Label>
             <TextField className="w-full">
               <Input
                 value={voiceId}
                 onChangeText={setVoiceId}
                 placeholder="ID de la voz"
-                className="bg-surface text-white border-0"
+                className="bg-surface text-foreground border-0"
                 placeholderTextColor={muted}
               />
             </TextField>

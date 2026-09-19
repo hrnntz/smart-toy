@@ -1,6 +1,14 @@
 {
-  "dependencies": {
-    "@heroui/react": "^3.2.4",
-    "@heroui/styles": "^3.2.4"
+  "name": "panda-ai-smart-toy",
+  "version": "1.0.0",
+  "description": "PandaAI - Smart Toy Monorepo (Backend + Mobile App + Firmware)",
+  "private": true,
+  "scripts": {
+    "backend:dev": "npm run dev --prefix backend",
+    "backend:build": "npm run build --prefix backend",
+    "backend:test": "npm test --prefix backend",
+    "backend:typecheck": "npm run typecheck --prefix backend",
+    "mobile:start": "npm start --prefix mobile",
+    "mobile:lint": "npm run lint --prefix mobile"
   }
 }

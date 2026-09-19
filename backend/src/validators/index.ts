@@ -62,7 +62,9 @@ export const updateDeviceConfigSchema = z.object({
     eyeLights: z.boolean().optional(),
     vibration: z.boolean().optional(),
     nightMode: z.boolean().optional(),
-    wifi: z.boolean().optional(),
+    wifi: z.union([z.string(), z.boolean()]).optional().nullable(),
+    personality: z.string().max(1000).optional().nullable(),
+    voiceId: z.string().max(100).optional().nullable(),
   }),
 });
 
@@ -73,11 +75,11 @@ export const updatePushTokenSchema = z.object({
       .string()
       .min(10, "Push token inválido")
       .max(500, "Push token demasiado largo")
-      .regex(/^[A-Za-z0-9_:/-]+$/, "Push token contiene caracteres inválidos"),
+      .regex(/^[A-Za-z0-9_:/\-\[\]]+$/, "Push token contiene caracteres inválidos"),
   }),
 });
 
-/** Rutina (valores estrictos) */
+/** Rutina (creación completa) */
 export const rutinaSchema = z.object({
   body: z.object({
     nombre: z.string().min(1).max(100),
@@ -85,6 +87,19 @@ export const rutinaSchema = z.object({
     repetir: z.boolean().optional(),
     mensaje: z.string().max(500).optional().nullable(),
     accionAdicional: z.string().max(200).optional().nullable(),
+    isActive: z.boolean().optional(),
+  }),
+});
+
+/** Rutina (actualización parcial: permite toggle de isActive o campos individuales) */
+export const updateRutinaSchema = z.object({
+  body: z.object({
+    nombre: z.string().min(1).max(100).optional(),
+    hora: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Formato HH:MM requerido").optional(),
+    repetir: z.boolean().optional(),
+    mensaje: z.string().max(500).optional().nullable(),
+    accionAdicional: z.string().max(200).optional().nullable(),
+    isActive: z.boolean().optional(),
   }),
 });
 
@@ -107,11 +122,11 @@ export const createToySchema = z.object({
   }),
 });
 
-/** Historia con IA */
+/** Historia con IA (permite duracion como string ej. 'Media (10 min)' o número) */
 export const generateStorySchema = z.object({
   body: z.object({
     tema: z.string().min(1).max(200),
-    duracion: z.number().int().min(1).max(60).optional(),
+    duracion: z.union([z.string().max(50), z.number().int().min(1).max(60)]).optional(),
     personajes: z.string().max(500).optional(),
     enseñanza: z.string().max(500).optional(),
   }),

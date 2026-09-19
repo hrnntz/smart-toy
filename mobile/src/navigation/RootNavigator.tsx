@@ -93,14 +93,11 @@ export default function RootNavigator() {
         <Stack.Screen name="Rutinas" component={RutinasScreen} />
         <Stack.Screen name="RutinaForm" component={RutinaFormScreen} />
         <Stack.Screen name="Musica" component={MusicaScreen} />
-        <Stack.Screen name="Música" component={MusicaScreen} />
 
         {/* Pantallas de supervisión por cámara */}
         <Stack.Screen name="Supervision" component={SupervisionScreen} />
-        <Stack.Screen name="Supervisión" component={SupervisionScreen} />
         <Stack.Screen name="CameraBroadcaster" component={CameraBroadcasterScreen} />
         <Stack.Screen name="PandaDevice" component={PandaDeviceScreen} />
-        <Stack.Screen name="PandaInside" component={PandaDeviceScreen} />
 
         {/* ✅ Pantallas de historias */}
         <Stack.Screen name="Historias" component={HistoriasScreen} />

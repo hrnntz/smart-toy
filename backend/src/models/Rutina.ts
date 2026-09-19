@@ -22,6 +22,9 @@ export class Rutina {
   @Column({ default: false })
   repetir!: boolean;
 
+  @Column({ default: true })
+  isActive!: boolean;
+
   @Column({ type: "text", nullable: true })
   mensaje!: string | null;
 

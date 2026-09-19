@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 
 const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
+  apiKey: process.env.GROQ_API_KEY || 'dummy_groq_key',
 });
 
 export interface ChatHistoryMessage {

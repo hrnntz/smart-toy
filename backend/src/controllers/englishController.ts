@@ -30,7 +30,7 @@ const NIVELES = [
   "B1 - Intermedio",
 ];
 
-const nivelPorPalabras = (palabras: number): string => {
+export const nivelPorPalabras = (palabras: number): string => {
   const idx = Math.min(Math.floor(palabras / 15), NIVELES.length - 1);
   return NIVELES[idx];
 };
@@ -193,7 +193,7 @@ const normalize = (s: string): string =>
     .replace(/[^a-z0-9\s]/g, "")
     .replace(/\s+/g, " ");
 
-const isPronunciationCorrect = (target: string, said: string): boolean => {
+export const isPronunciationCorrect = (target: string, said: string): boolean => {
   const t = normalize(target);
   const s = normalize(said);
   if (!s) return false;

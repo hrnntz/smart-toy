@@ -181,9 +181,10 @@ export const registerPushTokenWithBackend = async (): Promise<void> => {
     console.log('📱 Registrar Expo Push Token en Backend:', pushToken);
     
     const token = await storage.getItem('token');
-    const api = require('./api').api;
-    if (token && api) {
-      await api.post('/config/push-token', { pushToken });
+    const apiModule = require('./api');
+    const apiInstance = apiModule.default || apiModule;
+    if (token && apiInstance) {
+      await apiInstance.post('/config/push-token', { pushToken });
       console.log('✅ Push Token guardado exitosamente en Backend');
     }
   } catch (error) {

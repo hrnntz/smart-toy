@@ -1,29 +1,29 @@
 export const colors = {
-  // Light Mode (Inspirado en Klarna / Family)
+  // Light Mode (PandaAI Design System - Coral Cálido)
   light: {
-    background: '#F9FAFB',
+    background: '#F2F4F8',
     card: '#FFFFFF',
-    text: '#111827',
-    textSecondary: '#717171',
-    primary: '#06B6D4', // Vibrante Cyan
-    secondary: '#8B5CF6', // Vibrante Violeta
-    border: '#E5E7EB',
+    text: '#101218',
+    textSecondary: '#757A89',
+    primary: '#E8533F', // Coral Cálido PandaAI
+    secondary: '#171B26', // Azul Marino
+    border: '#E0E3EC',
     error: '#EF4444',
-    success: '#10B981',
-    surface: '#F3F4F6', // Para modales o inputs
+    success: '#22C55E',
+    surface: '#F0F2F7',
   },
-  // Dark Mode (Inspirado en Tesla)
+  // Dark Mode (PandaAI Design System - Azul Marino Profundo)
   dark: {
-    background: '#121212',
-    card: '#1E1E1E',
-    text: '#F9FAFB',
-    textSecondary: '#9CA3AF',
-    primary: '#00FF88', // Verde Neón (Tesla vibe)
-    secondary: '#06B6D4', // Cyan vibrante
-    border: '#374151',
+    background: '#0D0F16',
+    card: '#171B26',
+    text: '#EEF0F5',
+    textSecondary: '#6B7280',
+    primary: '#FF7A68', // Coral Luminoso PandaAI
+    secondary: '#1D2230',
+    border: '#252B3A',
     error: '#F87171',
     success: '#34D399',
-    surface: '#27272A',
+    surface: '#1E2335',
   },
 };
 

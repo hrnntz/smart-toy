@@ -144,12 +144,12 @@ export default function ToyFormScreen({ navigation, route }: ToyFormScreenProps)
               <Pressable
                 className="px-3.5 py-2 rounded-full border-2"
                 style={{
-                  backgroundColor: childId === undefined ? 'rgba(74, 144, 217, 0.1)' : surface,
+                  backgroundColor: childId === undefined ? 'rgba(232, 83, 63, 0.12)' : surface,
                   borderColor: childId === undefined ? primary : 'transparent'
                 }}
                 onPress={() => setChildId(undefined)}
               >
-                <Label className={`text-sm ${childId === undefined ? 'text-primary font-bold' : 'text-foreground'}`}>
+                <Label className={`text-sm ${childId === undefined ? 'text-accent font-bold' : 'text-foreground'}`}>
                   Sin asignar
                 </Label>
               </Pressable>
@@ -158,12 +158,12 @@ export default function ToyFormScreen({ navigation, route }: ToyFormScreenProps)
                   key={child.id}
                   className="px-3.5 py-2 rounded-full border-2"
                   style={{
-                    backgroundColor: childId === child.id ? 'rgba(74, 144, 217, 0.1)' : surface,
+                    backgroundColor: childId === child.id ? 'rgba(232, 83, 63, 0.12)' : surface,
                     borderColor: childId === child.id ? primary : 'transparent'
                   }}
                   onPress={() => setChildId(child.id)}
                 >
-                  <Label className={`text-sm ${childId === child.id ? 'text-primary font-bold' : 'text-foreground'}`}>
+                  <Label className={`text-sm ${childId === child.id ? 'text-accent font-bold' : 'text-foreground'}`}>
                     {child.name}
                   </Label>
                 </Pressable>

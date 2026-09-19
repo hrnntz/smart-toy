@@ -89,7 +89,7 @@ export default function HomeScreen({ navigation }: any) {
       }
       const token = await storage.getItem('token');
       if (token) {
-        const userData = await authService.getProfile();
+        const userData = await authService.getCurrentUser();
         if (userData) {
           setUser(userData);
           await storage.setItem('user', JSON.stringify(userData));

@@ -1,4 +1,4 @@
-﻿# =========================
+# =========================
 # Dependencies
 # =========================
 node_modules/
@@ -17,8 +17,11 @@ dist/
 build/
 
 # =========================
-# React Native / Android
+# React Native / Expo / Android
 # =========================
+.expo/
+*.apk
+!releases/*.apk
 mobile/android/.gradle/
 mobile/android/build/
 mobile/android/app/build/

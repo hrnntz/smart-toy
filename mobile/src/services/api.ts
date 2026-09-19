@@ -153,12 +153,7 @@ export const englishService = {
     api.post('/english/complete-theme', { themeKey, correctCount, totalCount, childId }),
 };
 
-// ✅ Servicio de autenticación (login, registro, etc.)
-export const authService = {
-  login: (email: string, password: string) => api.post('/auth/login', { email, password }),
-  register: (name: string, email: string, password: string) => 
-    api.post('/auth/register', { name, email, password }),
-  getProfile: () => api.get('/auth/profile'),
-};
+// ✅ Servicio de autenticación unificado
+export { authService } from './auth';
 
 export default api;

@@ -75,10 +75,10 @@ export default function RutinasScreen({ navigation }: any) {
   const repeatCount = rutinas.filter(r => r.repetir).length;
 
   return (
-    <View className="flex-1 bg-[#0D0F16] px-4 pt-12">
+    <View className="flex-1 bg-background px-4 pt-12">
       <View className="flex-row justify-between items-center mb-6">
         <View className="flex-1">
-          <Label className="text-2xl font-extrabold text-white">Rutinas</Label>
+          <Label className="text-2xl font-extrabold text-foreground">Rutinas</Label>
           <Label className="text-sm text-muted mt-1">Recordatorios diarios de Panda</Label>
         </View>
         <Pressable
@@ -92,11 +92,11 @@ export default function RutinasScreen({ navigation }: any) {
 
       <Card variant="default" className="mb-6 rounded-3xl bg-surface border-0">
         <Card.Body className="flex-row py-4 px-2">
-          <View className="flex-1 items-center border-r border-white/10">
+          <View className="flex-1 items-center border-r border-separator">
             <Label className="text-2xl font-bold" style={{ color: '#6366F1' } as any}>{rutinas.length}</Label>
             <Label className="text-xs text-muted mt-1">Total</Label>
           </View>
-          <View className="flex-1 items-center border-r border-white/10">
+          <View className="flex-1 items-center border-r border-separator">
             <Label className="text-2xl font-bold" style={{ color: accent } as any}>{activeCount}</Label>
             <Label className="text-xs text-muted mt-1">Activas</Label>
           </View>
@@ -114,7 +114,7 @@ export default function RutinasScreen({ navigation }: any) {
         {rutinas.length === 0 ? (
           <View className="items-center mt-16 px-6">
             <Ionicons name="alarm-outline" size={64} color="#6366F1" />
-            <Label className="text-lg font-bold text-white mt-4 text-center">No hay rutinas</Label>
+            <Label className="text-lg font-bold text-foreground mt-4 text-center">No hay rutinas</Label>
             <Label className="text-sm text-muted mt-2 text-center mb-6">Configura recordatorios para que Panda ayude a tu hijo durante el día.</Label>
             <Button variant="primary" feedbackVariant="scale-ripple" onPress={() => navigation.navigate('RutinaForm')}>
               <Button.Label>Crear primera rutina</Button.Label>
@@ -130,7 +130,7 @@ export default function RutinasScreen({ navigation }: any) {
                   </View>
                   
                   <View className="flex-1">
-                    <Label className="text-base font-bold text-white mb-0.5">{rutina.nombre}</Label>
+                    <Label className="text-base font-bold text-foreground mb-0.5">{rutina.nombre}</Label>
                     <View className="flex-row items-center gap-2">
                       <Label className="text-2xl font-extrabold" style={{ color: accent } as any}>{formatHora(rutina.hora)}</Label>
                       {rutina.repetir && (
@@ -143,7 +143,7 @@ export default function RutinasScreen({ navigation }: any) {
                   
                   <View className="items-end justify-between h-full py-1">
                     <RNSwitch
-                      trackColor={{ false: muted as any, true: '#6366F1' }}
+                      trackColor={{ false: muted as any, true: accent as any }}
                       thumbColor="#FFFFFF"
                       ios_backgroundColor={muted}
                       onValueChange={() => toggleRutina(rutina.id, rutina.isActive)}
@@ -162,7 +162,7 @@ export default function RutinasScreen({ navigation }: any) {
                 </View>
 
                 {rutina.mensaje && (
-                  <View className="mt-3 flex-row items-center gap-2 bg-white/5 rounded-xl px-3 py-2">
+                  <View className="mt-3 flex-row items-center gap-2 bg-default rounded-xl px-3 py-2">
                     <Ionicons name="chatbubble-ellipses" size={14} color={muted} />
                     <Text className="text-xs text-muted flex-1" numberOfLines={1} style={{ color: muted }}>{rutina.mensaje}</Text>
                   </View>

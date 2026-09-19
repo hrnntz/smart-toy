@@ -142,12 +142,12 @@ export default function ChildFormScreen({ navigation, route }: ChildFormScreenPr
                 key={option}
                 className="px-5 py-2.5 rounded-full border-2"
                 style={{
-                  backgroundColor: gender === option ? 'rgba(74, 144, 217, 0.1)' : surface,
+                  backgroundColor: gender === option ? 'rgba(232, 83, 63, 0.12)' : surface,
                   borderColor: gender === option ? primary : 'transparent'
                 }}
                 onPress={() => setGender(option)}
               >
-                <Label className={`text-sm ${gender === option ? 'text-primary font-bold' : 'text-foreground'}`}>
+                <Label className={`text-sm ${gender === option ? 'text-accent font-bold' : 'text-foreground'}`}>
                   {option}
                 </Label>
               </Pressable>

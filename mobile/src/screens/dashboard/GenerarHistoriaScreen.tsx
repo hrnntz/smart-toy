@@ -91,12 +91,12 @@ export default function GenerarHistoriaScreen({ navigation }: any) {
                 key={d}
                 className="px-4 py-2 rounded-full border-2"
                 style={{
-                  backgroundColor: duracion === d ? 'rgba(74, 144, 217, 0.1)' : surface,
+                  backgroundColor: duracion === d ? 'rgba(232, 83, 63, 0.12)' : surface,
                   borderColor: duracion === d ? primary : 'transparent'
                 }}
                 onPress={() => setDuracion(d)}
               >
-                <Label className={`text-sm ${duracion === d ? 'text-primary font-bold' : 'text-foreground'}`}>
+                <Label className={`text-sm ${duracion === d ? 'text-accent font-bold' : 'text-foreground'}`}>
                   {d}
                 </Label>
               </Pressable>

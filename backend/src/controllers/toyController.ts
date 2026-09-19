@@ -274,8 +274,9 @@ export const chatWithToy = async (req: AuthRequest, res: Response): Promise<void
 
     if (toyEntity) {
       try {
-        const userMsg = messageRepository.create({ toy: toyEntity, content: message, isUser: true });
-        const botMsg = messageRepository.create({ toy: toyEntity, content: reply, isUser: false });
+        const userRef = toyEntity.user || (userId ? { id: userId } : undefined);
+        const userMsg = messageRepository.create({ toy: toyEntity, user: userRef, content: message, isUser: true });
+        const botMsg = messageRepository.create({ toy: toyEntity, user: userRef, content: reply, isUser: false });
         await messageRepository.save([userMsg, botMsg]);
       } catch (saveErr) {
         console.warn("No se pudo guardar historial:", saveErr);
@@ -380,8 +381,9 @@ export const voiceChatWithToy = async (req: AuthRequest, res: Response): Promise
     // Guardar historial en la base de datos si hay juguete asociado
     if (toyEntity) {
       try {
-        const userMsg = messageRepository.create({ toy: toyEntity, content: message, isUser: true });
-        const botMsg = messageRepository.create({ toy: toyEntity, content: replyText, isUser: false });
+        const userRef = toyEntity.user || (userId ? { id: userId } : undefined);
+        const userMsg = messageRepository.create({ toy: toyEntity, user: userRef, content: message, isUser: true });
+        const botMsg = messageRepository.create({ toy: toyEntity, user: userRef, content: replyText, isUser: false });
         await messageRepository.save([userMsg, botMsg]);
       } catch (saveErr) {
         console.warn("No se pudo guardar historial:", saveErr);
@@ -428,30 +430,24 @@ export const reportTelemetry = async (req: Request, res: Response): Promise<void
 
     const cleanSerial = String(serialNumber || "").trim().toLowerCase();
 
-    // Buscar coincidencia de forma 100% segura sin errores de sintaxis SQL
-    const allToys = await toyRepository.find({ relations: ["user", "child"] });
-    let toy = allToys.find(
-      (t) => t.serialNumber && t.serialNumber.trim().toLowerCase() === cleanSerial
-    );
+    // Buscar coincidencia por serial exacto o normalizado
+    let toy = await toyRepository.findOne({
+      where: { serialNumber },
+      relations: ["user", "child"],
+    });
 
-    // Si no coincide exactamente, buscar si uno contiene al otro (ej. 'toy-001' con 'toy-001-abc')
     if (!toy) {
+      const allToys = await toyRepository.find({ relations: ["user", "child"] });
       toy = allToys.find(
-        (t) =>
-          t.serialNumber &&
-          (cleanSerial.includes(t.serialNumber.trim().toLowerCase()) ||
-           t.serialNumber.trim().toLowerCase().includes(cleanSerial))
-      );
-    }
-
-    // Fallback: Si no coincide pero existe un juguete en la BD, vincular al primer juguete
-    if (!toy && allToys.length > 0) {
-      toy = allToys[0];
-      toy.serialNumber = serialNumber;
+        (t) => t.serialNumber && t.serialNumber.trim().toLowerCase() === cleanSerial
+      ) || null;
     }
 
     if (!toy) {
-      res.status(404).json({ success: false, message: "No hay juguetes registrados en el sistema" });
+      res.status(404).json({
+        success: false,
+        message: `Juguete con número de serie "${serialNumber}" no encontrado. Regístralo primero en la app móvil.`,
+      });
       return;
     }
 
@@ -606,10 +602,6 @@ export const triggerToyAction = async (req: AuthRequest, res: Response): Promise
     // Registrar comando pendiente para que el ESP32 lo recoja en su siguiente petición HTTP
     pendingToyCommands[toy.serialNumber] = action;
     pendingToyCommands[toy.serialNumber.toLowerCase()] = action;
-    pendingToyCommands["TOY-001-ABC"] = action;
-    pendingToyCommands["toy-001-abc"] = action;
-    pendingToyCommands["TOY-001"] = action;
-    pendingToyCommands["toy-001"] = action;
 
     // Emitir comando por WebSockets a los canales del juguete
     try {

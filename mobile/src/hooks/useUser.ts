@@ -12,7 +12,7 @@ export function useUser() {
 
   const loadUser = async () => {
     try {
-      const userData = await authService.getProfile();
+      const userData = await authService.getCurrentUser();
       setUser(userData);
     } catch (error) {
       console.error('Error loading user:', error);

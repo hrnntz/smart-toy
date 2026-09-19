@@ -19,8 +19,8 @@ export default function HistoriasScreen({ navigation }: any) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   
-  const [accent, muted, surface, background] = useThemeColor([
-    'accent', 'muted', 'surface', 'background'
+  const [accent, muted, surface, background, foreground] = useThemeColor([
+    'accent', 'muted', 'surface', 'background', 'foreground'
   ]);
   const amber = '#F59E0B';
 
@@ -34,25 +34,24 @@ export default function HistoriasScreen({ navigation }: any) {
 
   useFocusEffect(useCallback(() => { loadHistorias(); }, []));
 
-  const formatDate = (dateString: string) => {
-    if (!dateString) return '';
-    const d = new Date(dateString);
+  const formatDate = (dateStr: string) => {
+    const d = new Date(dateStr);
     return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
   };
 
   if (loading) {
     return (
-      <View className="flex-1 justify-center items-center" style={{ backgroundColor: '#0D0F16' }}>
+      <View className="flex-1 justify-center items-center bg-background">
         <Spinner size="lg" color="primary" />
       </View>
     );
   }
 
   return (
-    <View className="flex-1 px-4 pt-12" style={{ backgroundColor: '#0D0F16' }}>
+    <View className="flex-1 px-4 pt-12 bg-background">
       <View className="flex-row justify-between items-center mb-6">
         <View className="flex-1">
-          <Label className="text-2xl font-extrabold text-white">Cuentos IA</Label>
+          <Label className="text-2xl font-extrabold text-foreground">Cuentos IA</Label>
           <Label className="text-sm text-muted mt-1">Historias creadas para ti</Label>
         </View>
         <Pressable
@@ -72,7 +71,7 @@ export default function HistoriasScreen({ navigation }: any) {
         {historias.length === 0 ? (
           <View className="items-center mt-20 px-6">
             <Ionicons name="book" size={64} color={amber} />
-            <Label className="text-lg font-bold text-white mt-4 text-center">Sin historias aún</Label>
+            <Label className="text-lg font-bold text-foreground mt-4 text-center">Sin historias aún</Label>
             <Label className="text-sm text-muted mt-2 text-center mb-6">Genera un cuento personalizado para la hora de dormir o para aprender jugando.</Label>
             <Button variant="primary" feedbackVariant="scale-ripple" style={{ backgroundColor: amber }} onPress={() => navigation.navigate('GenerarHistoria')}>
               <Button.Label className="text-white">Crear primera historia</Button.Label>
@@ -92,7 +91,7 @@ export default function HistoriasScreen({ navigation }: any) {
                 
                 <Card.Body className="p-4">
                   <View className="flex-row justify-between items-start mb-2 gap-2">
-                    <Text className="text-base font-bold text-white flex-1" numberOfLines={2} style={{ fontSize: 16, fontWeight: 'bold', color: 'white' }}>{historia.titulo}</Text>
+                    <Text className="text-base font-bold text-foreground flex-1" numberOfLines={2} style={{ fontSize: 16, fontWeight: 'bold', color: foreground }}>{historia.titulo}</Text>
                     {historia.duracion && (
                       <View className="px-2 py-1 rounded-full flex-row items-center gap-1" style={{ backgroundColor: 'rgba(245, 158, 11, 0.15)' }}>
                         <Label className="text-[10px] font-bold" style={{ color: amber } as any}>⏱ {historia.duracion}</Label>
@@ -104,7 +103,7 @@ export default function HistoriasScreen({ navigation }: any) {
                     {historia.contenido.replace(/\n/g, ' ')}
                   </Text>
                   
-                  <View className="flex-row justify-between items-center mt-2 pt-3 border-t border-white/5">
+                  <View className="flex-row justify-between items-center mt-2 pt-3 border-t border-separator">
                     <Label className="text-xs text-muted">{formatDate(historia.createdAt)}</Label>
                     <Label className="text-xs font-bold" style={{ color: accent } as any}>Leer historia →</Label>
                   </View>

@@ -125,7 +125,7 @@ export default function ChildListScreen({ navigation }: any) {
           children.map((child) => (
             <Card key={child.id} variant="default" className="mb-3">
               <Card.Body className="flex-row items-center py-4">
-                <View className="w-13 h-13 rounded-full bg-primary/15 justify-center items-center mr-3.5">
+                <View className="w-13 h-13 rounded-full bg-accent/15 justify-center items-center mr-3.5">
                   <Ionicons name="person" size={28} color={primary} />
                 </View>
                 <View className="flex-1">

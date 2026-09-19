@@ -278,13 +278,13 @@ export default function SupervisionScreen({ navigation }: any) {
   };
 
   return (
-    <View className="flex-1 bg-[#0D0F16] pt-12">
+    <View className="flex-1 bg-background pt-12">
       {/* Header */}
       <View className="flex-row items-center px-4 pb-4">
         <IconButton icon="arrow-back" onPress={() => navigation.goBack()} />
         <View className="flex-1 ml-3">
-          <Label className="text-xl font-extrabold text-white">Cámara en Vivo</Label>
-          <Label className="text-xs text-gray-400">Panda Inside • Transmisión Continua</Label>
+          <Label className="text-xl font-extrabold text-foreground">Cámara en Vivo</Label>
+          <Label className="text-xs text-muted">Panda Inside • Transmisión Continua</Label>
         </View>
         <View
           className="px-3 py-1 rounded-full flex-row items-center gap-1.5"

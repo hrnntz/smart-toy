@@ -90,7 +90,7 @@ export default function InglesScreen({ navigation }: any) {
         </View>
       ) : (
         <ScrollView showsVerticalScrollIndicator={false}>
-          <View className="bg-primary rounded-2xl p-5 mb-4 shadow-md">
+          <View className="bg-accent rounded-2xl p-5 mb-4 shadow-md">
             <Label className="text-sm font-medium text-white/80 mb-1">Nivel actual</Label>
             <Label className="text-3xl font-bold text-white mb-3">{progress?.nivel}</Label>
             <Label className="text-[13px] text-white font-medium">
@@ -109,7 +109,7 @@ export default function InglesScreen({ navigation }: any) {
             <Card variant="default" className="flex-1 border-0 shadow-sm">
               <Card.Body className="p-4 items-center">
                 <Ionicons name="time-outline" size={26} color={primary} />
-                <Label className="text-lg font-bold text-primary mt-1">{progress?.planDiarioMin || 20}</Label>
+                <Label className="text-lg font-bold text-accent mt-1">{progress?.planDiarioMin || 20}</Label>
                 <Label className="text-xs text-muted">min al día</Label>
               </Card.Body>
             </Card>

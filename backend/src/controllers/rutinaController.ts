@@ -55,7 +55,7 @@ export const createRutina = async (
       return;
     }
 
-    const { nombre, hora, repetir, mensaje, accionAdicional } = req.body;
+    const { nombre, hora, repetir, mensaje, accionAdicional, isActive } = req.body;
 
     if (!nombre || !hora) {
       res.status(400).json({
@@ -71,6 +71,7 @@ export const createRutina = async (
       repetir: repetir || false,
       mensaje: mensaje || null,
       accionAdicional: accionAdicional || null,
+      isActive: isActive !== undefined ? Boolean(isActive) : true,
       user: { id: userId },
     });
 
@@ -114,18 +115,19 @@ export const updateRutina = async (
     if (!rutina) {
       res.status(404).json({
         success: false,
-       message: "Rutina no encontrada",
+        message: "Rutina no encontrada",
       });
       return;
     }
 
-    const { nombre, hora, repetir, mensaje, accionAdicional } = req.body;
+    const { nombre, hora, repetir, mensaje, accionAdicional, isActive } = req.body;
 
     if (nombre) rutina.nombre = nombre;
     if (hora) rutina.hora = hora;
     if (repetir !== undefined) rutina.repetir = repetir;
     if (mensaje !== undefined) rutina.mensaje = mensaje;
     if (accionAdicional !== undefined) rutina.accionAdicional = accionAdicional;
+    if (isActive !== undefined) rutina.isActive = Boolean(isActive);
 
     const updatedRutina = await rutinaRepository.save(rutina);
 

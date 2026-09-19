@@ -2,16 +2,20 @@ import { Platform } from 'react-native';
 
 /**
  * Configuración central del entorno.
- * Si pruebas en tu teléfono físico conectado a Render,
- * coloca tu URL de Render en RENDER_API_URL (ej: 'https://tu-app.onrender.com/api')
- * o usa la variable de entorno EXPO_PUBLIC_API_URL.
+ * Para alternar entre Backend local y Producción (Render):
+ * 1. Define EXPO_PUBLIC_API_URL en tu archivo .env
+ * 2. O cambia USE_RENDER_BY_DEFAULT a false para desarrollo local (10.0.2.2 o localhost)
  */
+const USE_RENDER_BY_DEFAULT = true;
 const RENDER_API_URL = 'https://smart-toy.onrender.com/api';
 
 const getDefaultApiUrl = (): string => {
   const envUrl = process.env.EXPO_PUBLIC_API_URL;
   if (envUrl) return envUrl;
-  if (RENDER_API_URL.trim()) return RENDER_API_URL.trim();
+
+  if (USE_RENDER_BY_DEFAULT && RENDER_API_URL.trim()) {
+    return RENDER_API_URL.trim();
+  }
 
   if (Platform.OS === 'android') {
     return 'http://10.0.2.2:3000/api';
